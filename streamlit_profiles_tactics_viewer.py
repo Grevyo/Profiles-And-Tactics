@@ -33,7 +33,7 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
     # Drop accidental empty trailing columns from CSV export.
     tactics = tactics.loc[:, ~tactics.columns.str.contains(r"^Unnamed")]
-    tactics = tactics.loc[:, tactics.columns.astype(str).str.strip().ne("")]
+    tactics = tactics.loc[:, tactics.columns.astype(str).str.strip() != ""]
 
     achievements_raw = pd.read_csv(ACHIEVEMENTS_CSV)
     if len(achievements_raw.columns) == 1:
