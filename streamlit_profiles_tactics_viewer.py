@@ -35,20 +35,14 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     tactics = tactics.loc[:, ~tactics.columns.str.contains(r"^Unnamed")]
     tactics = tactics.loc[:, tactics.columns.astype(str).str.strip() != ""]
 
-    achievements_raw = pd.read_csv(ACHIEVEMENTS_CSV)
-    if len(achievements_raw.columns) == 1:
-        split = achievements_raw.iloc[:, 0].astype(str).str.split("|", expand=True)
-        split.columns = [
-            "player",
-            "achievement_name",
-            "achievement_link",
-            "achievement_tier",
-            "season_name",
-            "position",
-        ]
-        achievements = split.apply(lambda s: s.str.strip() if s.dtype == object else s)
-    else:
-        achievements = achievements_raw
+    achievements = pd.read_csv(
+        ACHIEVEMENTS_CSV,
+        sep="|",
+        quotechar='"',
+        engine="python",
+    )
+    achievements.columns = achievements.columns.astype(str).str.strip()
+    achievements = achievements.apply(lambda s: s.str.strip() if s.dtype == object else s)
 
     players["date"] = pd.to_datetime(players["date"], errors="coerce")
     tactics["date"] = pd.to_datetime(tactics["date"], errors="coerce")
