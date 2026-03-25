@@ -134,8 +134,19 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         st.session_state["page"] = "home"
         st.rerun()
 
-    players = sorted(player_df["player"].dropna().unique().tolist())
-    selected_player = st.selectbox("Pick a player", players)
+    players = sorted(
+        player_df[
+            player_df["player"].astype(str).str.contains("ⓜ", regex=False, na=False)
+        ]["player"]
+        .dropna()
+        .unique()
+        .tolist()
+    )
+    if not players:
+        st.warning('No players with "ⓜ" in their name were found.')
+        return
+
+    selected_player = st.selectbox('Pick a player (names containing "ⓜ")', players)
 
     filtered_players, filtered_tactics = _apply_shared_filters(player_df, tactics_df, selected_player)
 
