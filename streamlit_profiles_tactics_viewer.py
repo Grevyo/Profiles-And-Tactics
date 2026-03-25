@@ -7,6 +7,7 @@ Run:
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import pandas as pd
 import streamlit as st
@@ -17,6 +18,14 @@ DATA_DIR = Path(__file__).parent / "data"
 PLAYER_CSV = DATA_DIR / "PlayerDataMatser.csv"
 TACTICS_CSV = DATA_DIR / "TacticsDataMaster.csv"
 ACHIEVEMENTS_CSV = DATA_DIR / "Achievements.csv"
+IMAGE_FOLDERS = {
+    "competition": "competition_logos",
+    "map": "map_images",
+    "achievement": "Achievement_png",
+    "team": "team_logos",
+    "player": "player_photos",
+}
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 def _coerce_numeric(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
@@ -24,6 +33,46 @@ def _coerce_numeric(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
+
+
+def _normalize_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value).lower())
+
+
+@st.cache_data(show_spinner=False)
+def _build_image_index() -> dict[str, dict[str, Path]]:
+    image_index: dict[str, dict[str, Path]] = {}
+    for image_type, folder_name in IMAGE_FOLDERS.items():
+        folder = DATA_DIR / folder_name
+        entries: dict[str, Path] = {}
+        if folder.exists():
+            for path in folder.iterdir():
+                if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS:
+                    entries[_normalize_key(path.stem)] = path
+        image_index[image_type] = entries
+    return image_index
+
+
+def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value: str | None) -> Path | None:
+    if not value:
+        return None
+    normalized = _normalize_key(value)
+    entries = image_index.get(image_type, {})
+    return entries.get(normalized)
+
+
+def _find_achievement_image(
+    image_index: dict[str, dict[str, Path]],
+    achievement_link: str | None,
+    achievement_name: str | None,
+) -> Path | None:
+    if achievement_link:
+        link_path = Path(str(achievement_link))
+        if link_path.suffix.lower() in IMAGE_EXTENSIONS:
+            by_name = _find_image(image_index, "achievement", link_path.stem)
+            if by_name:
+                return by_name
+    return _find_image(image_index, "achievement", achievement_name)
 
 
 @st.cache_data(show_spinner=False)
@@ -81,20 +130,21 @@ def _apply_shared_filters(
     min_date = filtered_players["date"].min().date()
     max_date = filtered_players["date"].max().date()
 
-    st.sidebar.header("Player Filters")
+    st.subheader("Player Filters")
+    filter_cols = st.columns(5)
     tier_options = sorted(filtered_players["tier"].dropna().unique().tolist())
-    selected_tiers = st.sidebar.multiselect("Tier of Team", tier_options, default=tier_options)
+    selected_tiers = filter_cols[0].multiselect("Tier of Team", tier_options, default=tier_options)
 
     event_options = sorted(filtered_players["competition"].dropna().unique().tolist())
-    selected_events = st.sidebar.multiselect("Event", event_options, default=event_options)
+    selected_events = filter_cols[1].multiselect("Event", event_options, default=event_options)
 
     opp_options = sorted(filtered_players["opponent_team"].dropna().unique().tolist())
-    selected_opp = st.sidebar.multiselect("Opponent", opp_options, default=opp_options)
+    selected_opp = filter_cols[2].multiselect("Opponent", opp_options, default=opp_options)
 
     side_options = sorted(tactics_df["side"].dropna().unique().tolist()) if "side" in tactics_df else []
-    selected_sides = st.sidebar.multiselect("Side (Red/Blue)", side_options, default=side_options)
+    selected_sides = filter_cols[3].multiselect("Side (Red/Blue)", side_options, default=side_options)
 
-    date_range = st.sidebar.date_input(
+    date_range = filter_cols[4].date_input(
         "Date Range",
         value=(min_date, max_date),
         min_value=min_date,
@@ -149,10 +199,31 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     selected_player = st.selectbox('Pick a player (names containing "ⓜ")', players)
 
     filtered_players, filtered_tactics = _apply_shared_filters(player_df, tactics_df, selected_player)
+    image_index = _build_image_index()
 
     if filtered_players.empty:
         st.warning("No player rows match the current filters.")
         return
+
+    first_row = filtered_players.sort_values("date", ascending=False).iloc[0]
+
+    header_cols = st.columns([1, 2, 2, 2])
+    player_image = _find_image(image_index, "player", selected_player)
+    with header_cols[0]:
+        if player_image:
+            st.image(str(player_image), caption=selected_player, use_container_width=True)
+    with header_cols[1]:
+        team_logo = _find_image(image_index, "team", first_row.get("my_team"))
+        if team_logo:
+            st.image(str(team_logo), caption=str(first_row.get("my_team", "")), use_container_width=True)
+    with header_cols[2]:
+        competition_logo = _find_image(image_index, "competition", first_row.get("competition"))
+        if competition_logo:
+            st.image(str(competition_logo), caption=str(first_row.get("competition", "")), use_container_width=True)
+    with header_cols[3]:
+        map_image = _find_image(image_index, "map", first_row.get("map"))
+        if map_image:
+            st.image(str(map_image), caption=str(first_row.get("map", "")), use_container_width=True)
 
     kills = int(filtered_players["kills"].sum())
     deaths = int(filtered_players["deaths"].sum())
@@ -214,11 +285,28 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         st.dataframe(top_tactics, use_container_width=True, hide_index=True)
 
     st.subheader("Achievements")
-    player_ach = achievements_df[achievements_df["player"].astype(str).str.contains(selected_player, case=False, na=False)]
+    player_ach = achievements_df[
+        achievements_df["player"].astype(str).str.contains(selected_player, case=False, na=False)
+    ].copy()
     if player_ach.empty:
         st.info("No achievements found for this player.")
     else:
-        st.dataframe(player_ach, use_container_width=True, hide_index=True)
+        player_ach["achievement_image"] = player_ach.apply(
+            lambda row: _find_achievement_image(
+                image_index,
+                row.get("achievement_link"),
+                row.get("achievement_name"),
+            ),
+            axis=1,
+        )
+        st.dataframe(
+            player_ach,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "achievement_image": st.column_config.ImageColumn("Achievement"),
+            },
+        )
 
     st.subheader("Full Player Match Stats")
     show_cols = [
@@ -252,17 +340,18 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         how="left",
     )
 
-    st.sidebar.header("Tactics Filters")
+    st.subheader("Tactics Filters")
+    filter_cols = st.columns(4)
     side_opts = sorted(df["side"].dropna().unique().tolist())
-    sides = st.sidebar.multiselect("Side", side_opts, default=side_opts)
+    sides = filter_cols[0].multiselect("Side", side_opts, default=side_opts)
     tier_opts = sorted(df["tier"].dropna().unique().tolist())
-    tiers = st.sidebar.multiselect("Tier", tier_opts, default=tier_opts)
+    tiers = filter_cols[1].multiselect("Tier", tier_opts, default=tier_opts)
 
     comp_opts = sorted(df["competition"].dropna().unique().tolist())
-    comps = st.sidebar.multiselect("Event", comp_opts, default=comp_opts)
+    comps = filter_cols[2].multiselect("Event", comp_opts, default=comp_opts)
 
     opp_opts = sorted(df["opponent_team"].dropna().unique().tolist())
-    opps = st.sidebar.multiselect("Opponent", opp_opts, default=opp_opts)
+    opps = filter_cols[3].multiselect("Opponent", opp_opts, default=opp_opts)
 
     if sides:
         df = df[df["side"].isin(sides)]
@@ -283,9 +372,33 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
         .sort_values(["win_rate_pct", "wins"], ascending=False)
     )
+    image_index = _build_image_index()
+
+    summary["competition_logo"] = (
+        df.groupby("tactic_name")["competition"]
+        .first()
+        .map(lambda comp: _find_image(image_index, "competition", comp))
+        .reindex(summary["tactic_name"])
+        .values
+    )
+    summary["map_image"] = (
+        df.groupby("tactic_name")["map"]
+        .first()
+        .map(lambda map_name: _find_image(image_index, "map", map_name))
+        .reindex(summary["tactic_name"])
+        .values
+    )
 
     st.subheader("Top Tactical Outcomes")
-    st.dataframe(summary.head(30), use_container_width=True, hide_index=True)
+    st.dataframe(
+        summary.head(30),
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "competition_logo": st.column_config.ImageColumn("Competition"),
+            "map_image": st.column_config.ImageColumn("Map"),
+        },
+    )
     st.bar_chart(summary.head(15).set_index("tactic_name")["win_rate_pct"])
 
 
