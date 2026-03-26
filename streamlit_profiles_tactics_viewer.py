@@ -10,7 +10,9 @@ import base64
 from pathlib import Path
 import re
 
+import altair as alt
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 st.set_page_config(page_title="Grevs CPL Pages", layout="wide")
@@ -1173,6 +1175,59 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         },
     )
     st.bar_chart(summary.head(15).set_index("tactic_name")["win_rate_pct"])
+    st.subheader("Visual Tactical Insights")
+    viz_col_1, viz_col_2 = st.columns(2)
+
+    with viz_col_1:
+        st.markdown("#### Plotly: Win Rate by Tactic and Side")
+        winrate_heat = (
+            summary.pivot_table(
+                index="tactic_name",
+                columns="side",
+                values="win_rate_pct",
+                aggfunc="mean",
+            )
+            .fillna(0)
+            .head(12)
+        )
+        if winrate_heat.empty:
+            st.info("Not enough data to render the Plotly chart.")
+        else:
+            fig = px.imshow(
+                winrate_heat,
+                text_auto=".1f",
+                aspect="auto",
+                color_continuous_scale="Viridis",
+                labels={"color": "Win Rate %", "x": "Side", "y": "Tactic"},
+                title="Top Tactics Win Rate Heatmap",
+            )
+            fig.update_layout(height=460, margin=dict(l=20, r=20, t=56, b=20))
+            st.plotly_chart(fig, use_container_width=True)
+
+    with viz_col_2:
+        st.markdown("#### Altair: Wins vs Losses by Tactic")
+        altair_data = summary.head(15).copy()
+        if altair_data.empty:
+            st.info("Not enough data to render the Altair chart.")
+        else:
+            altair_long = altair_data.melt(
+                id_vars=["tactic_name", "side"],
+                value_vars=["wins", "losses"],
+                var_name="result",
+                value_name="round_outcomes",
+            )
+            altair_chart = (
+                alt.Chart(altair_long)
+                .mark_bar()
+                .encode(
+                    x=alt.X("tactic_name:N", sort="-y", title="Tactic"),
+                    y=alt.Y("round_outcomes:Q", title="Rounds"),
+                    color=alt.Color("result:N", title="Outcome"),
+                    tooltip=["tactic_name", "side", "result", "round_outcomes"],
+                )
+                .properties(height=430)
+            )
+            st.altair_chart(altair_chart, use_container_width=True)
 
     st.subheader("Side Breakdown")
     side_summary = (
