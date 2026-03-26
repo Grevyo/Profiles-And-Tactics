@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import html
+import importlib.util
 from pathlib import Path
 import re
 
@@ -2568,7 +2569,11 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
                 "status": "Status",
             }
         )
-        st.dataframe(board.style.background_gradient(subset=["Round diff"], cmap="RdYlGn"), use_container_width=True, hide_index=True)
+        if importlib.util.find_spec("matplotlib") is not None:
+            board_display = board.style.background_gradient(subset=["Round diff"], cmap="RdYlGn")
+        else:
+            board_display = board
+        st.dataframe(board_display, use_container_width=True, hide_index=True)
 
     st.markdown("### Spotlight")
     if not leaderboard.empty:
