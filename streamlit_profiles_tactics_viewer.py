@@ -116,6 +116,34 @@ def _inject_styles() -> None:
             padding: 10px 12px;
             background: linear-gradient(120deg, rgba(54, 87, 155, 0.45) 0%, rgba(35, 57, 103, 0.2) 100%);
         }
+        .hero-score-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr 1fr;
+            gap: 8px;
+            margin: 8px 0 12px 0;
+        }
+        .side-score-card {
+            border: 1px solid rgba(151, 166, 195, 0.35);
+            border-radius: 12px;
+            padding: 10px;
+            background: rgba(18, 25, 40, 0.75);
+            text-align: center;
+        }
+        .side-red { border-color: rgba(255, 108, 122, 0.55); }
+        .side-blue { border-color: rgba(78, 170, 255, 0.55); }
+        .side-score-label {
+            font-size: 0.74rem;
+            color: #9da7bd;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .side-score-value {
+            font-size: 1.35rem;
+            color: #f5f7fb;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-top: 2px;
+        }
         .hero-grevscore-label {
             color: #b8caf0;
             font-size: 0.82rem;
@@ -128,15 +156,66 @@ def _inject_styles() -> None:
             font-weight: 900;
             line-height: 1.05;
         }
+        .hero-grevscore-tier {
+            font-size: 0.8rem;
+            color: #d6e2ff;
+            margin-top: 3px;
+            letter-spacing: 0.04em;
+        }
+        .grev-meter {
+            margin-top: 10px;
+            position: relative;
+            height: 38px;
+            border-radius: 999px;
+            border: 1px solid rgba(151, 166, 195, 0.38);
+            background:
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(255, 255, 255, 0.13) 0px,
+                    rgba(255, 255, 255, 0.13) 1px,
+                    transparent 1px,
+                    transparent 28px
+                ),
+                linear-gradient(90deg, rgba(255, 108, 122, 0.35) 0%, rgba(240, 190, 79, 0.35) 45%, rgba(49, 209, 123, 0.35) 100%);
+            overflow: hidden;
+        }
+        .grev-meter-needle {
+            position: absolute;
+            top: 4px;
+            width: 2px;
+            height: 28px;
+            background: #f5f8ff;
+            box-shadow: 0 0 10px rgba(245, 248, 255, 0.65);
+        }
+        .grev-meter-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.68rem;
+            color: #b8caf0;
+            margin-top: 4px;
+        }
         .filter-shell {
             border: 1px solid rgba(151, 166, 195, 0.3);
             border-radius: 10px;
-            padding: 6px 10px;
+            padding: 4px 8px;
             background: rgba(15, 20, 32, 0.65);
         }
         .form-row {
             border-bottom: 1px solid rgba(151, 166, 195, 0.2);
-            padding: 6px 0;
+            padding: 4px 0;
+        }
+        .compact-filter-header {
+            color: #d3def6;
+            margin: 0 0 2px 0;
+            font-size: 0.95rem;
+        }
+        .stMultiSelect [data-baseweb="tag"] {
+            padding: 0 4px;
+            font-size: 0.74rem;
+        }
+        [data-testid="stDateInput"] input,
+        [data-testid="stMultiSelect"] input {
+            font-size: 0.8rem;
         }
         </style>
         """,
@@ -291,6 +370,7 @@ def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: 
         + (score_components["consistency"] * 0.06)
         + (score_components["avg_kpd"] * 0.05)
     )
+    grevscore_raw = min(max(grevscore, 0.0), 100.0)
     return {
         "matches": float(matches),
         "kills": kills,
@@ -302,8 +382,38 @@ def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: 
         "acc": acc,
         "kpm": kpm,
         "impact": impact,
-        "grevscore": min(max(grevscore, 0.0), 100.0),
+        "grevscore_raw": grevscore_raw,
+        "grevscore": grevscore_raw / 100.0,
     }
+
+
+def _score_tier_label(score: float) -> str:
+    if score >= 1.5:
+        return "Amazing"
+    if score >= 1.2:
+        return "Good"
+    if score >= 1.0:
+        return "Okay"
+    if score >= 0.9:
+        return "Average"
+    if score >= 0.75:
+        return "Poor"
+    return "Very Poor"
+
+
+def _side_grevscore(filtered_players: pd.DataFrame, filtered_tactics: pd.DataFrame, side_name: str) -> float:
+    if filtered_players.empty or filtered_tactics.empty or "side" not in filtered_tactics.columns:
+        return 0.0
+    side_matches = filtered_tactics[
+        filtered_tactics["side"].astype(str).str.lower().str.contains(side_name.lower(), na=False)
+    ]["match_id"].dropna().unique()
+    if len(side_matches) == 0:
+        return 0.0
+    side_players = filtered_players[filtered_players["match_id"].isin(side_matches)]
+    side_tactics = filtered_tactics[filtered_tactics["match_id"].isin(side_matches)]
+    if side_players.empty:
+        return 0.0
+    return _calc_player_card_metrics(side_players, side_tactics)["grevscore"]
 
 
 def _stat_visual(value: float, low: float, high: float, invert: bool = False) -> tuple[str, float]:
@@ -407,7 +517,7 @@ def _apply_shared_filters(
     min_date = filtered_players["date"].min().date()
     max_date = filtered_players["date"].max().date()
 
-    st.subheader("Player Filters")
+    st.markdown('<p class="compact-filter-header">Player Filters</p>', unsafe_allow_html=True)
     filter_cols = st.columns(5)
     tier_options = sorted(filtered_players["tier"].dropna().unique().tolist())
     with filter_cols[0]:
@@ -500,6 +610,10 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
             st.image(str(competition_logo), caption=str(first_row.get("competition", "")), width=180)
 
     metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
+    red_score = _side_grevscore(filtered_players, filtered_tactics, "red")
+    blue_score = _side_grevscore(filtered_players, filtered_tactics, "blue")
+    score_tier = _score_tier_label(metrics["grevscore"])
+    grev_meter_pos = min(max(((metrics["grevscore"] - 0.75) / (1.5 - 0.75)) * 100.0, 0.0), 100.0)
     kills = int(metrics["kills"])
     deaths = int(metrics["deaths"])
     assists = int(metrics["assists"])
@@ -537,9 +651,30 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                 {team_logo_html}
                 <div class="panel-muted">Player card</div>
                 <div class="panel-title">{selected_player}</div>
-                <div class="hero-grevscore">
-                    <div class="hero-grevscore-label">GrevScore</div>
-                    <div class="hero-grevscore-value">{metrics["grevscore"]:.1f}</div>
+                <div class="hero-score-grid">
+                    <div class="side-score-card side-red">
+                        <div class="side-score-label">Red Score</div>
+                        <div class="side-score-value">{red_score:.2f}</div>
+                    </div>
+                    <div class="hero-grevscore">
+                        <div class="hero-grevscore-label">GrevScore</div>
+                        <div class="hero-grevscore-value">{metrics["grevscore"]:.2f}</div>
+                        <div class="hero-grevscore-tier">{score_tier}</div>
+                        <div class="grev-meter">
+                            <div class="grev-meter-needle" style="left: calc({grev_meter_pos:.1f}% - 1px);"></div>
+                        </div>
+                        <div class="grev-meter-labels">
+                            <span>0.75 Poor</span>
+                            <span>0.9 Avg</span>
+                            <span>1.0 Okay</span>
+                            <span>1.2 Good</span>
+                            <span>1.5 Amazing</span>
+                        </div>
+                    </div>
+                    <div class="side-score-card side-blue">
+                        <div class="side-score-label">Blue Score</div>
+                        <div class="side-score-value">{blue_score:.2f}</div>
+                    </div>
                 </div>
                 <div class="stats-grid">
                     {''.join(stat_chips)}
