@@ -7,6 +7,7 @@ Run:
 from __future__ import annotations
 
 import base64
+import html
 from pathlib import Path
 import re
 
@@ -154,28 +155,61 @@ def _inject_styles() -> None:
         }
         .achievement-inline-list {
             display: grid;
-            gap: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
             margin-top: 8px;
         }
         .achievement-inline-item {
             border: 1px solid rgba(151, 166, 195, 0.28);
             border-radius: 10px;
-            padding: 8px 10px;
+            padding: 8px;
             background: rgba(18, 25, 40, 0.72);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
+            display: grid;
+            gap: 6px;
+        }
+        .achievement-season {
+            color: #b4c3e7;
+            font-size: 0.72rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .achievement-image-wrap {
+            position: relative;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(141, 169, 221, 0.38);
+            min-height: 88px;
+            background: rgba(10, 15, 24, 0.75);
         }
         .achievement-inline-item img {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
+            width: 100%;
+            height: 98px;
             object-fit: cover;
+            display: block;
+        }
+        .achievement-tier-icon {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 900;
+            letter-spacing: 0.02em;
+            border: 1px solid currentColor;
+            background: rgba(10, 15, 24, 0.9);
         }
         .achievement-inline-name {
             color: #f5f7fb;
             font-weight: 700;
+            line-height: 1.2;
+            font-size: 0.83rem;
         }
         .quick-row {
             display: grid;
@@ -237,8 +271,7 @@ def _inject_styles() -> None:
             font-weight: 800;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            margin-bottom: 8px;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
         }
         .tier-s { color: #f5c451; }
         .tier-a { color: #9c6df6; }
@@ -789,6 +822,27 @@ def _achievement_tier_class(tier: str | None) -> str:
     return "tier-unknown"
 
 
+def _achievement_card_html(ach_row: pd.Series) -> str:
+    ach_tier = str(ach_row.get("achievement_tier", "")).strip().upper() or "?"
+    ach_tier_class = _achievement_tier_class(ach_tier)
+    ach_image = ach_row.get("achievement_image")
+    season = html.escape(str(ach_row.get("season_name", "-")))
+    name = html.escape(str(ach_row.get("achievement_name", "-")))
+    image_html = "<div class='panel-muted' style='padding:8px;'>No image</div>"
+    if ach_image:
+        image_html = f"<img src='data:image/png;base64,{base64.b64encode(ach_image.read_bytes()).decode('utf-8')}'>"
+    return (
+        "<div class='achievement-inline-item'>"
+        f"<div class='achievement-season'>{season}</div>"
+        "<div class='achievement-image-wrap'>"
+        f"{image_html}"
+        f"<span class='achievement-tier achievement-tier-icon {ach_tier_class}'>{html.escape(ach_tier[:1])}</span>"
+        "</div>"
+        f"<span class='achievement-inline-name'>{name}</span>"
+        "</div>"
+    )
+
+
 def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame) -> tuple[float, pd.DataFrame]:
     if player_rows.empty:
         return 0.0, pd.DataFrame()
@@ -1041,24 +1095,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         )
     achievement_inline_html = "<div class='panel-muted'>No achievements found.</div>"
     if not player_ach.empty:
-        achievement_rows = []
-        for _, ach_row in player_ach.iterrows():
-            ach_tier = str(ach_row.get("achievement_tier", "-"))
-            ach_tier_class = _achievement_tier_class(ach_tier)
-            ach_image = ach_row.get("achievement_image")
-            ach_image_html = (
-                f"<img src='data:image/png;base64,{base64.b64encode(ach_image.read_bytes()).decode('utf-8')}'>"
-                if ach_image
-                else ""
-            )
-            achievement_rows.append(
-                "<div class='achievement-inline-item'>"
-                f"{ach_image_html}"
-                f"<span class='achievement-inline-name'>{ach_row.get('achievement_name', '-')}</span>"
-                f"<span class='achievement-tier {ach_tier_class}'>Tier {ach_tier}</span>"
-                f"<span class='panel-muted'>({ach_row.get('season_name', '-')})</span>"
-                "</div>"
-            )
+        achievement_rows = [_achievement_card_html(ach_row) for _, ach_row in player_ach.iterrows()]
         achievement_inline_html = f"<div class='achievement-inline-list'>{''.join(achievement_rows)}</div>"
 
     st.markdown(
@@ -1235,25 +1272,8 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     if player_ach.empty:
         st.info("No achievements found for this player.")
     else:
-        ach_cols = st.columns(3)
-        for i, (_, ach_row) in enumerate(player_ach.iterrows()):
-            with ach_cols[i % 3]:
-                st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-                ach_image = ach_row.get("achievement_image")
-                ach_tier = str(ach_row.get("achievement_tier", "-"))
-                tier_class = _achievement_tier_class(ach_tier)
-                st.markdown(
-                    f'<div class="achievement-tier {tier_class}">Tier {ach_tier}</div>',
-                    unsafe_allow_html=True,
-                )
-                if ach_image:
-                    st.image(str(ach_image), use_container_width=True)
-                st.markdown(
-                    f"**{ach_row.get('achievement_name', '-') }**  \n"
-                    f"Season: `{ach_row.get('season_name', '-')}`  \n"
-                    f"Position: `{ach_row.get('position', '-')}`"
-                )
-                st.markdown("</div>", unsafe_allow_html=True)
+        achievement_html = "".join(_achievement_card_html(ach_row) for _, ach_row in player_ach.iterrows())
+        st.markdown(f"<div class='achievement-inline-list'>{achievement_html}</div>", unsafe_allow_html=True)
 
     st.subheader("Full Player Match Stats")
     show_cols = [
