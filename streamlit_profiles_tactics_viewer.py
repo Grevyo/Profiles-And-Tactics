@@ -378,6 +378,23 @@ def _inject_styles() -> None:
             place-items: center;
             padding: 12px;
             backdrop-filter: blur(4px);
+            position: relative;
+        }
+        .hero-logo-badge-left::after {
+            content: "";
+            position: absolute;
+            inset: 20% 12%;
+            border-radius: 14px;
+            background: radial-gradient(circle, rgba(49, 209, 123, 0.26), transparent 70%);
+            z-index: -1;
+        }
+        .hero-logo-badge-right::after {
+            content: "";
+            position: absolute;
+            inset: 20% 12%;
+            border-radius: 14px;
+            background: radial-gradient(circle, rgba(255, 107, 79, 0.2), transparent 70%);
+            z-index: -1;
         }
         .hero-logo-badge img {
             width: 100%;
@@ -462,47 +479,73 @@ def _coerce_numeric(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     return df
 
 
-def _render_global_branding() -> None:
-    logo_col_1, logo_col_2 = st.columns(2)
-    with logo_col_1:
-        if MEDISPORTS_LOGO.exists():
-            st.image(str(MEDISPORTS_LOGO), width=190)
-        else:
-            st.caption("Medisports logo not found.")
-    with logo_col_2:
-        if CPL_LOGO.exists():
-            st.image(str(CPL_LOGO), width=160)
-        else:
-            st.caption("CPL logo not found.")
-    st.markdown("---")
-
-
 def _image_to_data_uri(image_path: Path) -> str:
     return f"data:image/{image_path.suffix.lstrip('.').lower()};base64,{base64.b64encode(image_path.read_bytes()).decode('utf-8')}"
 
 
-def _render_integrated_branding(context_label: str) -> None:
-    logos: list[str] = []
-    if MEDISPORTS_LOGO.exists():
-        logos.append(
-            f'<span style="display:flex;align-items:center;gap:8px;"><img src="{_image_to_data_uri(MEDISPORTS_LOGO)}" '
-            'style="height:34px;border-radius:8px;" alt="Medisports logo"><span>Medisports</span></span>'
-        )
-    if CPL_LOGO.exists():
-        logos.append(
-            f'<span style="display:flex;align-items:center;gap:8px;"><img src="{_image_to_data_uri(CPL_LOGO)}" '
-            'style="height:34px;border-radius:8px;" alt="CPL logo"><span>CPL</span></span>'
-        )
-    if logos:
-        st.markdown(
-            f"""
-            <div class="panel-card" style="padding:10px 14px;margin-top:4px;">
-                <div class="panel-muted" style="margin-bottom:8px;">{context_label}</div>
-                <div style="display:flex;gap:18px;flex-wrap:wrap;color:#dce7ff;font-weight:700;">{''.join(logos)}</div>
+def _render_top_hero(active_page: str, subtitle: str) -> None:
+    medicart_logo_html = (
+        f'<img src="{_image_to_data_uri(MEDISPORTS_LOGO)}" alt="Medicart logo" style="max-width:144px;">'
+        if MEDISPORTS_LOGO.exists()
+        else '<span style="color:#c7d5f1;font-size:0.8rem;">Medicart logo missing</span>'
+    )
+    cpl_logo_html = (
+        f'<img src="{_image_to_data_uri(CPL_LOGO)}" alt="CPL logo" style="max-width:108px;">'
+        if CPL_LOGO.exists()
+        else '<span style="color:#c7d5f1;font-size:0.8rem;">CPL logo missing</span>'
+    )
+    st.markdown(
+        f"""
+        <section class="hero-shell">
+            <div class="hero-row">
+                <div class="hero-logo-badge hero-logo-badge-left">{medicart_logo_html}</div>
+                <div class="hero-title-block">
+                    <h1>Grev's CPL Dashboard</h1>
+                    <div class="hero-subtitle">{subtitle}</div>
+                    <div class="hero-pill-row">
+                        <span class="hero-pill">S10 Active</span>
+                        <span class="hero-pill">HLTV Style</span>
+                        <span class="hero-pill">Medicart Data</span>
+                    </div>
+                </div>
+                <div class="hero-logo-badge hero-logo-badge-right">{cpl_logo_html}</div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            <div class="hero-shell-divider"></div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="home-tab-row">', unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button(
+            "👤 HLTV CPL Profile Viewer",
+            use_container_width=True,
+            type="primary" if active_page == "profiles" else "secondary",
+            key=f"hero_nav_profiles_{active_page}",
+        ):
+            st.session_state["page"] = "profiles"
+            st.rerun()
+    with col2:
+        if st.button(
+            "📊 Teams Tactical Breakdown",
+            use_container_width=True,
+            type="primary" if active_page == "tactics" else "secondary",
+            key=f"hero_nav_tactics_{active_page}",
+        ):
+            st.session_state["page"] = "tactics"
+            st.rerun()
+    with col3:
+        if st.button(
+            "⚔️ Medisports Vs Breakdown",
+            use_container_width=True,
+            type="primary" if active_page == "medisports_vs" else "secondary",
+            key=f"hero_nav_medisports_{active_page}",
+        ):
+            st.session_state["page"] = "medisports_vs"
+            st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _normalize_key(value: str) -> str:
@@ -773,53 +816,11 @@ def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame)
 
 
 def _home() -> None:
-    medicart_logo_html = (
-        f'<img src="{_image_to_data_uri(MEDISPORTS_LOGO)}" alt="Medicart logo" style="max-width:132px;">'
-        if MEDISPORTS_LOGO.exists()
-        else '<span style="color:#c7d5f1;font-size:0.8rem;">Medicart logo missing</span>'
+    _inject_styles()
+    _render_top_hero(
+        active_page="home",
+        subtitle="Player analytics, tactical breakdowns, match insights.",
     )
-    cpl_logo_html = (
-        f'<img src="{_image_to_data_uri(CPL_LOGO)}" alt="CPL logo" style="max-width:104px;">'
-        if CPL_LOGO.exists()
-        else '<span style="color:#c7d5f1;font-size:0.8rem;">CPL logo missing</span>'
-    )
-    st.markdown(
-        f"""
-        <section class="hero-shell">
-            <div class="hero-row">
-                <div class="hero-logo-badge">{medicart_logo_html}</div>
-                <div class="hero-title-block">
-                    <h1>Grev's CPL Dashboard</h1>
-                    <div class="hero-subtitle">Player analytics, tactical breakdowns, match insights.</div>
-                    <div class="hero-pill-row">
-                        <span class="hero-pill">S10 Active</span>
-                        <span class="hero-pill">HLTV Style</span>
-                        <span class="hero-pill">Medicart Data</span>
-                    </div>
-                </div>
-                <div class="hero-logo-badge">{cpl_logo_html}</div>
-            </div>
-            <div class="hero-shell-divider"></div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown('<div class="home-tab-row">', unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("👤 HLTV CPL Profile Viewer", use_container_width=True, type="primary"):
-            st.session_state["page"] = "profiles"
-            st.rerun()
-    with col2:
-        if st.button("📊 Teams Tactical Breakdown", use_container_width=True):
-            st.session_state["page"] = "tactics"
-            st.rerun()
-    with col3:
-        if st.button("⚔️ Medisports Vs Breakdown", use_container_width=True):
-            st.session_state["page"] = "medisports_vs"
-            st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _build_match_level_results(tactics_df: pd.DataFrame) -> pd.DataFrame:
@@ -902,12 +903,10 @@ def _apply_shared_filters(
 
 def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achievements_df: pd.DataFrame) -> None:
     _inject_styles()
-    st.title("HLTV CPL Profile Viewer")
-    _render_global_branding()
-    _render_integrated_branding("Player profiles powered by Medisports x CPL")
-    if st.button("← Back to Home"):
-        st.session_state["page"] = "home"
-        st.rerun()
+    _render_top_hero(
+        active_page="profiles",
+        subtitle="Medicart analytics, player profiles, tactics, and event breakdowns.",
+    )
 
     players = sorted(
         player_df[
@@ -1253,12 +1252,10 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 
 def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame) -> None:
     _inject_styles()
-    st.title("Teams Tactical Breakdown")
-    _render_global_branding()
-    _render_integrated_branding("Tactical performance context")
-    if st.button("← Back to Home"):
-        st.session_state["page"] = "home"
-        st.rerun()
+    _render_top_hero(
+        active_page="tactics",
+        subtitle="Team tactical breakdowns, map outcomes, and strategic performance context.",
+    )
 
     recent_cutoff = pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=10)
     player_recent = player_df[player_df["date"] >= recent_cutoff].copy()
@@ -1550,12 +1547,10 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
 
 def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
     _inject_styles()
-    st.title("Medisports Vs Breakdown")
-    _render_global_branding()
-    _render_integrated_branding("Head-to-head analysis: Medisports in CPL")
-    if st.button("← Back to Home"):
-        st.session_state["page"] = "home"
-        st.rerun()
+    _render_top_hero(
+        active_page="medisports_vs",
+        subtitle="Head-to-head Medisports performance, opponent trends, and matchup insights.",
+    )
 
     team_df = tactics_df[
         tactics_df["my_team"].astype(str).str.contains("ⓜ", regex=False, na=False)
