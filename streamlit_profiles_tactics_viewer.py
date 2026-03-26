@@ -3131,6 +3131,8 @@ def _medisports_vs_breakdown(
         for _, row in sorted_tournament.iterrows():
             wr_class = "vs-pill-good" if float(row["win_rate_pct"]) >= 55 else ("vs-pill-mid" if float(row["win_rate_pct"]) >= 45 else "vs-pill-bad")
             rd_class = "vs-pill-good" if int(row["round_diff"]) >= 0 else "vs-pill-bad"
+            clean_competition = _sanitize_competition_value(row.get("competition", ""))
+            clean_best_map = _sanitize_competition_value(row.get("best_map", ""))
             logo_html = (
                 f'<img class="rank-logo" src="{row["competition_logo"]}" alt="competition logo">'
                 if row["competition_logo"]
@@ -3139,12 +3141,12 @@ def _medisports_vs_breakdown(
             t_rows.append(
                 f"""
                 <div class="ranked-row" style="grid-template-columns: minmax(0, 1.8fr) repeat(6, minmax(0, 1fr));">
-                    <div class="rank-cell-main">{logo_html}<span class="rank-name">{html.escape(str(row["competition"]))}</span></div>
+                    <div class="rank-cell-main">{logo_html}<span class="rank-name">{html.escape(str(clean_competition))}</span></div>
                     <div class="stat-label">Matches <b>{int(row["matches"])}</b></div>
                     <div class="stat-label">Record <b>{int(row["wins"])}-{int(row["losses"])}-{int(row["draws"])}</b></div>
                     <div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div>
                     <div><span class="vs-pill {rd_class}">RD {int(row["round_diff"]):+d}</span></div>
-                    <div><span class="vs-pill">Best map {html.escape(str(row["best_map"]))}</span></div>
+                    <div><span class="vs-pill">Best map {html.escape(str(clean_best_map))}</span></div>
                     <div></div>
                 </div>
                 """
