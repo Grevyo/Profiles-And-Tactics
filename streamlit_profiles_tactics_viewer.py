@@ -155,76 +155,98 @@ def _inject_styles() -> None:
             gap: 8px;
         }
         .achievement-inline-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 10px;
-            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 6px;
         }
         .achievement-inline-list-single {
-            grid-template-columns: minmax(140px, 220px);
-            justify-content: start;
+            justify-content: flex-start;
         }
         .achievement-inline-item {
-            border: none;
+            width: 132px;
+            height: 162px;
+            border: 1px solid rgba(151, 166, 195, 0.34);
             border-radius: 10px;
-            padding: 8px;
-            background: rgba(18, 25, 40, 0.72);
-            display: grid;
-            gap: 6px;
-            text-align: center;
-            justify-items: center;
+            background: linear-gradient(180deg, rgba(22, 31, 47, 0.92), rgba(10, 16, 27, 0.94));
+            display: block;
+            flex: 0 0 132px;
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(9, 13, 21, 0.65);
         }
         .achievement-season {
-            color: #b4c3e7;
-            font-size: 0.72rem;
-            letter-spacing: 0.05em;
+            position: absolute;
+            top: 6px;
+            left: 8px;
+            right: 34px;
+            color: #d7e3ff;
+            font-size: 0.62rem;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
-            font-weight: 700;
-            text-align: center;
-            width: 100%;
+            font-weight: 800;
+            text-align: left;
+            z-index: 2;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .achievement-image-wrap {
             position: relative;
             width: 100%;
-            border-radius: 8px;
+            height: 100%;
             overflow: hidden;
             border: none;
-            min-height: 88px;
-            background: rgba(10, 15, 24, 0.75);
+            background: radial-gradient(circle at 50% 44%, rgba(43, 62, 97, 0.42), rgba(10, 15, 24, 0.92));
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .achievement-inline-item img {
             width: 100%;
-            height: 98px;
+            height: 100%;
             object-fit: contain;
             object-position: center;
             display: block;
+            padding: 22px 10px 30px;
+            box-sizing: border-box;
         }
         .achievement-tier-icon {
             position: absolute;
-            top: 8px;
-            left: 8px;
-            min-width: 24px;
-            height: 24px;
+            top: 6px;
+            right: 7px;
+            min-width: 18px;
+            height: 18px;
             border-radius: 999px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.72rem;
+            font-size: 0.6rem;
             font-weight: 900;
             letter-spacing: 0.02em;
             border: none;
-            background: rgba(10, 15, 24, 0.9);
+            background: rgba(10, 15, 24, 0.94);
+            z-index: 2;
         }
         .achievement-inline-name {
+            position: absolute;
+            left: 6px;
+            right: 6px;
+            bottom: 6px;
             color: #f5f7fb;
-            font-weight: 700;
+            font-weight: 800;
             line-height: 1.2;
-            font-size: 0.83rem;
+            font-size: 0.66rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
             text-align: center;
-            width: 100%;
+            z-index: 2;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .quick-row {
             display: grid;
@@ -871,17 +893,17 @@ def _achievement_card_html(ach_row: pd.Series) -> str:
     ach_image = ach_row.get("achievement_image")
     season = html.escape(str(ach_row.get("season_name", "-")))
     name = html.escape(str(ach_row.get("achievement_name", "-")))
-    image_html = "<div class='panel-muted' style='padding:8px;'>No image</div>"
+    image_html = "<div class='panel-muted' style='font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;'>No image</div>"
     if ach_image:
         image_html = f"<img src='data:image/png;base64,{base64.b64encode(ach_image.read_bytes()).decode('utf-8')}'>"
     return (
         "<div class='achievement-inline-item'>"
-        f"<div class='achievement-season'>{season}</div>"
         "<div class='achievement-image-wrap'>"
+        f"<div class='achievement-season'>{season}</div>"
         f"{image_html}"
         f"<span class='achievement-tier achievement-tier-icon {ach_tier_class}'>{html.escape(ach_tier[:1])}</span>"
-        "</div>"
         f"<span class='achievement-inline-name'>{name}</span>"
+        "</div>"
         "</div>"
     )
 
