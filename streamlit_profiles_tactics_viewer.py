@@ -972,6 +972,26 @@ def normalize_competition_name(competition: str | None) -> str | None:
     return re.sub(r"\b(S\d+)\.\d+\b", r"\1", str(competition))
 
 
+def _sanitize_competition_value(value: object) -> object:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return value
+
+    text = str(value).strip()
+    if not text:
+        return text
+
+    if "<" in text and ">" in text:
+        rank_match = re.search(r'class=["\']rank-name["\']>([^<]+)<', text, flags=re.IGNORECASE)
+        if rank_match:
+            text = rank_match.group(1).strip()
+        else:
+            text = re.sub(r"data:image/[^\"']+", "", text, flags=re.IGNORECASE)
+            text = re.sub(r"<[^>]+>", " ", text)
+            text = " ".join(html.unescape(text).split())
+
+    return text
+
+
 def add_grouped_competition_column(df: pd.DataFrame, source_col: str = "competition") -> pd.DataFrame:
     grouped_df = df.copy()
     if source_col not in grouped_df.columns:
@@ -1015,6 +1035,10 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         ["kills", "deaths", "mvps", "kpd", "accuracy_pct", "hs_pct", "damage", "rounds_played"],
     )
     tactics = _coerce_numeric(tactics, ["wins", "losses", "total_rounds", "win_rate_pct"])
+    if "competition" in players.columns:
+        players["competition"] = players["competition"].apply(_sanitize_competition_value)
+    if "competition" in tactics.columns:
+        tactics["competition"] = tactics["competition"].apply(_sanitize_competition_value)
     players = add_grouped_competition_column(players, source_col="competition")
     tactics = add_grouped_competition_column(tactics, source_col="competition")
 
