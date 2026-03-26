@@ -1780,6 +1780,17 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     tactic_perf = tactic_perf.merge(family_map, on=["tactic_name", "map", "side"], how="left")
     tactic_perf["family"] = tactic_perf["family"].fillna("Unspecified")
 
+    ten_day_cutoff = pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=10)
+    active_tactic_keys = (
+        df.loc[df["date"] >= ten_day_cutoff, ["tactic_name", "map", "side"]]
+        .drop_duplicates()
+    )
+    if active_tactic_keys.empty:
+        st.warning("No tactics have been used in the last 10 days for the selected filters.")
+        return
+    df = df.merge(active_tactic_keys, on=["tactic_name", "map", "side"], how="inner")
+    tactic_perf = tactic_perf.merge(active_tactic_keys, on=["tactic_name", "map", "side"], how="inner")
+
     round_rows: list[dict[str, object]] = []
     for row in df.sort_values(["date", "match_id", "tactic_name"]).itertuples(index=False):
         row_dict = row._asdict()
@@ -1838,40 +1849,47 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     }
     tactic_perf["confidence_badge"] = tactic_perf["confidence"].map(confidence_badges).fillna("⚪ Too little sample")
 
+    eco_context_bonus = 6.0
+    tactic_perf["context_adjusted_win_pct"] = tactic_perf["win_pct"] + tactic_perf["family"].eq("Eco").astype(float) * eco_context_bonus
+
     def _action_label(row: pd.Series, avg_win: float) -> str:
-        if row["win_pct"] >= 58 and row["times_used"] >= 10:
+        adjusted_win = row["context_adjusted_win_pct"]
+        if adjusted_win >= 58 and row["times_used"] >= 10:
             return "Keep"
-        if row["win_pct"] < 45 and row["times_used"] >= 10:
+        if adjusted_win < 45 and row["times_used"] >= 10:
             return "Drop"
-        if row["win_pct"] >= 60 and row["times_used"] < 6:
+        if adjusted_win >= 60 and row["times_used"] < 6:
             return "Test More"
-        if row["usage_pct"] > 12 and row["win_pct"] < avg_win:
+        if row["usage_pct"] > 12 and adjusted_win < avg_win:
             return "Rework"
-        if row["usage_pct"] < 8 and row["win_pct"] >= 58 and row["times_used"] >= 6:
+        if row["usage_pct"] < 8 and adjusted_win >= 58 and row["times_used"] >= 6:
             return "Use More"
         return "Monitor"
 
-    overall_avg_win = float(tactic_perf["win_pct"].mean())
+    overall_avg_win = float(tactic_perf["context_adjusted_win_pct"].mean())
     tactic_perf["recommended_action"] = tactic_perf.apply(lambda r: _action_label(r, overall_avg_win), axis=1)
 
     def _reason_label(row: pd.Series) -> str:
-        if row["times_used"] >= 12 and row["win_pct"] < 45:
+        adjusted_win = row["context_adjusted_win_pct"]
+        if row["times_used"] >= 12 and adjusted_win < 45:
             return "Poor overall in strong sample"
         if row["trend"] == "Falling" and row["last_10_usage_win_pct"] < row["win_pct"]:
             return "Poor recent form"
-        if row["usage_pct"] >= 12 and row["win_pct"] < overall_avg_win:
+        if row["usage_pct"] >= 12 and adjusted_win < overall_avg_win:
             return "Overused, low return"
         if pd.notna(row.get("vs S tier win %")) and float(row.get("vs S tier win %", 0)) < 45:
             return "Bad vs strong teams"
-        if row["round_share_pct"] >= 30 and row["win_pct"] < 50:
+        if row["round_share_pct"] >= 30 and adjusted_win < 50:
             return "Map-side liability"
         if row["times_used"] < 8:
             return "Low sample volatility"
+        if row["family"] == "Eco" and row["win_pct"] < row["context_adjusted_win_pct"]:
+            return "Eco context considered (back-foot rounds)"
         return "Monitor trend"
 
     tactic_perf["reason"] = tactic_perf.apply(_reason_label, axis=1)
     tactic_perf["urgency_score"] = (
-        (50 - tactic_perf["win_pct"]).clip(lower=0) * 1.3
+        (50 - tactic_perf["context_adjusted_win_pct"]).clip(lower=0) * 1.3
         + tactic_perf["usage_pct"] * 0.9
         + tactic_perf["times_used"].clip(upper=30) * 0.5
     ).round(1)
@@ -1896,7 +1914,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     summary_keys = tactic_perf.apply(lambda r: f'{r["map"]} | {r["side"]} | {r["tactic_name"]}', axis=1)
     summary_key_df = tactic_perf.assign(summary_key=summary_keys)
 
-    ten_day_cutoff = pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=10)
     recent_usage_keys = (
         df.loc[df["date"] >= ten_day_cutoff, ["tactic_name", "map", "side"]]
         .drop_duplicates()
@@ -1943,6 +1960,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         )
 
     kpi_cols = st.columns(5)
+    st.caption(f"Eco tactics are context-adjusted by +{eco_context_bonus:.0f}pp in decision scoring to reflect back-foot round economics.")
     with kpi_cols[0]:
         st.markdown(
             f"""
@@ -2033,6 +2051,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
             "net_rounds": "Net rounds",
             "usage_pct": "Usage %",
             "last_10_usage_win_pct": "Last 10 Win %",
+            "context_adjusted_win_pct": "Context Win %",
             "vs S tier win %": "vs S",
             "vs A tier win %": "vs A",
             "vs B tier win %": "vs B",
@@ -2041,7 +2060,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
             "recommended_action": "Action",
         }
     )
-    perf_cols = ["Tactic", "Map", "Side", "Uses", "Win %", "Last 10 Win %", "Net rounds", "Usage %", "vs S", "vs A", "vs B", "vs C", "Confidence", "Action"]
+    perf_cols = ["Tactic", "Map", "Side", "Uses", "Win %", "Context Win %", "Last 10 Win %", "Net rounds", "Usage %", "vs S", "vs A", "vs B", "vs C", "Confidence", "Action"]
     st.dataframe(perf_table[perf_cols].sort_values(["Win %", "Uses"], ascending=[False, False]), use_container_width=True, hide_index=True)
 
     selected_key = st.selectbox("Selected tactic summary", summary_options, key="selected_tactic_summary")
