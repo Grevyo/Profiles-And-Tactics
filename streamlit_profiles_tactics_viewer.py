@@ -110,29 +110,47 @@ def _inject_styles() -> None:
         }
         .top-identity-grid {
             display: grid;
-            grid-template-columns: 170px 1fr 1.35fr;
-            gap: 14px;
+            grid-template-columns: 1.8fr 0.95fr;
+            gap: 12px;
             align-items: stretch;
         }
-        .portrait-frame {
-            border: 1px solid rgba(104, 143, 210, 0.6);
-            border-radius: 14px;
-            padding: 8px;
-            background: linear-gradient(180deg, rgba(41, 59, 97, 0.35), rgba(15, 21, 34, 0.65));
-            box-shadow: 0 0 18px rgba(58, 102, 189, 0.24);
-        }
-        .portrait-strip {
-            margin-top: 8px;
-            font-size: 0.74rem;
-            color: #b5c3e2;
-            display: grid;
-            gap: 3px;
-        }
-        .identity-card {
+        .identity-strip {
             border: 1px solid rgba(151, 166, 195, 0.35);
             border-radius: 12px;
-            padding: 14px;
+            padding: 12px;
             background: rgba(14, 20, 32, 0.78);
+        }
+        .identity-strip-main {
+            display: grid;
+            grid-template-columns: 110px 1fr;
+            gap: 12px;
+            align-items: center;
+        }
+        .portrait-frame {
+            border: 1px solid rgba(104, 143, 210, 0.5);
+            border-radius: 10px;
+            padding: 6px;
+            background: linear-gradient(180deg, rgba(41, 59, 97, 0.25), rgba(15, 21, 34, 0.5));
+        }
+        .portrait-strip {
+            margin-top: 4px;
+            font-size: 0.7rem;
+            color: #a8b8da;
+            display: grid;
+            gap: 2px;
+        }
+        .team-line {
+            color: #c9d5ef;
+            margin-top: 3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .quick-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
         }
         .profile-label {
             font-size: 0.73rem;
@@ -149,19 +167,19 @@ def _inject_styles() -> None:
         }
         .identity-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 8px;
             margin-top: 10px;
         }
         .identity-kv {
             border: 1px solid rgba(151, 166, 195, 0.28);
             border-radius: 10px;
-            padding: 8px 10px;
+            padding: 7px 9px;
             background: rgba(18, 25, 40, 0.72);
-            min-height: 64px;
+            min-height: 54px;
         }
         .identity-kv-value {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #f5f7fb;
             font-weight: 800;
             line-height: 1.15;
@@ -169,7 +187,7 @@ def _inject_styles() -> None:
         .hero-grevscore {
             border: 1px solid rgba(118, 168, 255, 0.45);
             border-radius: 14px;
-            padding: 14px;
+            padding: 12px;
             background: linear-gradient(120deg, rgba(54, 87, 155, 0.45) 0%, rgba(35, 57, 103, 0.2) 100%);
             box-shadow: 0 0 18px rgba(54, 116, 255, 0.22);
             text-align: center;
@@ -194,7 +212,7 @@ def _inject_styles() -> None:
         }
         .gauge-score {
             color: #f5f8ff;
-            font-size: 2.55rem;
+            font-size: 2.05rem;
             font-weight: 900;
             line-height: 1.05;
             margin-bottom: 4px;
@@ -241,11 +259,12 @@ def _inject_styles() -> None:
             margin-top: 2px;
         }
         .section-label {
-            font-size: 0.78rem;
+            font-size: 0.82rem;
             color: #9eb0d4;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            margin-top: 8px;
+            margin-top: 12px;
+            margin-bottom: 5px;
         }
         .filter-shell {
             border: 1px solid rgba(151, 166, 195, 0.3);
@@ -643,6 +662,14 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     team_logo = _find_image(image_index, "team", first_row.get("my_team"))
 
     metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
+    rank_scope = []
+    for player_name, rows in player_df.groupby("player"):
+        p_metrics = _calc_player_card_metrics(rows, tactics_df[tactics_df["match_id"].isin(rows["match_id"].unique())])
+        rank_scope.append({"player": player_name, "score": p_metrics["grevscore"]})
+    rank_df = pd.DataFrame(rank_scope).sort_values("score", ascending=False).reset_index(drop=True)
+    team_rank = int(rank_df.index[rank_df["player"] == selected_player][0] + 1) if not rank_df.empty else 1
+    rank_total = max(int(len(rank_df)), 1)
+    percentile = ((rank_total - team_rank) / rank_total) * 100.0
     score_tier = _score_tier_label(metrics["grevscore"])
     gauge_pct = min(max(((metrics["grevscore"] - 0.75) / (1.5 - 0.75)) * 100.0, 0.0), 100.0)
     gauge_angle = -90 + (gauge_pct * 1.8)
@@ -655,17 +682,53 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     avg_hs = float(filtered_players["hs_pct"].mean()) if not filtered_players.empty else 0.0
     avg_kpd = float(filtered_players["kpd"].mean()) if not filtered_players.empty else 0.0
 
-    stat_chips = [
+    stat_chips_overview = [
+        _build_stat_chip("Rating", f'{metrics["grevscore"]:.2f}', metrics["grevscore"], 0.65, 1.35),
         _build_stat_chip("Matches", f'{int(metrics["matches"])}', metrics["matches"], 3, 16),
         _build_stat_chip("K/D", f'{metrics["kd"]:.2f}', metrics["kd"], 0.7, 1.3),
         _build_stat_chip("KDA", f'{metrics["kda"]:.2f}', metrics["kda"], 1.0, 2.2),
-        _build_stat_chip("K / D / A", f"{kills}/{deaths}/{assists}", metrics["kda"], 1.0, 2.2),
+    ]
+    stat_chips_damage = [
         _build_stat_chip("DPM", f'{metrics["dpm"]:.1f}', metrics["dpm"], 1800, 3600),
-        _build_stat_chip("Acc%", f'{metrics["acc"]:.1f}%', metrics["acc"], 45, 80),
         _build_stat_chip("KPM", f'{metrics["kpm"]:.2f}', metrics["kpm"], 0.45, 1.0),
         _build_stat_chip("Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
-        _build_stat_chip("Avg KPD", f"{avg_kpd:.2f}", avg_kpd, 0.8, 1.5),
     ]
+    stat_chips_efficiency = [
+        _build_stat_chip("Acc%", f'{metrics["acc"]:.1f}%', metrics["acc"], 45, 80),
+        _build_stat_chip("Avg KPD", f"{avg_kpd:.2f}", avg_kpd, 0.8, 1.5),
+        _build_stat_chip("HS%", f"{avg_hs:.1f}%", avg_hs, 24, 55),
+    ]
+    side_split = "-"
+    if not filtered_tactics.empty and "side" in filtered_tactics.columns:
+        side_summary = (
+            filtered_tactics.groupby("side", as_index=False)[["wins", "losses"]].sum().sort_values("wins", ascending=False)
+        )
+        if not side_summary.empty:
+            s = side_summary.iloc[0]
+            side_split = f'{s["side"]}: {int(s["wins"])}W-{int(s["losses"])}L'
+    best_map = (
+        filtered_players.groupby("map")["kills"].sum().sort_values(ascending=False).index[0]
+        if "map" in filtered_players.columns and not filtered_players.empty
+        else "-"
+    )
+    stat_chips_context = [
+        _build_stat_chip("Best Map", best_map, float(metrics["kd"]), 0.7, 1.3),
+        _build_stat_chip("Record", f"{kills}/{deaths}/{assists}", metrics["kda"], 1.0, 2.2),
+        _build_stat_chip("Side Split", side_split, float(metrics["kpm"]), 0.45, 1.0),
+        _build_stat_chip("Team Rank", f"#{team_rank}/{rank_total}", percentile, 0, 100),
+    ]
+
+    player_ach = achievements_df[
+        achievements_df["player"].astype(str).str.contains(selected_player, case=False, na=False)
+    ].copy()
+    featured_achievement = player_ach.iloc[0] if not player_ach.empty else None
+    featured_achievement_image = None
+    if featured_achievement is not None:
+        featured_achievement_image = _find_achievement_image(
+            image_index,
+            featured_achievement.get("achievement_link"),
+            featured_achievement.get("achievement_name"),
+        )
     team_logo_html = ""
     if team_logo:
         team_logo_html = (
@@ -675,36 +738,49 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         f"""
         <div class="panel-card">
             <div class="top-identity-grid">
-                <div class="portrait-frame">
-                    {"<img class='player-headshot' src='data:image/png;base64," + base64.b64encode(player_image.read_bytes()).decode("utf-8") + "'>" if player_image else "<div class='panel-muted'>No portrait found.</div>"}
-                    <div class="portrait-strip">
-                        <div>Team: <strong>{first_row.get("my_team", "-")}</strong></div>
-                        <div>Matches: <strong>{int(metrics["matches"])}</strong></div>
-                        <div>Form: <strong>{score_tier}</strong></div>
+                <div class="identity-strip">
+                    <div class="identity-strip-main">
+                        <div class="portrait-frame">
+                            {"<img class='player-headshot' src='data:image/png;base64," + base64.b64encode(player_image.read_bytes()).decode("utf-8") + "'>" if player_image else "<div class='panel-muted'>No portrait found.</div>"}
+                            <div class="portrait-strip">
+                                <div>Rating note: <strong>{score_tier}</strong></div>
+                                <div>Percentile: <strong>{percentile:.0f}th</strong></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="profile-label">Player Identity</div>
+                            <div class="profile-name">{selected_player}</div>
+                            <div class="team-line">{team_logo_html}<span>{first_row.get("my_team", "-")}</span></div>
+                            <div class="panel-muted">Role: Fragger · Country: - · Handedness: -</div>
+                        </div>
                     </div>
-                </div>
-                <div class="identity-card">
-                    <div class="profile-label">Player Profile</div>
-                    <div class="profile-name">{selected_player}</div>
-                    <div class="panel-muted">{team_logo_html}<span>{first_row.get("my_team", "-")}</span></div>
-                    <div class="identity-grid">
+                    <div class="quick-row">
                         <div class="identity-kv">
-                            <div class="profile-label">Record</div>
-                            <div class="identity-kv-value">{kills}/{deaths}/{assists}</div>
+                            <div class="profile-label">Rating</div>
+                            <div class="identity-kv-value">{metrics["grevscore"]:.2f}</div>
+                        </div>
+                        <div class="identity-kv">
+                            <div class="profile-label">Matches</div>
+                            <div class="identity-kv-value">{int(metrics["matches"])}</div>
                         </div>
                         <div class="identity-kv">
                             <div class="profile-label">Best Map</div>
-                            <div class="identity-kv-value">{filtered_players.groupby("map")["kills"].sum().sort_values(ascending=False).index[0] if "map" in filtered_players.columns and not filtered_players.empty else "-"}</div>
+                            <div class="identity-kv-value">{best_map}</div>
                         </div>
                         <div class="identity-kv">
-                            <div class="profile-label">Latest Event</div>
-                            <div class="identity-kv-value">{first_row.get("competition", "-")}</div>
+                            <div class="profile-label">Achievement</div>
+                            <div class="identity-kv-value">{featured_achievement.get("achievement_tier", "-") if featured_achievement is not None else "-"}</div>
                         </div>
+                    </div>
+                    <div class="team-line" style="margin-top:8px;">
+                        {("<img style='width:36px;border-radius:6px;' src='data:image/png;base64," + base64.b64encode(featured_achievement_image.read_bytes()).decode("utf-8") + "'>") if featured_achievement_image else ""}
+                        <span>{featured_achievement.get("achievement_name", "No highlighted achievement") if featured_achievement is not None else "No highlighted achievement"}</span>
+                        <span class="panel-muted">Season: {featured_achievement.get("season_name", "-") if featured_achievement is not None else "-"}</span>
                     </div>
                 </div>
                 <div class="hero-grevscore">
-                    <div class="hero-grevscore-label">GrevScore</div>
-                    <div class="hero-grevscore-tier">{score_tier}</div>
+                    <div class="hero-grevscore-label">Rating</div>
+                    <div class="hero-grevscore-tier">{score_tier} · {percentile:.0f}th percentile</div>
                     <div class="gauge-wrap">
                         <div class="gauge-score">{metrics["grevscore"]:.2f}</div>
                         <div class="gauge-arc"></div>
@@ -717,11 +793,29 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                         <span>Good</span>
                         <span>Star</span>
                     </div>
+                    <div class="panel-muted" style="margin-top:6px;">
+                        {"Side note: Below average" if metrics["grevscore"] < 0.95 else "Side note: Above average"}
+                    </div>
+                    <div class="panel-muted">
+                        Team rank #{team_rank}/{rank_total}
+                    </div>
                 </div>
             </div>
-            <div class="section-label">Core Performance</div>
+            <div class="section-label">Overview</div>
             <div class="stats-grid">
-                {"".join(stat_chips)}
+                {"".join(stat_chips_overview)}
+            </div>
+            <div class="section-label">Damage / Output</div>
+            <div class="stats-grid">
+                {"".join(stat_chips_damage)}
+            </div>
+            <div class="section-label">Accuracy / Efficiency</div>
+            <div class="stats-grid">
+                {"".join(stat_chips_efficiency)}
+            </div>
+            <div class="section-label">Context</div>
+            <div class="stats-grid">
+                {"".join(stat_chips_context)}
             </div>
         </div>
         """,
@@ -820,9 +914,6 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         st.dataframe(top_tactics, use_container_width=True, hide_index=True)
 
     st.subheader("Achievements")
-    player_ach = achievements_df[
-        achievements_df["player"].astype(str).str.contains(selected_player, case=False, na=False)
-    ].copy()
     if player_ach.empty:
         st.info("No achievements found for this player.")
     else:
