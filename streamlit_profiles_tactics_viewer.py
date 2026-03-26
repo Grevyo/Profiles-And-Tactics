@@ -370,6 +370,34 @@ def _render_global_branding() -> None:
     st.markdown("---")
 
 
+def _image_to_data_uri(image_path: Path) -> str:
+    return f"data:image/{image_path.suffix.lstrip('.').lower()};base64,{base64.b64encode(image_path.read_bytes()).decode('utf-8')}"
+
+
+def _render_integrated_branding(context_label: str) -> None:
+    logos: list[str] = []
+    if MEDISPORTS_LOGO.exists():
+        logos.append(
+            f'<span style="display:flex;align-items:center;gap:8px;"><img src="{_image_to_data_uri(MEDISPORTS_LOGO)}" '
+            'style="height:34px;border-radius:8px;" alt="Medisports logo"><span>Medisports</span></span>'
+        )
+    if CPL_LOGO.exists():
+        logos.append(
+            f'<span style="display:flex;align-items:center;gap:8px;"><img src="{_image_to_data_uri(CPL_LOGO)}" '
+            'style="height:34px;border-radius:8px;" alt="CPL logo"><span>CPL</span></span>'
+        )
+    if logos:
+        st.markdown(
+            f"""
+            <div class="panel-card" style="padding:10px 14px;margin-top:4px;">
+                <div class="panel-muted" style="margin-bottom:8px;">{context_label}</div>
+                <div style="display:flex;gap:18px;flex-wrap:wrap;color:#dce7ff;font-weight:700;">{''.join(logos)}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
 def _normalize_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", str(value).lower())
 
@@ -640,6 +668,7 @@ def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame)
 def _home() -> None:
     st.title("Grevs CPL Pages")
     _render_global_branding()
+    _render_integrated_branding("League + Team identity")
     st.write("Welcome! Choose a page below.")
 
     col1, col2, col3 = st.columns(3)
@@ -739,6 +768,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     _inject_styles()
     st.title("HLTV CPL Profile Viewer")
     _render_global_branding()
+    _render_integrated_branding("Player profiles powered by Medisports x CPL")
     if st.button("← Back to Home"):
         st.session_state["page"] = "home"
         st.rerun()
@@ -1089,6 +1119,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     _inject_styles()
     st.title("Teams Tactical Breakdown")
     _render_global_branding()
+    _render_integrated_branding("Tactical performance context")
     if st.button("← Back to Home"):
         st.session_state["page"] = "home"
         st.rerun()
@@ -1385,6 +1416,7 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
     _inject_styles()
     st.title("Medisports Vs Breakdown")
     _render_global_branding()
+    _render_integrated_branding("Head-to-head analysis: Medisports in CPL")
     if st.button("← Back to Home"):
         st.session_state["page"] = "home"
         st.rerun()
@@ -1460,7 +1492,7 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
 
     chart_col_1, chart_col_2 = st.columns(2)
     with chart_col_1:
-        st.markdown("#### Match Wins by Opponent")
+        st.markdown("#### Match Wins/Losses by Opponent")
         wins_chart = (
             alt.Chart(vs_summary.sort_values("wins", ascending=False))
             .mark_bar(cornerRadiusEnd=4)
