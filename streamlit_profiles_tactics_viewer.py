@@ -671,6 +671,8 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     tactics = pd.read_csv(TACTICS_CSV)
     players = _normalize_match_id_column(players)
     tactics = _normalize_match_id_column(tactics)
+    if "tactic_name" in tactics.columns:
+        tactics["tactic_name"] = tactics["tactic_name"].apply(_normalize_tactic_name)
 
     # Drop accidental empty trailing columns from CSV export.
     tactics = tactics.loc[:, ~tactics.columns.str.contains(r"^Unnamed")]
@@ -744,6 +746,18 @@ def _multiselect_filter(label: str, options: list[str], key: str) -> list[str]:
     summary = "All" if not selected else f"{len(selected)} selected"
     st.markdown(f'<div class="panel-muted">{label}: {summary}</div>', unsafe_allow_html=True)
     return active
+
+
+def _normalize_tactic_name(value: str) -> str:
+    raw = str(value or "")
+    match = re.match(r"^\s*((?:[\(\[\{<][^)\]}>]+[\)\]}>]\s*)+)(.*)$", raw)
+    if not match:
+        return re.sub(r"\s+", " ", raw).strip()
+
+    tags = re.findall(r"[\(\[\{<][^)\]}>]+[\)\]}>]", match.group(1))
+    remainder = re.sub(r"\s+", " ", match.group(2)).strip()
+    normalized_prefix = "".join(tags)
+    return f"{normalized_prefix} {remainder}".strip()
 
 
 def _expand_tactics_by_round_type(df: pd.DataFrame) -> pd.DataFrame:
@@ -1735,19 +1749,30 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
 
     st.subheader("Map + side split heatmap")
     heatmap_data = tactic_perf.copy()
-    heatmap_data["map_side"] = heatmap_data["map"].astype(str) + " " + heatmap_data["side"].astype(str)
-    heat = (
-        alt.Chart(heatmap_data)
-        .mark_rect()
-        .encode(
-            x=alt.X("map_side:N", title="Map + Side"),
-            y=alt.Y("tactic_name:N", title="Tactic", sort="-x"),
-            color=alt.Color("win_pct:Q", title="Win %", scale=alt.Scale(scheme="redyellowgreen")),
-            tooltip=["tactic_name", "map", "side", "times_used", "win_pct", "round_share_pct"],
-        )
-        .properties(height=420)
+    tactic_order = (
+        heatmap_data.groupby("tactic_name", as_index=False)["times_used"]
+        .sum()
+        .sort_values("times_used", ascending=False)["tactic_name"]
+        .tolist()
     )
-    st.altair_chart(heat, use_container_width=True)
+    side_order = [side for side in ["T", "CT"] if side in heatmap_data["side"].astype(str).unique().tolist()]
+    if not side_order:
+        side_order = sorted(heatmap_data["side"].astype(str).unique().tolist())
+
+    base_heat = alt.Chart(heatmap_data).encode(
+        x=alt.X("map:N", title="Map", sort=alt.SortField("round_share_pct", order="descending"), axis=alt.Axis(labelAngle=-20)),
+        y=alt.Y("tactic_name:N", title="Tactic", sort=tactic_order),
+        column=alt.Column("side:N", title="Side", sort=side_order, spacing=18),
+        tooltip=["tactic_name", "map", "side", "times_used", "win_pct", "round_share_pct"],
+    )
+    heat = base_heat.mark_rect().encode(
+        color=alt.Color("win_pct:Q", title="Win %", scale=alt.Scale(scheme="redyellowgreen", domain=[0, 100]))
+    )
+    labels = base_heat.mark_text(fontSize=10).encode(
+        text=alt.Text("win_pct:Q", format=".0f"),
+        color=alt.condition("datum.win_pct >= 55", alt.value("#111827"), alt.value("#f9fafb")),
+    )
+    st.altair_chart((heat + labels).properties(height=460), use_container_width=True)
 
     st.subheader("Round share vs success")
     scatter = (
