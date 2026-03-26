@@ -22,9 +22,9 @@ PLAYER_CSV = DATA_DIR / "PlayerDataMatser.csv"
 TACTICS_CSV = DATA_DIR / "TacticsDataMaster.csv"
 ACHIEVEMENTS_CSV = DATA_DIR / "Achievements.csv"
 PLAYER_META_CSV_CANDIDATES = (
+    DATA_DIR / "player.csv",
     DATA_DIR / "Player.csv",
     DATA_DIR / "players.csv",
-    DATA_DIR / "player.csv",
 )
 IMAGE_FOLDERS = {
     "competition": "competition_logos",
@@ -38,6 +38,67 @@ APP_ROOT = Path(__file__).parent
 MEDISPORTS_LOGO = APP_ROOT / "team_logos" / "ᴍᴇᴅɪꜱᴘᴏʀᴛꜱ ⓜ.png"
 CPL_LOGO = APP_ROOT / "competition_logos" / "cpl.png"
 TIER_COLOR_MAP = {"S": "#f5c451", "A": "#9c6df6", "B": "#5ea9ff", "C": "#4ed083"}
+COUNTRY_TO_ALPHA2 = {
+    "belarus": "BY",
+    "china": "CN",
+    "japan": "JP",
+    "slovakia": "SK",
+    "greece": "GR",
+    "russia": "RU",
+    "latvia": "LV",
+    "ukraine": "UA",
+    "poland": "PL",
+    "sweden": "SE",
+    "denmark": "DK",
+    "norway": "NO",
+    "finland": "FI",
+    "germany": "DE",
+    "france": "FR",
+    "spain": "ES",
+    "italy": "IT",
+    "portugal": "PT",
+    "united kingdom": "GB",
+    "uk": "GB",
+    "england": "GB",
+    "scotland": "GB",
+    "ireland": "IE",
+    "netherlands": "NL",
+    "belgium": "BE",
+    "austria": "AT",
+    "switzerland": "CH",
+    "czech republic": "CZ",
+    "czechia": "CZ",
+    "romania": "RO",
+    "serbia": "RS",
+    "croatia": "HR",
+    "bosnia and herzegovina": "BA",
+    "slovenia": "SI",
+    "hungary": "HU",
+    "turkey": "TR",
+    "israel": "IL",
+    "kazakhstan": "KZ",
+    "mongolia": "MN",
+    "south korea": "KR",
+    "korea": "KR",
+    "vietnam": "VN",
+    "thailand": "TH",
+    "philippines": "PH",
+    "malaysia": "MY",
+    "singapore": "SG",
+    "indonesia": "ID",
+    "india": "IN",
+    "pakistan": "PK",
+    "australia": "AU",
+    "new zealand": "NZ",
+    "united states": "US",
+    "usa": "US",
+    "canada": "CA",
+    "mexico": "MX",
+    "brazil": "BR",
+    "argentina": "AR",
+    "chile": "CL",
+    "uruguay": "UY",
+}
 
 
 def _inject_styles() -> None:
@@ -172,13 +233,13 @@ def _inject_styles() -> None:
             justify-content: flex-start;
         }
         .achievement-inline-item {
-            width: 112px;
-            height: 136px;
+            width: 102px;
+            height: 124px;
             border: 1px solid rgba(151, 166, 195, 0.34);
             border-radius: 10px;
             background: linear-gradient(180deg, rgba(22, 31, 47, 0.92), rgba(10, 16, 27, 0.94));
             display: block;
-            flex: 0 0 112px;
+            flex: 0 0 102px;
             overflow: hidden;
             box-shadow: inset 0 0 0 1px rgba(9, 13, 21, 0.65);
         }
@@ -244,7 +305,7 @@ def _inject_styles() -> None:
             color: #f5f7fb;
             font-weight: 800;
             line-height: 1.2;
-            font-size: 0.59rem;
+            font-size: 0.54rem;
             letter-spacing: 0.04em;
             text-transform: uppercase;
             text-align: center;
@@ -768,7 +829,7 @@ def _load_player_metadata() -> pd.DataFrame:
     if metadata_path is None:
         return pd.DataFrame()
 
-    metadata = pd.read_csv(metadata_path)
+    metadata = pd.read_csv(metadata_path, sep=None, engine="python")
     metadata.columns = metadata.columns.astype(str).str.strip()
     metadata = metadata.apply(lambda col: col.str.strip() if col.dtype == object else col)
     if metadata.empty:
@@ -795,6 +856,24 @@ def _load_player_metadata() -> pd.DataFrame:
     metadata["player_lookup"] = metadata["player"].astype(str).str.strip().str.casefold()
     metadata = metadata.drop_duplicates(subset=["player_lookup"], keep="last")
     return metadata
+
+
+def _nation_flag_emoji(value: str | None) -> str:
+    nation = str(value or "").strip()
+    if not nation:
+        return ""
+    normalized = nation.casefold()
+    alpha2 = nation.upper() if len(nation) == 2 and nation.isalpha() else COUNTRY_TO_ALPHA2.get(normalized, "")
+    if len(alpha2) != 2 or not alpha2.isalpha():
+        return ""
+    return "".join(chr(127397 + ord(ch)) for ch in alpha2.upper())
+
+
+def _safe_mean(df: pd.DataFrame, column: str, default: float = 0.0) -> float:
+    if column not in df.columns or df.empty:
+        return default
+    value = pd.to_numeric(df[column], errors="coerce").mean()
+    return float(value) if pd.notna(value) else default
 
 
 def _player_meta_value(player_meta: pd.Series | None, key: str, default: str = "-") -> str:
@@ -1307,6 +1386,11 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
             color = "#31d17b" if score >= 70 else ("#f0be4f" if score >= 45 else "#ff6c7a")
             form_blocks.append(f"<div class='form-dot' style='background:{color};'></div>")
     form_block_html = "".join(form_blocks) if form_blocks else "<div class='panel-muted'>No recent form data.</div>"
+    player_role = _player_meta_value(player_meta_row, "role", "Fragger")
+    player_nation = _player_meta_value(player_meta_row, "nation")
+    nation_flag = _nation_flag_emoji(player_nation)
+    nation_with_flag = f"{nation_flag} {player_nation}".strip() if player_nation != "-" else player_nation
+    handedness = _player_meta_value(player_meta_row, "handedness")
 
     st.markdown(
         f"""
@@ -1320,7 +1404,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                         <div>
                             <div class="profile-label">Player Identity</div>
                             <div class="profile-name">{selected_player}</div>
-                            <div class="identity-meta-line">{team_logo_html}<span>{first_row.get("my_team", "-")} · {_player_meta_value(player_meta_row, "role", "Fragger")} · {_player_meta_value(player_meta_row, "nation")} · {_player_meta_value(player_meta_row, "handedness")}</span></div>
+                            <div class="identity-meta-line">{team_logo_html}<span>{first_row.get("my_team", "-")} · {player_role} · {nation_with_flag} · {handedness}</span></div>
                         </div>
                     </div>
                     <div class="section-label">Achievements</div>
@@ -1429,12 +1513,16 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 
     comparison_metrics = pd.DataFrame(
         [
-            {"metric": "Rating", "player": metrics["grevscore"], "team_avg": team_scope["kpd"].mean()},
-            {"metric": "K/D", "player": metrics["kd"], "team_avg": team_scope["kpd"].mean()},
-            {"metric": "Impact", "player": metrics["impact"], "team_avg": team_scope["impact_score"].mean()},
-            {"metric": "HS%", "player": avg_hs, "team_avg": team_scope["hs_pct"].mean()},
-            {"metric": "Acc%", "player": avg_acc, "team_avg": team_scope["accuracy_pct"].mean()},
-            {"metric": "DPM", "player": metrics["dpm"], "team_avg": (team_scope["damage"] / team_scope["rounds_played"].replace(0, 1)).mean()},
+            {"metric": "Rating", "player": metrics["grevscore"], "team_avg": _safe_mean(team_scope, "kpd")},
+            {"metric": "K/D", "player": metrics["kd"], "team_avg": _safe_mean(team_scope, "kpd")},
+            {
+                "metric": "Impact",
+                "player": metrics["impact"],
+                "team_avg": _safe_mean(team_scope, "impact_score", _safe_mean(team_scope, "impact")),
+            },
+            {"metric": "HS%", "player": avg_hs, "team_avg": _safe_mean(team_scope, "hs_pct")},
+            {"metric": "Acc%", "player": avg_acc, "team_avg": _safe_mean(team_scope, "accuracy_pct")},
+            {"metric": "DPM", "player": metrics["dpm"], "team_avg": _safe_mean(team_scope, "dpm")},
         ]
     ).melt("metric", var_name="group", value_name="value")
     comparison_metrics["group"] = comparison_metrics["group"].map({"player": selected_player, "team_avg": "Team Avg"})
