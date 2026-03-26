@@ -2711,20 +2711,67 @@ def _medisports_vs_breakdown(
             )
             st.altair_chart(fallback_chart, use_container_width=True)
     with chart_col_2:
-        st.markdown(f"#### Win rate by opponent (min {min_matches})")
-        wr_data = vs_summary[vs_summary["matches"] >= min_matches]
-        wr_chart = (
-            alt.Chart(wr_data)
-            .mark_bar()
-            .encode(
-                x=alt.X("opponent_team:N", sort="-y", title="Opponent"),
-                y=alt.Y("win_rate_pct:Q", title="Win rate %"),
-                color=alt.Color("matches:Q", title="Matches", scale=alt.Scale(scheme="blues")),
-                tooltip=["opponent_team", "matches", "record", "win_rate_pct", "round_diff"],
+        st.markdown("#### Matchup strength (Win/Lose)")
+        wl_data = (
+            vs_summary[vs_summary["matches"] >= min_matches]
+            .assign(
+                match_diff=lambda d: d["wins"] - d["losses"],
+                win_loss_per_match=lambda d: ((d["wins"] - d["losses"]) / d["matches"].clip(lower=1)).round(2),
             )
-            .properties(height=380)
+            .sort_values("match_diff", ascending=False)
         )
-        st.altair_chart(wr_chart, use_container_width=True)
+        if go is not None:
+            wrapped_labels = []
+            wrap_width = 26
+            for label in wl_data["opponent_team"].astype(str):
+                wrapped_labels.append("<br>".join(textwrap.wrap(label, width=wrap_width, break_long_words=False)) or label)
+
+            bar_height = 30
+            min_height = 340
+            chart_height = max(min_height, len(wl_data) * bar_height + 80)
+            longest_label = max((len(name) for name in wl_data["opponent_team"].astype(str)), default=0)
+            left_margin = min(420, max(170, 80 + longest_label * 6))
+
+            wl_chart = go.Figure(
+                go.Bar(
+                    x=wl_data["match_diff"],
+                    y=wrapped_labels,
+                    orientation="h",
+                    marker_color=["#44c06f" if value >= 0 else "#e85c6b" for value in wl_data["match_diff"]],
+                    customdata=wl_data[["opponent_team", "record", "matches", "win_loss_per_match"]],
+                    hovertemplate=(
+                        "<b>%{customdata[0]}</b><br>"
+                        "Record: %{customdata[1]}<br>"
+                        "Matches: %{customdata[2]}<br>"
+                        "Win/Lose diff: %{x:+d}<br>"
+                        "Win/Lose diff / match: %{customdata[3]:+.2f}<extra></extra>"
+                    ),
+                )
+            )
+            wl_chart.update_layout(
+                height=chart_height,
+                margin=dict(l=left_margin, r=20, t=20, b=45),
+                bargap=0.22,
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+            )
+            wl_chart.update_yaxes(automargin=True, showticklabels=True, title_text="Opponent", tickfont=dict(size=12))
+            wl_chart.update_xaxes(title_text="Win/Lose differential", zeroline=True, zerolinewidth=1)
+            st.plotly_chart(wl_chart, use_container_width=True)
+        else:
+            st.info("Plotly is not installed, showing a fallback chart.")
+            wl_fallback_chart = (
+                alt.Chart(wl_data)
+                .mark_bar()
+                .encode(
+                    x=alt.X("match_diff:Q", title="Win/Lose differential"),
+                    y=alt.Y("opponent_team:N", sort="-x", title="Opponent"),
+                    color=alt.condition(alt.datum.match_diff >= 0, alt.value("#44c06f"), alt.value("#e85c6b")),
+                    tooltip=["opponent_team", "record", "matches", "wins", "losses", "match_diff", "win_loss_per_match"],
+                )
+                .properties(height=max(340, len(wl_data) * 30))
+            )
+            st.altair_chart(wl_fallback_chart, use_container_width=True)
 
     st.markdown("#### Opponent × Map heatmap")
     map_summary = (
