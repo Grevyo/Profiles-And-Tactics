@@ -1213,7 +1213,11 @@ def _build_match_level_results(tactics_df: pd.DataFrame) -> pd.DataFrame:
     )
     results["round_diff"] = results["round_wins"] - results["round_losses"]
     results["match_result"] = results["round_diff"].apply(lambda x: "Win" if x > 0 else ("Loss" if x < 0 else "Draw"))
-    return match_meta.merge(results, on="match_id", how="inner")
+    merged = match_meta.merge(results, on="match_id", how="inner")
+    for col in match_cols:
+        if col not in merged.columns:
+            merged[col] = pd.NA
+    return merged
 
 
 def _apply_shared_filters(
