@@ -13,23 +13,23 @@ from pathlib import Path
 import re
 import textwrap
 
-import altair as alt
 import pandas as pd
 import streamlit as st
 
 
-def _load_plotly_graph_objects():
-    """Load Plotly graph objects when available, otherwise return None."""
+def _load_plotly_modules():
+    """Load Plotly modules when available, otherwise return (None, None)."""
     if importlib.util.find_spec("plotly.graph_objects") is None:
-        return None
+        return None, None
     try:
         import plotly.graph_objects as graph_objects
+        from plotly.subplots import make_subplots as subplot_builder
     except Exception:
-        return None
-    return graph_objects
+        return None, None
+    return graph_objects, subplot_builder
 
 
-go = _load_plotly_graph_objects()
+go, make_subplots = _load_plotly_modules()
 
 st.set_page_config(page_title="Grevs CPL Pages", layout="wide")
 
@@ -115,6 +115,53 @@ COUNTRY_TO_ALPHA2 = {
     "chile": "CL",
     "uruguay": "UY",
 }
+
+PLOTLY_FONT_COLOR = "#dbe4f0"
+PLOTLY_GRID_COLOR = "rgba(157, 167, 189, 0.16)"
+PLOTLY_BG_COLOR = "rgba(0, 0, 0, 0)"
+PLOTLY_PANEL_BG_COLOR = "rgba(12, 18, 29, 0.74)"
+
+
+def _render_plotly_unavailable() -> None:
+    st.warning("Plotly is unavailable in this environment. Install `plotly` to render dashboard charts.")
+
+
+def _wrap_labels(labels: pd.Series, width: int = 26) -> list[str]:
+    wrapped_labels = []
+    for label in labels.astype(str):
+        wrapped_labels.append("<br>".join(textwrap.wrap(label, width=width, break_long_words=False)) or label)
+    return wrapped_labels
+
+
+def _apply_plotly_dark_style(fig, *, height: int | None = None, margin: dict | None = None, hovermode: str = "closest"):
+    if height is not None:
+        fig.update_layout(height=height)
+    fig.update_layout(
+        margin=margin or dict(l=80, r=24, t=48, b=56),
+        paper_bgcolor=PLOTLY_BG_COLOR,
+        plot_bgcolor=PLOTLY_PANEL_BG_COLOR,
+        font=dict(color=PLOTLY_FONT_COLOR, size=12),
+        hoverlabel=dict(bgcolor="#0f1727", bordercolor="#243146", font=dict(color="#f5f7fb", size=12)),
+        legend=dict(font=dict(size=11), orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hovermode=hovermode,
+    )
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor=PLOTLY_GRID_COLOR,
+        zerolinecolor="rgba(157, 167, 189, 0.24)",
+        automargin=True,
+        tickfont=dict(size=11),
+        title_font=dict(size=12),
+    )
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor=PLOTLY_GRID_COLOR,
+        zerolinecolor="rgba(157, 167, 189, 0.24)",
+        automargin=True,
+        tickfont=dict(size=11),
+        title_font=dict(size=12),
+    )
+    return fig
 
 
 def _inject_styles() -> None:
@@ -1540,33 +1587,37 @@ def _hltv_profile_view(
         .sort_values("date")
         .copy()
     )
-    if not recent_window.empty:
+    if not recent_window.empty and go is not None:
         recent_window["match_index"] = range(1, len(recent_window) + 1)
         recent_window["rating"] = recent_window["kpd"].fillna(0.0)
         recent_window["wins"] = recent_window["wins"] if "wins" in recent_window.columns else 0
         recent_window["losses"] = recent_window["losses"] if "losses" in recent_window.columns else 0
         recent_window["result"] = recent_window["wins"].fillna(0) > recent_window["losses"].fillna(0)
-        trend_chart = (
-            alt.Chart(recent_window)
-            .mark_line(point=True, strokeWidth=2.4)
-            .encode(
-                x=alt.X("match_index:Q", title="Recent matches"),
-                y=alt.Y("rating:Q", title="Rating", scale=alt.Scale(zero=False)),
-                color=alt.value("#63b8ff"),
-                tooltip=["date:T", "map:N", "opponent_team:N", "rating:Q", "kpd:Q"],
+        trend_chart = go.Figure()
+        trend_chart.add_trace(
+            go.Scatter(
+                x=recent_window["match_index"],
+                y=recent_window["rating"],
+                mode="lines+markers",
+                line=dict(color="#63b8ff", width=2.4),
+                marker=dict(
+                    size=9,
+                    color=recent_window["result"].map({True: "#31d17b", False: "#ff6c7a"}),
+                    line=dict(width=0),
+                ),
+                customdata=recent_window[["date", "map", "opponent_team", "wins", "losses", "kpd"]],
+                hovertemplate=(
+                    "Match: %{x}<br>Rating: %{y:.2f}<br>Date: %{customdata[0]}<br>"
+                    "Map: %{customdata[1]}<br>Opponent: %{customdata[2]}<br>"
+                    "W-L: %{customdata[3]}-%{customdata[4]}<br>K/D: %{customdata[5]:.2f}<extra></extra>"
+                ),
+                showlegend=False,
             )
-            .properties(height=250, title="Recent Form (Last 20)")
         )
-        trend_points = (
-            alt.Chart(recent_window)
-            .mark_circle(size=68)
-            .encode(
-                x="match_index:Q",
-                y="rating:Q",
-                color=alt.condition("datum.result", alt.value("#31d17b"), alt.value("#ff6c7a")),
-                tooltip=["date:T", "wins:Q", "losses:Q", "rating:Q"],
-            )
-        )
+        trend_chart.update_layout(title="Recent Form (Last 20)")
+        trend_chart.update_xaxes(title_text="Recent matches")
+        trend_chart.update_yaxes(title_text="Rating", rangemode="normal")
+        _apply_plotly_dark_style(trend_chart, height=280, hovermode="x unified")
     else:
         trend_chart = None
 
@@ -1576,16 +1627,22 @@ def _hltv_profile_view(
         .rename(columns={"kpd": "rating"})
         .sort_values("rating", ascending=False)
     )
-    map_chart = (
-        alt.Chart(map_perf)
-        .mark_bar(cornerRadiusEnd=4, color="#5ea9ff")
-        .encode(
-            x=alt.X("rating:Q", title="Rating", scale=alt.Scale(zero=False)),
-            y=alt.Y("map:N", title=None, sort="-x"),
-            tooltip=["map:N", "rating:Q"],
+    map_chart = None
+    if not map_perf.empty and go is not None:
+        map_chart = go.Figure(
+            go.Bar(
+                x=map_perf["rating"],
+                y=map_perf["map"],
+                orientation="h",
+                marker=dict(color="#5ea9ff"),
+                hovertemplate="Map: %{y}<br>Rating: %{x:.2f}<extra></extra>",
+                showlegend=False,
+            )
         )
-        .properties(height=250, title="Map Performance")
-    ) if not map_perf.empty else None
+        map_chart.update_layout(title="Map Performance")
+        map_chart.update_xaxes(title_text="Rating")
+        map_chart.update_yaxes(title_text=None, autorange="reversed")
+        _apply_plotly_dark_style(map_chart, height=280)
 
     comparison_metrics = pd.DataFrame(
         [
@@ -1602,50 +1659,74 @@ def _hltv_profile_view(
         ]
     ).melt("metric", var_name="group", value_name="value")
     comparison_metrics["group"] = comparison_metrics["group"].map({"player": selected_player, "team_avg": "Team Avg"})
-    comparison_chart = (
-        alt.Chart(comparison_metrics)
-        .mark_bar(cornerRadiusEnd=4)
-        .encode(
-            x=alt.X("value:Q", title="Value"),
-            y=alt.Y("metric:N", title=None),
-            color=alt.Color("group:N", title=None, scale=alt.Scale(domain=[selected_player, "Team Avg"], range=["#31d17b", "#9da7bd"])),
-            xOffset="group:N",
-            tooltip=["metric:N", "group:N", "value:Q"],
-        )
-        .properties(height=250, title="Player vs Team Average")
-    )
+    comparison_chart = None
+    if go is not None:
+        comparison_chart = go.Figure()
+        for group_name, color in [(selected_player, "#31d17b"), ("Team Avg", "#9da7bd")]:
+            group_df = comparison_metrics[comparison_metrics["group"] == group_name]
+            comparison_chart.add_trace(
+                go.Bar(
+                    x=group_df["value"],
+                    y=group_df["metric"],
+                    orientation="h",
+                    name=group_name,
+                    marker=dict(color=color),
+                    hovertemplate="Metric: %{y}<br>Group: " + group_name + "<br>Value: %{x:.2f}<extra></extra>",
+                )
+            )
+        comparison_chart.update_layout(title="Player vs Team Average", barmode="group")
+        comparison_chart.update_xaxes(title_text="Value")
+        comparison_chart.update_yaxes(title_text=None, categoryorder="array", categoryarray=list(reversed(comparison_metrics["metric"].drop_duplicates().tolist())))
+        _apply_plotly_dark_style(comparison_chart, height=280)
 
-    side_chart = (
-        alt.Chart(side_chart_data)
-        .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5, color="#f0be4f")
-        .encode(
-            x=alt.X("side:N", title="Side"),
-            y=alt.Y("rating:Q", title="Avg K/D", scale=alt.Scale(zero=False)),
-            tooltip=["side:N", "rating:Q"],
+    side_chart = None
+    if not side_chart_data.empty and go is not None:
+        side_chart = go.Figure(
+            go.Bar(
+                x=side_chart_data["side"],
+                y=side_chart_data["rating"],
+                marker=dict(color="#f0be4f"),
+                hovertemplate="Side: %{x}<br>Avg K/D: %{y:.2f}<extra></extra>",
+                showlegend=False,
+            )
         )
-        .properties(height=250, title="Side Split")
-    ) if not side_chart_data.empty else None
+        side_chart.update_layout(title="Side Split")
+        side_chart.update_xaxes(title_text="Side")
+        side_chart.update_yaxes(title_text="Avg K/D")
+        _apply_plotly_dark_style(side_chart, height=280)
 
     top_row_left, top_row_right = st.columns(2)
     with top_row_left:
         if trend_chart is None:
-            st.info("Not enough recent match data for trend graph.")
+            if go is None:
+                _render_plotly_unavailable()
+            else:
+                st.info("Not enough recent match data for trend graph.")
         else:
-            st.altair_chart(trend_chart + trend_points, use_container_width=True)
+            st.plotly_chart(trend_chart, use_container_width=True)
     with top_row_right:
         if map_chart is None:
-            st.info("No map data available for selected filters.")
+            if go is None:
+                _render_plotly_unavailable()
+            else:
+                st.info("No map data available for selected filters.")
         else:
-            st.altair_chart(map_chart, use_container_width=True)
+            st.plotly_chart(map_chart, use_container_width=True)
 
     bottom_row_left, bottom_row_right = st.columns(2)
     with bottom_row_left:
-        st.altair_chart(comparison_chart, use_container_width=True)
+        if comparison_chart is None:
+            _render_plotly_unavailable()
+        else:
+            st.plotly_chart(comparison_chart, use_container_width=True)
     with bottom_row_right:
         if side_chart is None:
-            st.info("No side split data available for selected filters.")
+            if go is None:
+                _render_plotly_unavailable()
+            else:
+                st.info("No side split data available for selected filters.")
         else:
-            st.altair_chart(side_chart, use_container_width=True)
+            st.plotly_chart(side_chart, use_container_width=True)
 
     st.caption(f"Total rounds played in filter: {rounds}")
 
@@ -2161,30 +2242,66 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             rolling_5=lambda d: (d["round_result"].gt(0).rolling(5, min_periods=1).mean() * 100).round(1),
             rolling_10=lambda d: (d["round_result"].gt(0).rolling(10, min_periods=1).mean() * 100).round(1),
         )
-        trend_chart = (
-            alt.Chart(selected_rounds)
-            .transform_fold(["rolling_5", "rolling_10"], as_=["metric", "value"])
-            .mark_line(point=True)
-            .encode(
-                x=alt.X("use_idx:Q", title="Match/Round order"),
-                y=alt.Y("value:Q", title="Rolling win rate %"),
-                color=alt.Color("metric:N", title="Window"),
-                tooltip=["date", "match_id", "round_result", "rolling_5", "rolling_10"],
+        if go is None or make_subplots is None:
+            _render_plotly_unavailable()
+        else:
+            trend_fig = make_subplots(
+                rows=2,
+                cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.08,
+                row_heights=[0.35, 0.65],
             )
-            .properties(height=320)
-        )
-        outcome_scatter = (
-            alt.Chart(selected_rounds)
-            .mark_circle(size=65, opacity=0.65)
-            .encode(
-                x=alt.X("use_idx:Q", title="Use order"),
-                y=alt.Y("round_result:Q", title="Round result (+1/-1)"),
-                color=alt.condition("datum.round_result > 0", alt.value("#31d17b"), alt.value("#ff6c7a")),
-                tooltip=["date", "match_id", "round_result"],
+            trend_fig.add_trace(
+                go.Scatter(
+                    x=selected_rounds["use_idx"],
+                    y=selected_rounds["round_result"],
+                    mode="markers",
+                    marker=dict(
+                        size=9,
+                        color=selected_rounds["round_result"].gt(0).map({True: "#31d17b", False: "#ff6c7a"}),
+                        opacity=0.75,
+                    ),
+                    customdata=selected_rounds[["date", "match_id"]],
+                    hovertemplate="Use: %{x}<br>Round result: %{y:+.0f}<br>Date: %{customdata[0]}<br>Match: %{customdata[1]}<extra></extra>",
+                    showlegend=False,
+                ),
+                row=1,
+                col=1,
             )
-            .properties(height=140)
-        )
-        st.altair_chart(outcome_scatter & trend_chart, use_container_width=True)
+            trend_fig.add_trace(
+                go.Scatter(
+                    x=selected_rounds["use_idx"],
+                    y=selected_rounds["rolling_5"],
+                    mode="lines+markers",
+                    name="rolling_5",
+                    line=dict(color="#63b8ff", width=2),
+                    marker=dict(size=6),
+                    customdata=selected_rounds[["date", "match_id", "round_result", "rolling_10"]],
+                    hovertemplate="Use: %{x}<br>Rolling 5: %{y:.1f}%<br>Date: %{customdata[0]}<br>Match: %{customdata[1]}<br>Round: %{customdata[2]:+.0f}<br>Rolling 10: %{customdata[3]:.1f}%<extra></extra>",
+                ),
+                row=2,
+                col=1,
+            )
+            trend_fig.add_trace(
+                go.Scatter(
+                    x=selected_rounds["use_idx"],
+                    y=selected_rounds["rolling_10"],
+                    mode="lines+markers",
+                    name="rolling_10",
+                    line=dict(color="#f0be4f", width=2),
+                    marker=dict(size=6),
+                    customdata=selected_rounds[["date", "match_id", "round_result", "rolling_5"]],
+                    hovertemplate="Use: %{x}<br>Rolling 10: %{y:.1f}%<br>Date: %{customdata[0]}<br>Match: %{customdata[1]}<br>Round: %{customdata[2]:+.0f}<br>Rolling 5: %{customdata[3]:.1f}%<extra></extra>",
+                ),
+                row=2,
+                col=1,
+            )
+            trend_fig.update_xaxes(title_text="Match/Round order", row=2, col=1)
+            trend_fig.update_yaxes(title_text="Round result (+1/-1)", row=1, col=1)
+            trend_fig.update_yaxes(title_text="Rolling win rate %", row=2, col=1)
+            _apply_plotly_dark_style(trend_fig, height=500, hovermode="x unified")
+            st.plotly_chart(trend_fig, use_container_width=True)
 
     st.subheader("Map + side split heatmap")
     top_n_tactics = int(st.slider("Heatmap tactic limit", 6, 20, 15, key="heatmap_top_n"))
@@ -2210,39 +2327,74 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                 .sort_values("times_used", ascending=False)["tactic_name"]
                 .tolist()
             )
-            heat = (
-                alt.Chart(map_heat)
-                .mark_rect()
-                .encode(
-                    x=alt.X("side:N", title="Side", sort=side_order),
-                    y=alt.Y("tactic_name:N", title="Tactic", sort=tactic_order),
-                    color=alt.Color("win_pct:Q", title="Win %", scale=alt.Scale(scheme="redyellowgreen", domain=[0, 100])),
-                    tooltip=["tactic_name", "side", "times_used", "win_pct", "round_share_pct"],
+            if go is None:
+                _render_plotly_unavailable()
+            else:
+                pivot = (
+                    map_heat.pivot(index="tactic_name", columns="side", values="win_pct")
+                    .reindex(index=tactic_order, columns=side_order)
                 )
-                .properties(height=420)
-            )
-            labels = alt.Chart(map_heat).mark_text(fontSize=10, fontWeight="bold").encode(
-                x=alt.X("side:N", sort=side_order),
-                y=alt.Y("tactic_name:N", sort=tactic_order),
-                text=alt.Text("times_used:Q", format=".0f"),
-                color=alt.condition("datum.win_pct >= 55", alt.value("#111827"), alt.value("#f9fafb")),
-            )
-            st.altair_chart(heat + labels, use_container_width=True)
+                text_vals = (
+                    map_heat.pivot(index="tactic_name", columns="side", values="times_used")
+                    .reindex(index=tactic_order, columns=side_order)
+                    .fillna(0)
+                    .astype(int)
+                    .astype(str)
+                )
+                heatmap_fig = go.Figure(
+                    data=go.Heatmap(
+                        z=pivot.values,
+                        x=pivot.columns.tolist(),
+                        y=_wrap_labels(pd.Series(pivot.index.tolist()), width=28),
+                        colorscale=[[0.0, "#e85c6b"], [0.5, "#f0be4f"], [1.0, "#44c06f"]],
+                        zmin=0,
+                        zmax=100,
+                        text=text_vals.values,
+                        texttemplate="%{text}",
+                        hovertemplate="Tactic: %{y}<br>Side: %{x}<br>Win %: %{z:.1f}<br>Times used: %{text}<extra></extra>",
+                        colorbar=dict(title="Win %"),
+                    )
+                )
+                heatmap_fig.update_layout(title=f"{map_name} side split", margin=dict(l=220, r=24, t=48, b=48))
+                heatmap_fig.update_xaxes(title_text="Side", side="top")
+                heatmap_fig.update_yaxes(title_text="Tactic", autorange="reversed")
+                _apply_plotly_dark_style(heatmap_fig, height=max(420, 40 * max(len(tactic_order), 8)))
+                st.plotly_chart(heatmap_fig, use_container_width=True)
 
     st.subheader("Round share vs success")
-    scatter = (
-        alt.Chart(tactic_perf)
-        .mark_circle(opacity=0.8)
-        .encode(
-            x=alt.X("usage_pct:Q", title="Usage rate / round share %"),
-            y=alt.Y("win_pct:Q", title="Win rate %"),
-            size=alt.Size("times_used:Q", title="Times used"),
-            color=alt.Color("confidence:N", title="Confidence"),
-            tooltip=["tactic_name", "map", "side", "times_used", "usage_pct", "win_pct", "confidence", "recommended_action"],
-        )
-        .properties(height=380)
-    )
-    st.altair_chart(scatter, use_container_width=True)
+    if go is None:
+        _render_plotly_unavailable()
+    else:
+        confidence_colors = {"High": "#31d17b", "Medium": "#f0be4f", "Low": "#ff6c7a"}
+        scatter_fig = go.Figure()
+        for confidence in sorted(tactic_perf["confidence"].dropna().astype(str).unique().tolist()):
+            subset = tactic_perf[tactic_perf["confidence"].astype(str) == confidence]
+            scatter_fig.add_trace(
+                go.Scatter(
+                    x=subset["usage_pct"],
+                    y=subset["win_pct"],
+                    mode="markers",
+                    name=confidence,
+                    marker=dict(
+                        size=subset["times_used"].clip(lower=1).pow(0.5) * 6,
+                        color=confidence_colors.get(confidence, "#5ea9ff"),
+                        sizemode="diameter",
+                        opacity=0.82,
+                        line=dict(width=1, color="rgba(10, 16, 27, 0.9)"),
+                    ),
+                    customdata=subset[["tactic_name", "map", "side", "times_used", "recommended_action"]],
+                    hovertemplate=(
+                        "Tactic: %{customdata[0]}<br>Map/Side: %{customdata[1]} / %{customdata[2]}<br>"
+                        "Times used: %{customdata[3]}<br>Usage %: %{x:.1f}<br>Win %: %{y:.1f}<br>"
+                        "Action: %{customdata[4]}<extra></extra>"
+                    ),
+                )
+            )
+        scatter_fig.update_layout(title="Round share vs success")
+        scatter_fig.update_xaxes(title_text="Usage rate / round share %")
+        scatter_fig.update_yaxes(title_text="Win rate %")
+        _apply_plotly_dark_style(scatter_fig, height=400)
+        st.plotly_chart(scatter_fig, use_container_width=True)
 
     st.subheader("By enemy tier")
     sel_tier = tier_perf[
@@ -2256,22 +2408,24 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         sel_tier["tier_adjusted_score"] = sel_tier["tier_win_pct"] * sel_tier["tier"].map({"S": 1.35, "A": 1.15, "B": 1.0, "C": 0.85}).fillna(1.0)
         tier_palette_domain = ["S", "A", "B", "C"]
         tier_palette_range = [TIER_COLOR_MAP[t] for t in tier_palette_domain]
-        tier_chart = (
-            alt.Chart(sel_tier)
-            .mark_bar()
-            .encode(
-                x=alt.X("tier:N", sort=["S", "A", "B", "C"], title="Tier"),
-                y=alt.Y("tier_win_pct:Q", title="Win rate %"),
-                color=alt.Color(
-                    "tier:N",
-                    legend=None,
-                    scale=alt.Scale(domain=tier_palette_domain, range=tier_palette_range),
-                ),
-                tooltip=["tier", "wins", "losses", "tier_win_pct", "tier_adjusted_score"],
+        if go is None:
+            _render_plotly_unavailable()
+        else:
+            tier_chart = go.Figure(
+                go.Bar(
+                    x=sel_tier["tier"],
+                    y=sel_tier["tier_win_pct"],
+                    marker=dict(color=sel_tier["tier"].map(TIER_COLOR_MAP).fillna("#5ea9ff")),
+                    customdata=sel_tier[["wins", "losses", "tier_adjusted_score"]],
+                    hovertemplate="Tier: %{x}<br>Wins: %{customdata[0]}<br>Losses: %{customdata[1]}<br>Win %: %{y:.1f}<br>Adjusted: %{customdata[2]:.1f}<extra></extra>",
+                    showlegend=False,
+                )
             )
-            .properties(height=300)
-        )
-        st.altair_chart(tier_chart, use_container_width=True)
+            tier_chart.update_layout(title="By enemy tier")
+            tier_chart.update_xaxes(title_text="Tier", categoryorder="array", categoryarray=["S", "A", "B", "C"])
+            tier_chart.update_yaxes(title_text="Win rate %")
+            _apply_plotly_dark_style(tier_chart, height=320)
+            st.plotly_chart(tier_chart, use_container_width=True)
 
     st.subheader("Tactic family grouping")
     family_summary = (
@@ -2668,11 +2822,7 @@ def _medisports_vs_breakdown(
         st.markdown("#### Matchup strength (round differential)")
         diff_data = vs_summary[vs_summary["matches"] >= min_matches].sort_values("round_diff", ascending=False)
         if go is not None:
-            wrapped_labels = []
-            wrap_width = 26
-            for label in diff_data["opponent_team"].astype(str):
-                wrapped_labels.append("<br>".join(textwrap.wrap(label, width=wrap_width, break_long_words=False)) or label)
-
+            wrapped_labels = _wrap_labels(diff_data["opponent_team"], width=26)
             bar_height = 30
             min_height = 340
             chart_height = max(min_height, len(diff_data) * bar_height + 80)
@@ -2699,26 +2849,13 @@ def _medisports_vs_breakdown(
                 height=chart_height,
                 margin=dict(l=left_margin, r=20, t=20, b=45),
                 bargap=0.22,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
             )
-            diff_chart.update_yaxes(automargin=True, showticklabels=True, title_text="Opponent", tickfont=dict(size=12))
+            diff_chart.update_yaxes(showticklabels=True, title_text="Opponent", tickfont=dict(size=12), autorange="reversed")
             diff_chart.update_xaxes(title_text="Round differential", zeroline=True, zerolinewidth=1)
+            _apply_plotly_dark_style(diff_chart, margin=dict(l=left_margin, r=20, t=20, b=45))
             st.plotly_chart(diff_chart, use_container_width=True)
         else:
-            st.info("Plotly is not installed, showing a fallback chart.")
-            fallback_chart = (
-                alt.Chart(diff_data)
-                .mark_bar()
-                .encode(
-                    x=alt.X("round_diff:Q", title="Round differential"),
-                    y=alt.Y("opponent_team:N", sort="-x", title="Opponent"),
-                    color=alt.condition(alt.datum.round_diff >= 0, alt.value("#44c06f"), alt.value("#e85c6b")),
-                    tooltip=["opponent_team", "record", "matches", "round_diff", "round_diff_per_match"],
-                )
-                .properties(height=max(340, len(diff_data) * 30))
-            )
-            st.altair_chart(fallback_chart, use_container_width=True)
+            _render_plotly_unavailable()
     with chart_col_2:
         st.markdown("#### Matchup strength (Win/Lose)")
         wl_data = (
@@ -2730,11 +2867,7 @@ def _medisports_vs_breakdown(
             .sort_values("match_diff", ascending=False)
         )
         if go is not None:
-            wrapped_labels = []
-            wrap_width = 26
-            for label in wl_data["opponent_team"].astype(str):
-                wrapped_labels.append("<br>".join(textwrap.wrap(label, width=wrap_width, break_long_words=False)) or label)
-
+            wrapped_labels = _wrap_labels(wl_data["opponent_team"], width=26)
             bar_height = 30
             min_height = 340
             chart_height = max(min_height, len(wl_data) * bar_height + 80)
@@ -2761,26 +2894,13 @@ def _medisports_vs_breakdown(
                 height=chart_height,
                 margin=dict(l=left_margin, r=20, t=20, b=45),
                 bargap=0.22,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
             )
-            wl_chart.update_yaxes(automargin=True, showticklabels=True, title_text="Opponent", tickfont=dict(size=12))
+            wl_chart.update_yaxes(showticklabels=True, title_text="Opponent", tickfont=dict(size=12), autorange="reversed")
             wl_chart.update_xaxes(title_text="Win/Lose differential", zeroline=True, zerolinewidth=1)
+            _apply_plotly_dark_style(wl_chart, margin=dict(l=left_margin, r=20, t=20, b=45))
             st.plotly_chart(wl_chart, use_container_width=True)
         else:
-            st.info("Plotly is not installed, showing a fallback chart.")
-            wl_fallback_chart = (
-                alt.Chart(wl_data)
-                .mark_bar()
-                .encode(
-                    x=alt.X("match_diff:Q", title="Win/Lose differential"),
-                    y=alt.Y("opponent_team:N", sort="-x", title="Opponent"),
-                    color=alt.condition(alt.datum.match_diff >= 0, alt.value("#44c06f"), alt.value("#e85c6b")),
-                    tooltip=["opponent_team", "record", "matches", "wins", "losses", "match_diff", "win_loss_per_match"],
-                )
-                .properties(height=max(340, len(wl_data) * 30))
-            )
-            st.altair_chart(wl_fallback_chart, use_container_width=True)
+            _render_plotly_unavailable()
 
     st.markdown("#### Opponent × Map heatmap")
     map_summary = (
@@ -2800,26 +2920,48 @@ def _medisports_vs_breakdown(
     if map_heat.empty:
         st.info("No opponent-map pairs meet minimum matches.")
     else:
-        base = (
-            alt.Chart(map_heat)
-            .mark_rect()
-            .encode(
-                x=alt.X("map:N", title="Map"),
-                y=alt.Y("opponent_team:N", title="Opponent", sort="-color"),
-                color=alt.Color(
-                    "win_rate_pct:Q",
-                    title="Win rate %",
-                    scale=alt.Scale(domain=[0, 100], range=["#e85c6b", "#f0be4f", "#44c06f"]),
-                ),
-                tooltip=["opponent_team", "map", "matches", "record", "win_rate_pct", "round_diff"],
+        if go is None:
+            _render_plotly_unavailable()
+        else:
+            opponent_order = (
+                map_heat.groupby("opponent_team", as_index=False)["win_rate_pct"]
+                .mean()
+                .sort_values("win_rate_pct", ascending=False)["opponent_team"]
+                .tolist()
             )
-            .properties(height=420)
-        )
-        text = base.mark_text(fontSize=11).encode(
-            text="matches:Q",
-            color=alt.condition("datum.win_rate_pct > 55", alt.value("#08111f"), alt.value("#f5f7fb")),
-        )
-        st.altair_chart(base + text, use_container_width=True)
+            map_order = sorted(map_heat["map"].astype(str).unique().tolist())
+            z = (
+                map_heat.pivot(index="opponent_team", columns="map", values="win_rate_pct")
+                .reindex(index=opponent_order, columns=map_order)
+            )
+            matches_text = (
+                map_heat.pivot(index="opponent_team", columns="map", values="matches")
+                .reindex(index=opponent_order, columns=map_order)
+                .fillna(0)
+                .astype(int)
+                .astype(str)
+            )
+            heat_fig = go.Figure(
+                data=go.Heatmap(
+                    z=z.values,
+                    x=z.columns.tolist(),
+                    y=_wrap_labels(pd.Series(z.index.tolist()), width=26),
+                    colorscale=[[0.0, "#e85c6b"], [0.5, "#f0be4f"], [1.0, "#44c06f"]],
+                    zmin=0,
+                    zmax=100,
+                    text=matches_text.values,
+                    texttemplate="%{text}",
+                    hovertemplate="Opponent: %{y}<br>Map: %{x}<br>Win rate: %{z:.1f}%<br>Matches: %{text}<extra></extra>",
+                    colorbar=dict(title="Win rate %"),
+                )
+            )
+            longest_opp = max((len(name) for name in opponent_order), default=0)
+            left_margin = min(420, max(170, 80 + longest_opp * 6))
+            heat_fig.update_layout(title="Opponent × Map heatmap", margin=dict(l=left_margin, r=24, t=48, b=48))
+            heat_fig.update_xaxes(title_text="Map")
+            heat_fig.update_yaxes(title_text="Opponent", autorange="reversed")
+            _apply_plotly_dark_style(heat_fig, height=max(420, len(opponent_order) * 32 + 120), hovermode="closest")
+            st.plotly_chart(heat_fig, use_container_width=True)
 
     st.markdown("### Context sections")
     tcol1, tcol2 = st.columns(2)
