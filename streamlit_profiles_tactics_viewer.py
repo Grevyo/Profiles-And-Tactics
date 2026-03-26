@@ -21,6 +21,7 @@ DATA_DIR = Path(__file__).parent / "data"
 PLAYER_CSV = DATA_DIR / "PlayerDataMatser.csv"
 TACTICS_CSV = DATA_DIR / "TacticsDataMaster.csv"
 ACHIEVEMENTS_CSV = DATA_DIR / "Achievements.csv"
+PLAYER_META_CSV = DATA_DIR / "player.csv"
 IMAGE_FOLDERS = {
     "competition": "competition_logos",
     "map": "map_images",
@@ -159,6 +160,10 @@ def _inject_styles() -> None:
             gap: 10px;
             margin-top: 8px;
         }
+        .achievement-inline-list-single {
+            grid-template-columns: minmax(140px, 220px);
+            justify-content: start;
+        }
         .achievement-inline-item {
             border: none;
             border-radius: 10px;
@@ -199,9 +204,8 @@ def _inject_styles() -> None:
         }
         .achievement-tier-icon {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 8px;
+            left: 8px;
             min-width: 24px;
             height: 24px;
             border-radius: 999px;
@@ -674,6 +678,34 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return players, tactics, achievements
 
 
+@st.cache_data(show_spinner=False)
+def _load_player_metadata() -> pd.DataFrame:
+    if not PLAYER_META_CSV.exists():
+        return pd.DataFrame()
+
+    metadata = pd.read_csv(PLAYER_META_CSV)
+    metadata.columns = metadata.columns.astype(str).str.strip()
+    metadata = metadata.apply(lambda col: col.str.strip() if col.dtype == object else col)
+    if metadata.empty:
+        return metadata
+
+    player_col = next((col for col in metadata.columns if col.casefold() == "player"), None)
+    if player_col is None:
+        return pd.DataFrame()
+
+    metadata = metadata.rename(columns={player_col: "player"})
+    metadata["player_lookup"] = metadata["player"].astype(str).str.strip().str.casefold()
+    metadata = metadata.drop_duplicates(subset=["player_lookup"], keep="last")
+    return metadata
+
+
+def _player_meta_value(player_meta: pd.Series | None, key: str, default: str = "-") -> str:
+    if player_meta is None:
+        return default
+    value = str(player_meta.get(key, "")).strip()
+    return value if value else default
+
+
 def _multiselect_filter(label: str, options: list[str], key: str) -> list[str]:
     if not options:
         st.caption(f"{label}: no options")
@@ -1015,12 +1047,20 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     with st.expander("Profile Filters", expanded=False):
         filtered_players, filtered_tactics = _apply_shared_filters(player_df, tactics_df, selected_player)
     image_index = _build_image_index()
+    player_metadata = _load_player_metadata()
 
     if filtered_players.empty:
         st.warning("No player rows match the current filters.")
         return
 
     first_row = filtered_players.sort_values("date", ascending=False).iloc[0]
+
+    player_meta_row = None
+    if not player_metadata.empty and "player_lookup" in player_metadata.columns:
+        selected_lookup = str(selected_player).strip().casefold()
+        meta_rows = player_metadata[player_metadata["player_lookup"] == selected_lookup]
+        if not meta_rows.empty:
+            player_meta_row = meta_rows.iloc[0]
 
     player_image = _find_image(image_index, "player", selected_player)
     team_logo = _find_image(image_index, "team", first_row.get("my_team"))
@@ -1107,7 +1147,8 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     achievement_inline_html = "<div class='panel-muted'>No achievements found.</div>"
     if not player_ach.empty:
         achievement_rows = [_achievement_card_html(ach_row) for _, ach_row in player_ach.iterrows()]
-        achievement_inline_html = f"<div class='achievement-inline-list'>{''.join(achievement_rows)}</div>"
+        achievement_list_class = "achievement-inline-list achievement-inline-list-single" if len(achievement_rows) == 1 else "achievement-inline-list"
+        achievement_inline_html = f"<div class='{achievement_list_class}'>{''.join(achievement_rows)}</div>"
 
     st.markdown(
         f"""
@@ -1126,7 +1167,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                             <div class="profile-label">Player Identity</div>
                             <div class="profile-name">{selected_player}</div>
                             <div class="team-line">{team_logo_html}<span>{first_row.get("my_team", "-")}</span></div>
-                            <div class="panel-muted">Role: Fragger · Country: - · Handedness: -</div>
+                            <div class="panel-muted">Role: {_player_meta_value(player_meta_row, "role", "Fragger")} · Country: {_player_meta_value(player_meta_row, "nation")} · Handedness: {_player_meta_value(player_meta_row, "handedness")}</div>
                         </div>
                     </div>
                     <div class="quick-row">
@@ -1284,7 +1325,8 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         st.info("No achievements found for this player.")
     else:
         achievement_html = "".join(_achievement_card_html(ach_row) for _, ach_row in player_ach.iterrows())
-        st.markdown(f"<div class='achievement-inline-list'>{achievement_html}</div>", unsafe_allow_html=True)
+        achievement_list_class = "achievement-inline-list achievement-inline-list-single" if len(player_ach) == 1 else "achievement-inline-list"
+        st.markdown(f"<div class='{achievement_list_class}'>{achievement_html}</div>", unsafe_allow_html=True)
 
     st.subheader("Full Player Match Stats")
     show_cols = [
