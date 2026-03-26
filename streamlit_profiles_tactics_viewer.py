@@ -906,15 +906,21 @@ def _normalize_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", str(value).lower())
 
 
-def _ascii_small_caps(value: str) -> str:
+def normalize_logo_key(name: str | None) -> str:
+    if name is None:
+        return ""
+    text = str(name).strip().lower()
     converted_chars: list[str] = []
-    for char in str(value):
+    for char in text:
         char_name = unicodedata.name(char, "")
         if "LATIN LETTER SMALL CAPITAL" in char_name:
             converted_chars.append(char_name.rsplit(" ", 1)[-1].lower())
             continue
         converted_chars.append(char)
-    return "".join(converted_chars).lower()
+    text = "".join(converted_chars)
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 @st.cache_data(show_spinner=False)
@@ -935,22 +941,33 @@ def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value:
     if not value:
         return None
     if image_type == "competition":
-        ascii_value = _ascii_small_caps(value)
+        normalized_logo_key = normalize_logo_key(value)
+        competition_logo_aliases = {
+            "madmen": "madmen.png",
+            "madmen invitational": "madmen.png",
+            "madmen inhouse cup": "madmen.png",
+            "madmen castle bootcamp": "madmen.png",
+        }
+        alias_filename = competition_logo_aliases.get(normalized_logo_key)
+        if alias_filename:
+            alias_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / alias_filename
+            if alias_logo.exists():
+                return alias_logo
+        if "madmen" in normalized_logo_key:
+            madmen_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / "madmen.png"
+            if madmen_logo.exists():
+                return madmen_logo
         competition_logo_overrides = {
             "nova": "nova-prime.png",
             "cyberathletes": "cyberathletes.png",
             "diamond": "diamond.png",
         }
         for needle, filename in competition_logo_overrides.items():
-            if needle in ascii_value:
+            if needle in normalized_logo_key:
                 override_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / filename
                 if override_logo.exists():
                     return override_logo
-        if re.search(r"\bmadmen\b", ascii_value):
-            madmen_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / "madmen.png"
-            if madmen_logo.exists():
-                return madmen_logo
-    normalized = _normalize_key(value)
+    normalized = _normalize_key(normalize_logo_key(value))
     entries = image_index.get(image_type, {})
     return entries.get(normalized)
 
