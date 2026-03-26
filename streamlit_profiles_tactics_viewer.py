@@ -45,12 +45,12 @@ def _inject_styles() -> None:
         """
         <style>
         .panel-card {
-            background: radial-gradient(circle at top, #1a2234 0%, #0b0f17 68%);
-            border: 1px solid rgba(151, 166, 195, 0.45);
+            background: linear-gradient(165deg, #101721 0%, #0b1018 100%);
+            border: 1px solid rgba(151, 166, 195, 0.22);
             border-radius: 16px;
             padding: 20px 22px;
             margin-bottom: 16px;
-            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.32);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
         }
         .panel-muted {
             color: #9da7bd;
@@ -65,7 +65,7 @@ def _inject_styles() -> None:
         }
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 10px;
             margin-top: 12px;
         }
@@ -73,36 +73,36 @@ def _inject_styles() -> None:
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .stat-chip {
-            border: 1px solid rgba(151, 166, 195, 0.35);
+            border: 1px solid rgba(151, 166, 195, 0.2);
             border-radius: 10px;
-            padding: 9px 11px;
-            background: rgba(18, 25, 40, 0.8);
-            min-height: 84px;
+            padding: 8px 10px;
+            background: rgba(16, 23, 36, 0.72);
+            min-height: 76px;
         }
         .stat-label { color: #9da7bd; font-size: 0.78rem; }
         .stat-value { color: #f5f7fb; font-size: 1.25rem; font-weight: 800; line-height: 1.15; }
-        .stat-trend { font-size: 0.78rem; margin-top: 4px; font-weight: 600; }
+        .stat-trend { font-size: 0.74rem; margin-top: 5px; font-weight: 600; }
         .trend-good { color: #31d17b; }
         .trend-mid { color: #f0be4f; }
         .trend-bad { color: #ff6c7a; }
         .chip-good {
-            border-color: rgba(49, 209, 123, 0.6);
-            background: linear-gradient(180deg, rgba(25, 56, 45, 0.92), rgba(16, 30, 26, 0.84));
+            border-color: rgba(49, 209, 123, 0.42);
+            background: linear-gradient(180deg, rgba(18, 47, 37, 0.82), rgba(14, 27, 24, 0.76));
         }
         .chip-mid {
-            border-color: rgba(240, 190, 79, 0.58);
-            background: linear-gradient(180deg, rgba(66, 54, 24, 0.92), rgba(31, 27, 17, 0.84));
+            border-color: rgba(240, 190, 79, 0.4);
+            background: linear-gradient(180deg, rgba(57, 48, 27, 0.8), rgba(28, 24, 18, 0.76));
         }
         .chip-bad {
-            border-color: rgba(255, 108, 122, 0.62);
-            background: linear-gradient(180deg, rgba(72, 31, 37, 0.92), rgba(32, 18, 22, 0.84));
+            border-color: rgba(255, 108, 122, 0.44);
+            background: linear-gradient(180deg, rgba(66, 31, 37, 0.8), rgba(30, 18, 23, 0.76));
         }
         .stat-meter {
             width: 100%;
             background: rgba(151, 166, 195, 0.2);
             border-radius: 999px;
             overflow: hidden;
-            height: 6px;
+            height: 4px;
             margin-top: 6px;
         }
         .stat-meter-fill {
@@ -123,19 +123,19 @@ def _inject_styles() -> None:
         }
         .top-identity-grid {
             display: grid;
-            grid-template-columns: 1.45fr 0.95fr 1.15fr;
+            grid-template-columns: 1.4fr 1fr 1.05fr;
             gap: 12px;
             align-items: stretch;
         }
         .identity-strip {
-            border: 1px solid rgba(151, 166, 195, 0.35);
+            border: 1px solid rgba(151, 166, 195, 0.2);
             border-radius: 12px;
             padding: 12px;
-            background: rgba(14, 20, 32, 0.78);
+            background: rgba(12, 18, 29, 0.65);
         }
         .identity-strip-main {
             display: grid;
-            grid-template-columns: 110px 1fr;
+            grid-template-columns: 94px 1fr;
             gap: 12px;
             align-items: center;
         }
@@ -266,11 +266,16 @@ def _inject_styles() -> None:
             letter-spacing: 0.09em;
         }
         .profile-name {
-            font-size: 2rem;
+            font-size: 2.2rem;
             color: #f5f7fb;
             font-weight: 900;
             margin-top: 2px;
             line-height: 1.05;
+        }
+        .identity-meta-line {
+            color: #c9d5ef;
+            margin-top: 6px;
+            font-size: 0.86rem;
         }
         .identity-grid {
             display: grid;
@@ -292,18 +297,18 @@ def _inject_styles() -> None:
             line-height: 1.15;
         }
         .hero-grevscore {
-            border: 1px solid rgba(118, 168, 255, 0.45);
+            border: 1px solid rgba(118, 168, 255, 0.32);
             border-radius: 14px;
             padding: 12px;
-            background: linear-gradient(120deg, rgba(54, 87, 155, 0.45) 0%, rgba(35, 57, 103, 0.2) 100%);
-            box-shadow: 0 0 18px rgba(54, 116, 255, 0.22);
+            background: linear-gradient(120deg, rgba(47, 77, 137, 0.34) 0%, rgba(25, 44, 82, 0.24) 100%);
+            box-shadow: 0 0 10px rgba(54, 116, 255, 0.12);
             text-align: center;
         }
         .overview-side {
-            border: 1px solid rgba(151, 166, 195, 0.35);
+            border: 1px solid rgba(151, 166, 195, 0.2);
             border-radius: 12px;
             padding: 12px;
-            background: rgba(14, 20, 32, 0.78);
+            background: rgba(12, 18, 29, 0.65);
         }
         .overview-side .section-label {
             margin-top: 0;
@@ -393,6 +398,56 @@ def _inject_styles() -> None:
             text-transform: uppercase;
             margin-top: 12px;
             margin-bottom: 5px;
+        }
+        .context-summary {
+            margin-top: 10px;
+            border: 1px solid rgba(151, 166, 195, 0.18);
+            border-radius: 12px;
+            background: rgba(11, 16, 26, 0.6);
+            padding: 10px 12px;
+        }
+        .context-summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px 14px;
+        }
+        .context-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            border-bottom: 1px dashed rgba(151, 166, 195, 0.16);
+            padding-bottom: 3px;
+        }
+        .context-row:last-child {
+            border-bottom: none;
+        }
+        .context-key {
+            font-size: 0.76rem;
+            color: #9da7bd;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+        .context-val {
+            font-size: 0.83rem;
+            color: #f5f7fb;
+            font-weight: 700;
+            text-align: right;
+        }
+        .form-mini {
+            margin-top: 12px;
+            border-top: 1px solid rgba(151, 166, 195, 0.18);
+            padding-top: 10px;
+        }
+        .form-dot-row {
+            display: grid;
+            grid-template-columns: repeat(10, minmax(0, 1fr));
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .form-dot {
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(151, 166, 195, 0.3);
         }
         .filter-shell {
             border: 1px solid rgba(151, 166, 195, 0.3);
@@ -1174,8 +1229,6 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     gauge_pct = min(max(((metrics["grevscore"] - 0.75) / (1.5 - 0.75)) * 100.0, 0.0), 100.0)
     gauge_angle = -90 + (gauge_pct * 1.8)
     kills = int(metrics["kills"])
-    deaths = int(metrics["deaths"])
-    assists = int(metrics["assists"])
     damage = int(filtered_players["damage"].sum())
     rounds = int(filtered_players["rounds_played"].sum())
     avg_acc = float(filtered_players["accuracy_pct"].mean()) if not filtered_players.empty else 0.0
@@ -1186,17 +1239,17 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         _build_stat_chip("Rating", f'{metrics["grevscore"]:.2f}', metrics["grevscore"], 0.65, 1.35),
         _build_stat_chip("Matches", f'{int(metrics["matches"])}', metrics["matches"], 3, 16),
         _build_stat_chip("K/D", f'{metrics["kd"]:.2f}', metrics["kd"], 0.7, 1.3),
-        _build_stat_chip("KDA", f'{metrics["kda"]:.2f}', metrics["kda"], 1.0, 2.2),
+        _build_stat_chip("Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
     ]
-    stat_chips_damage = [
+    stat_chips_core = [
         _build_stat_chip("DPM", f'{metrics["dpm"]:.1f}', metrics["dpm"], 1800, 3600),
         _build_stat_chip("KPM", f'{metrics["kpm"]:.2f}', metrics["kpm"], 0.45, 1.0),
         _build_stat_chip("Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
-    ]
-    stat_chips_efficiency = [
         _build_stat_chip("Acc%", f'{metrics["acc"]:.1f}%', metrics["acc"], 45, 80),
         _build_stat_chip("Avg KPD", f"{avg_kpd:.2f}", avg_kpd, 0.8, 1.5),
+        _build_stat_chip("KDA", f'{metrics["kda"]:.2f}', metrics["kda"], 1.0, 2.2),
         _build_stat_chip("HS%", f"{avg_hs:.1f}%", avg_hs, 24, 55),
+        _build_stat_chip("Kills", f"{kills}", float(kills), 80, 260),
     ]
     side_split = "-"
     if not filtered_tactics.empty and "side" in filtered_tactics.columns:
@@ -1211,12 +1264,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         if "map" in filtered_players.columns and not filtered_players.empty
         else "-"
     )
-    stat_chips_context = [
-        _build_stat_chip("Best Map", best_map, float(metrics["kd"]), 0.7, 1.3),
-        _build_stat_chip("Record", f"{kills}/{deaths}/{assists}", metrics["kda"], 1.0, 2.2),
-        _build_stat_chip("Side Split", side_split, float(metrics["kpm"]), 0.45, 1.0),
-        _build_stat_chip("Team Rank", f"#{team_rank}/{rank_total}", percentile, 0, 100),
-    ]
+    record_text = f"{int(filtered_tactics['wins'].sum())}W-{int(filtered_tactics['losses'].sum())}L" if not filtered_tactics.empty else "-"
 
     player_ach = achievements_df[
         achievements_df["player"].astype(str).str.strip().str.casefold() == str(selected_player).strip().casefold()
@@ -1242,6 +1290,13 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         achievement_rows = [_achievement_card_html(ach_row) for _, ach_row in player_ach.iterrows()]
         achievement_list_class = "achievement-inline-list achievement-inline-list-single" if len(achievement_rows) == 1 else "achievement-inline-list"
         achievement_inline_html = f"<div class='{achievement_list_class}'>{''.join(achievement_rows)}</div>"
+    form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
+    form_blocks = []
+    if not recent_form.empty:
+        for score in recent_form.sort_values("date")["match_form_score"].tail(10).tolist():
+            color = "#31d17b" if score >= 70 else ("#f0be4f" if score >= 45 else "#ff6c7a")
+            form_blocks.append(f"<div class='form-dot' style='background:{color};'></div>")
+    form_block_html = "".join(form_blocks) if form_blocks else "<div class='panel-muted'>No recent form data.</div>"
 
     st.markdown(
         f"""
@@ -1251,34 +1306,19 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                     <div class="identity-strip-main">
                         <div class="portrait-frame">
                             {"<img class='player-headshot' src='data:image/png;base64," + base64.b64encode(player_image.read_bytes()).decode("utf-8") + "'>" if player_image else "<div class='panel-muted'>No portrait found.</div>"}
-                            <div class="portrait-strip">
-                                <div>Rating note: <strong>{score_tier}</strong></div>
-                                <div>Percentile: <strong>{percentile:.0f}th</strong></div>
-                            </div>
                         </div>
                         <div>
                             <div class="profile-label">Player Identity</div>
                             <div class="profile-name">{selected_player}</div>
-                            <div class="team-line">{team_logo_html}<span>{first_row.get("my_team", "-")}</span></div>
-                            <div class="panel-muted">Role: {_player_meta_value(player_meta_row, "role", "Fragger")} · Country: {_player_meta_value(player_meta_row, "nation")} · Handedness: {_player_meta_value(player_meta_row, "handedness")}</div>
-                        </div>
-                    </div>
-                    <div class="quick-row">
-                        <div class="identity-kv">
-                            <div class="profile-label">Best Map</div>
-                            <div class="identity-kv-value">{best_map}</div>
-                        </div>
-                        <div class="identity-kv">
-                            <div class="profile-label">Team Rank</div>
-                            <div class="identity-kv-value">#{team_rank}/{rank_total}</div>
+                            <div class="identity-meta-line">{team_logo_html}<span>{first_row.get("my_team", "-")} · {_player_meta_value(player_meta_row, "role", "Fragger")} · {_player_meta_value(player_meta_row, "nation")} · {_player_meta_value(player_meta_row, "handedness")}</span></div>
                         </div>
                     </div>
                     <div class="section-label">Achievements</div>
                     {achievement_inline_html}
                 </div>
                 <div class="hero-grevscore">
-                    <div class="hero-grevscore-label">Grevscore</div>
-                    <div class="hero-grevscore-tier">{score_tier} · {percentile:.0f}th percentile</div>
+                    <div class="hero-grevscore-label">GrevScore</div>
+                    <div class="hero-grevscore-tier">{percentile:.0f}th percentile · {score_tier}</div>
                     <div class="gauge-wrap">
                         <div class="gauge-score">{metrics["grevscore"]:.2f}</div>
                         <div class="gauge-arc"></div>
@@ -1291,12 +1331,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                         <span>Good</span>
                         <span>Star</span>
                     </div>
-                    <div class="panel-muted" style="margin-top:6px;">
-                        {"Side note: Below average" if metrics["grevscore"] < 0.95 else "Side note: Above average"}
-                    </div>
-                    <div class="panel-muted">
-                        Team rank #{team_rank}/{rank_total}
-                    </div>
+                    <div class="panel-muted" style="margin-top:6px;">Team rank #{team_rank}/{rank_total}</div>
                 </div>
                 <div class="overview-side">
                     <div class="section-label">Overview</div>
@@ -1305,27 +1340,30 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                     </div>
                 </div>
             </div>
-            <div class="section-label">Damage / Output</div>
+            <div class="section-label">Core Performance</div>
             <div class="stats-grid">
-                {"".join(stat_chips_damage)}
-            </div>
-            <div class="section-label">Accuracy / Efficiency</div>
-            <div class="stats-grid">
-                {"".join(stat_chips_efficiency)}
+                {"".join(stat_chips_core)}
             </div>
             <div class="section-label">Context</div>
-            <div class="stats-grid">
-                {"".join(stat_chips_context)}
+            <div class="context-summary">
+                <div class="context-summary-grid">
+                    <div class="context-row"><span class="context-key">Best map</span><span class="context-val">{best_map}</span></div>
+                    <div class="context-row"><span class="context-key">Team rank</span><span class="context-val">#{team_rank}/{rank_total}</span></div>
+                    <div class="context-row"><span class="context-key">Record</span><span class="context-val">{record_text}</span></div>
+                    <div class="context-row"><span class="context-key">Best side split</span><span class="context-val">{side_split}</span></div>
+                </div>
+            </div>
+            <div class="form-mini">
+                <div class="section-label" style="margin-top:0;">Form (Last 10)</div>
+                <div class="panel-muted">Form score <strong>{form_score:.1f}/100</strong></div>
+                <div class="form-dot-row">{form_block_html}</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
-    st.subheader("FORM (Last 10 Games)")
-    st.write(f"Form Score: **{form_score:.1f}/100**")
-    st.progress(min(max(form_score / 100.0, 0.0), 1.0))
+    st.subheader("Form Detail")
     if recent_form.empty:
         st.info("Not enough recent match data for form trends.")
     else:
