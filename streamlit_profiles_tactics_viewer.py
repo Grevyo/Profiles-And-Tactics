@@ -980,10 +980,14 @@ def _sanitize_competition_value(value: object) -> object:
     if not text:
         return text
 
+    # Normalize common escaped payload variants first.
+    text = html.unescape(text)
+    text = text.replace('\\"', '"').replace("\\'", "'")
+
     if "<" in text and ">" in text:
-        rank_match = re.search(r'class=["\']rank-name["\']>([^<]+)<', text, flags=re.IGNORECASE)
-        if rank_match:
-            text = rank_match.group(1).strip()
+        rank_names = re.findall(r'class=["\']rank-name["\']>([^<]+)<', text, flags=re.IGNORECASE)
+        if rank_names:
+            text = rank_names[0].strip()
         else:
             text = re.sub(r"data:image/[^\"']+", "", text, flags=re.IGNORECASE)
             text = re.sub(r"<[^>]+>", " ", text)
