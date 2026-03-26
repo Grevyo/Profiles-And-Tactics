@@ -906,21 +906,46 @@ def _normalize_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", str(value).lower())
 
 
+SMALLCAPS_MAP = str.maketrans(
+    {
+        "ᴍ": "m",
+        "ᴀ": "a",
+        "ʙ": "b",
+        "ᴄ": "c",
+        "ᴅ": "d",
+        "ᴇ": "e",
+        "ꜰ": "f",
+        "ɢ": "g",
+        "ʜ": "h",
+        "ɪ": "i",
+        "ᴊ": "j",
+        "ᴋ": "k",
+        "ʟ": "l",
+        "ɴ": "n",
+        "ᴏ": "o",
+        "ᴘ": "p",
+        "ǫ": "q",
+        "ʀ": "r",
+        "s": "s",
+        "ᴛ": "t",
+        "ᴜ": "u",
+        "ᴠ": "v",
+        "ᴡ": "w",
+        "x": "x",
+        "ʏ": "y",
+        "ᴢ": "z",
+    }
+)
+
+
 def normalize_logo_key(name: str | None) -> str:
-    if name is None:
-        return ""
-    text = str(name).strip().lower()
-    converted_chars: list[str] = []
-    for char in text:
-        char_name = unicodedata.name(char, "")
-        if "LATIN LETTER SMALL CAPITAL" in char_name:
-            converted_chars.append(char_name.rsplit(" ", 1)[-1].lower())
-            continue
-        converted_chars.append(char)
-    text = "".join(converted_chars)
-    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-    text = re.sub(r"[^a-z0-9]+", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
+    text = str(name or "").strip().lower()
+    text = text.translate(SMALLCAPS_MAP)
+    text = unicodedata.normalize("NFKD", text)
+    text = text.encode("ascii", "ignore").decode("ascii")
+    text = re.sub(r"[^a-z0-9\s]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 @st.cache_data(show_spinner=False)
@@ -942,6 +967,7 @@ def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value:
         return None
     if image_type == "competition":
         normalized_logo_key = normalize_logo_key(value)
+        resolved_logo: Path | None = None
         competition_logo_aliases = {
             "madmen": "madmen.png",
             "madmen invitational": "madmen.png",
@@ -952,24 +978,38 @@ def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value:
         if alias_filename:
             alias_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / alias_filename
             if alias_logo.exists():
-                return alias_logo
+                resolved_logo = alias_logo
         if "madmen" in normalized_logo_key:
             madmen_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / "madmen.png"
             if madmen_logo.exists():
-                return madmen_logo
+                resolved_logo = madmen_logo
         competition_logo_overrides = {
             "nova": "nova-prime.png",
             "cyberathletes": "cyberathletes.png",
             "diamond": "diamond.png",
         }
-        for needle, filename in competition_logo_overrides.items():
-            if needle in normalized_logo_key:
-                override_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / filename
-                if override_logo.exists():
-                    return override_logo
+        if resolved_logo is None:
+            for needle, filename in competition_logo_overrides.items():
+                if needle in normalized_logo_key:
+                    override_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / filename
+                    if override_logo.exists():
+                        resolved_logo = override_logo
+                        break
+        if resolved_logo is not None:
+            print(
+                "[logo_resolver] competition=%r normalized=%r resolved=%r"
+                % (value, normalized_logo_key, resolved_logo.name)
+            )
+            return resolved_logo
     normalized = _normalize_key(normalize_logo_key(value))
     entries = image_index.get(image_type, {})
-    return entries.get(normalized)
+    resolved_logo = entries.get(normalized)
+    if image_type == "competition":
+        print(
+            "[logo_resolver] competition=%r normalized=%r resolved=%r"
+            % (value, normalize_logo_key(value), resolved_logo.name if resolved_logo else None)
+        )
+    return resolved_logo
 
 
 def _competition_logo_uri(image_index: dict[str, dict[str, Path]], competition: str | None) -> str:
