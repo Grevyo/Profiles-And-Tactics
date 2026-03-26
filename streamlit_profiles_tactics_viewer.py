@@ -1045,9 +1045,20 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         on="match_id",
         how="left",
     )
+    df = df[df["date"].notna()].copy()
+    recent_cutoff = pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=10)
+    if "total_rounds" in df.columns:
+        df = df[df["total_rounds"].fillna(0) > 0]
+    else:
+        df = df[(df["wins"].fillna(0) + df["losses"].fillna(0)) > 0]
+    df = df[df["date"] >= recent_cutoff]
+
+    if df.empty:
+        st.warning("No active tactics used within the last 10 days.")
+        return
 
     st.subheader("Tactics Filters")
-    filter_cols = st.columns(4)
+    filter_cols = st.columns(5)
     side_opts = sorted(df["side"].dropna().unique().tolist())
     with filter_cols[0]:
         sides = _multiselect_filter("Side", side_opts, key="tactic_side")
@@ -1063,6 +1074,20 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     with filter_cols[3]:
         opps = _multiselect_filter("Opponent", opp_opts, key="tactic_opp")
 
+    tactic_opts = sorted(df["tactic_name"].dropna().unique().tolist())
+    with filter_cols[4]:
+        selected_tactics = st.multiselect(
+            "Tactics",
+            tactic_opts,
+            default=tactic_opts,
+            key="tactic_name_filter",
+            placeholder="Select tactics",
+        )
+        st.markdown(
+            f'<div class="panel-muted">Tactics: {len(selected_tactics)} selected</div>',
+            unsafe_allow_html=True,
+        )
+
     if sides:
         df = df[df["side"].isin(sides)]
     if tiers:
@@ -1071,13 +1096,14 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         df = df[df["competition"].isin(comps)]
     if opps:
         df = df[df["opponent_team"].isin(opps)]
+    df = df[df["tactic_name"].isin(selected_tactics)]
 
     if df.empty:
         st.warning("No tactics found for selected filters.")
         return
 
     summary = (
-        df.groupby(["tactic_name", "side"], as_index=False)[["wins", "losses", "total_rounds"]]
+        df.groupby(["tactic_name", "side", "map"], as_index=False)[["wins", "losses", "total_rounds"]]
         .sum()
         .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
         .sort_values(["win_rate_pct", "wins"], ascending=False)
@@ -1085,19 +1111,13 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     image_index = _build_image_index()
 
     summary["competition_logo"] = (
-        df.groupby("tactic_name")["competition"]
+        df.groupby(["tactic_name", "side", "map"])["competition"]
         .first()
         .map(lambda comp: _find_image(image_index, "competition", comp))
-        .reindex(summary["tactic_name"])
+        .reindex(summary.set_index(["tactic_name", "side", "map"]).index)
         .values
     )
-    summary["map_image"] = (
-        df.groupby("tactic_name")["map"]
-        .first()
-        .map(lambda map_name: _find_image(image_index, "map", map_name))
-        .reindex(summary["tactic_name"])
-        .values
-    )
+    summary["map_image"] = summary["map"].map(lambda map_name: _find_image(image_index, "map", map_name))
 
     top_row = summary.head(1)
     if not top_row.empty:
@@ -1130,6 +1150,38 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         },
     )
     st.bar_chart(summary.head(15).set_index("tactic_name")["win_rate_pct"])
+
+    st.subheader("Side Breakdown")
+    side_summary = (
+        df.groupby("side", as_index=False)[["wins", "losses", "total_rounds"]]
+        .sum()
+        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+        .sort_values("win_rate_pct", ascending=False)
+    )
+    st.dataframe(side_summary, use_container_width=True, hide_index=True)
+
+    red_col, blue_col = st.columns(2)
+    for col, side_name in [(red_col, "Red"), (blue_col, "Blue")]:
+        side_view = summary[summary["side"].astype(str).str.lower() == side_name.lower()].copy()
+        with col:
+            st.markdown(f"### {side_name} Side Tactics")
+            if side_view.empty:
+                st.info(f"No {side_name.lower()} side tactics for the selected filters.")
+            else:
+                st.dataframe(
+                    side_view.head(15)[["tactic_name", "map", "wins", "losses", "total_rounds", "win_rate_pct"]],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+    st.subheader("Map Breakdown")
+    map_summary = (
+        df.groupby(["map", "side"], as_index=False)[["wins", "losses", "total_rounds"]]
+        .sum()
+        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+        .sort_values(["map", "side"])
+    )
+    st.dataframe(map_summary, use_container_width=True, hide_index=True)
 
 
 def main() -> None:
