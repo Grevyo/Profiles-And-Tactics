@@ -392,10 +392,18 @@ def _find_achievement_image(
     return _find_image(image_index, "achievement", achievement_name)
 
 
+def _normalize_match_id_column(df: pd.DataFrame) -> pd.DataFrame:
+    if "match_id" in df.columns:
+        df["match_id"] = df["match_id"].astype(str).str.strip()
+    return df
+
+
 @st.cache_data(show_spinner=False)
 def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     players = pd.read_csv(PLAYER_CSV)
     tactics = pd.read_csv(TACTICS_CSV)
+    players = _normalize_match_id_column(players)
+    tactics = _normalize_match_id_column(tactics)
 
     # Drop accidental empty trailing columns from CSV export.
     tactics = tactics.loc[:, ~tactics.columns.str.contains(r"^Unnamed")]
@@ -412,6 +420,10 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
     players["date"] = pd.to_datetime(players["date"], errors="coerce")
     tactics["date"] = pd.to_datetime(tactics["date"], errors="coerce")
+    match_dates = players.groupby("match_id", as_index=False)["date"].max().rename(columns={"date": "match_date"})
+    tactics = tactics.merge(match_dates, on="match_id", how="left")
+    tactics["date"] = tactics["date"].fillna(tactics["match_date"])
+    tactics.drop(columns=["match_date"], inplace=True)
 
     players = _coerce_numeric(
         players,
@@ -1040,21 +1052,32 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         st.session_state["page"] = "home"
         st.rerun()
 
+    recent_cutoff = pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=10)
+    player_recent = player_df[player_df["date"] >= recent_cutoff].copy()
+    recent_match_ids = player_recent["match_id"].dropna().unique().tolist()
+    tier_lookup = (
+        player_df.groupby("match_id", as_index=False)["tier"]
+        .agg(lambda s: s.dropna().iloc[0] if not s.dropna().empty else None)
+    )
+
     df = tactics_df.merge(
-        player_df[["match_id", "tier"]].drop_duplicates(),
+        tier_lookup,
         on="match_id",
         how="left",
     )
     df = df[df["date"].notna()].copy()
-    recent_cutoff = pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=10)
     if "total_rounds" in df.columns:
         df = df[df["total_rounds"].fillna(0) > 0]
     else:
         df = df[(df["wins"].fillna(0) + df["losses"].fillna(0)) > 0]
-    df = df[df["date"] >= recent_cutoff]
-
     if df.empty:
-        st.warning("No active tactics used within the last 10 days.")
+        st.warning("No tactic data found.")
+        return
+
+    recent_df = df[df["match_id"].isin(recent_match_ids) & (df["date"] >= recent_cutoff)].copy()
+    recent_tactic_opts = sorted(recent_df["tactic_name"].dropna().unique().tolist())
+    if not recent_tactic_opts:
+        st.warning("No tactics have been used within the last 10 days.")
         return
 
     st.subheader("Tactics Filters")
@@ -1074,7 +1097,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     with filter_cols[3]:
         opps = _multiselect_filter("Opponent", opp_opts, key="tactic_opp")
 
-    tactic_opts = sorted(df["tactic_name"].dropna().unique().tolist())
+    tactic_opts = recent_tactic_opts
     with filter_cols[4]:
         selected_tactics = st.multiselect(
             "Tactics",
