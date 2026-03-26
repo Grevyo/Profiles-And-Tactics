@@ -21,7 +21,11 @@ DATA_DIR = Path(__file__).parent / "data"
 PLAYER_CSV = DATA_DIR / "PlayerDataMatser.csv"
 TACTICS_CSV = DATA_DIR / "TacticsDataMaster.csv"
 ACHIEVEMENTS_CSV = DATA_DIR / "Achievements.csv"
-PLAYER_META_CSV = DATA_DIR / "player.csv"
+PLAYER_META_CSV_CANDIDATES = (
+    DATA_DIR / "Player.csv",
+    DATA_DIR / "players.csv",
+    DATA_DIR / "player.csv",
+)
 IMAGE_FOLDERS = {
     "competition": "competition_logos",
     "map": "map_images",
@@ -705,14 +709,28 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
 @st.cache_data(show_spinner=False)
 def _load_player_metadata() -> pd.DataFrame:
-    if not PLAYER_META_CSV.exists():
+    metadata_path = next((path for path in PLAYER_META_CSV_CANDIDATES if path.exists()), None)
+    if metadata_path is None:
         return pd.DataFrame()
 
-    metadata = pd.read_csv(PLAYER_META_CSV)
+    metadata = pd.read_csv(metadata_path)
     metadata.columns = metadata.columns.astype(str).str.strip()
     metadata = metadata.apply(lambda col: col.str.strip() if col.dtype == object else col)
     if metadata.empty:
         return metadata
+
+    alias_map = {
+        "name": "player",
+        "country": "nation",
+        "nationality": "nation",
+    }
+    renamed_cols = {}
+    for col in metadata.columns:
+        normalized = col.strip().casefold()
+        if normalized in alias_map:
+            renamed_cols[col] = alias_map[normalized]
+    if renamed_cols:
+        metadata = metadata.rename(columns=renamed_cols)
 
     player_col = next((col for col in metadata.columns if col.casefold() == "player"), None)
     if player_col is None:
@@ -727,8 +745,17 @@ def _load_player_metadata() -> pd.DataFrame:
 def _player_meta_value(player_meta: pd.Series | None, key: str, default: str = "-") -> str:
     if player_meta is None:
         return default
-    value = str(player_meta.get(key, "")).strip()
-    return value if value else default
+    key_aliases = {
+        "nation": ("nation", "country", "nationality"),
+        "role": ("role",),
+        "handedness": ("handedness", "hand"),
+    }
+    candidates = key_aliases.get(key, (key,))
+    for candidate in candidates:
+        value = str(player_meta.get(candidate, "")).strip()
+        if value:
+            return value
+    return default
 
 
 def _multiselect_filter(label: str, options: list[str], key: str) -> list[str]:
@@ -1553,6 +1580,9 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         .reset_index()
     )
     tactic_perf = tactic_perf.merge(tier_pivot, on=["tactic_name", "map", "side"], how="left")
+    for tier_col in ("vs S tier win %", "vs A tier win %", "vs B tier win %", "vs C tier win %"):
+        if tier_col not in tactic_perf.columns:
+            tactic_perf[tier_col] = pd.NA
 
     family_map = (
         expanded_round_type_df.groupby(["tactic_name", "map", "side"], as_index=False)["round_type"]
