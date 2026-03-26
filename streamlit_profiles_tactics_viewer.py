@@ -29,6 +29,8 @@ IMAGE_FOLDERS = {
 }
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 APP_ROOT = Path(__file__).parent
+MEDISPORTS_LOGO = APP_ROOT / "team_logos" / "ᴍᴇᴅɪꜱᴘᴏʀᴛꜱ ⓜ.png"
+CPL_LOGO = APP_ROOT / "competition_logos" / "cpl.png"
 
 
 def _inject_styles() -> None:
@@ -353,6 +355,21 @@ def _coerce_numeric(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     return df
 
 
+def _render_global_branding() -> None:
+    logo_col_1, logo_col_2 = st.columns(2)
+    with logo_col_1:
+        if MEDISPORTS_LOGO.exists():
+            st.image(str(MEDISPORTS_LOGO), width=190)
+        else:
+            st.caption("Medisports logo not found.")
+    with logo_col_2:
+        if CPL_LOGO.exists():
+            st.image(str(CPL_LOGO), width=160)
+        else:
+            st.caption("CPL logo not found.")
+    st.markdown("---")
+
+
 def _normalize_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", str(value).lower())
 
@@ -622,6 +639,7 @@ def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame)
 
 def _home() -> None:
     st.title("Grevs CPL Pages")
+    _render_global_branding()
     st.write("Welcome! Choose a page below.")
 
     col1, col2, col3 = st.columns(3)
@@ -720,6 +738,7 @@ def _apply_shared_filters(
 def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achievements_df: pd.DataFrame) -> None:
     _inject_styles()
     st.title("HLTV CPL Profile Viewer")
+    _render_global_branding()
     if st.button("← Back to Home"):
         st.session_state["page"] = "home"
         st.rerun()
@@ -1069,6 +1088,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame) -> None:
     _inject_styles()
     st.title("Teams Tactical Breakdown")
+    _render_global_branding()
     if st.button("← Back to Home"):
         st.session_state["page"] = "home"
         st.rerun()
@@ -1164,6 +1184,15 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
         .sort_values(["win_rate_pct", "wins"], ascending=False)
     )
+    side_tactic_summary = (
+        df.groupby(["tactic_name", "side"], as_index=False)[["wins", "losses"]]
+        .sum()
+        .assign(
+            rounds_played=lambda d: d["wins"] + d["losses"],
+            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+        )
+        .sort_values(["side", "win_rate_pct", "rounds_played"], ascending=[True, False, False])
+    )
     image_index = _build_image_index()
 
     summary["competition_logo"] = (
@@ -1210,40 +1239,34 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     viz_col_1, viz_col_2 = st.columns(2)
 
     with viz_col_1:
-        st.markdown("#### Heatmap: Win Rate by Tactic and Side")
-        winrate_heat = (
-            summary.pivot_table(
-                index="tactic_name",
-                columns="side",
-                values="win_rate_pct",
-                aggfunc="mean",
+        st.markdown("#### Win % by Tactic (Red vs Blue)")
+        red_blue_cols = st.columns(2)
+        for side_name, side_scheme, side_col in [
+            ("Red", "reds", red_blue_cols[0]),
+            ("Blue", "blues", red_blue_cols[1]),
+        ]:
+            side_rows = (
+                side_tactic_summary[side_tactic_summary["side"].astype(str).str.lower() == side_name.lower()]
+                .head(12)
+                .copy()
             )
-            .fillna(0)
-            .head(12)
-        )
-        if winrate_heat.empty:
-            st.info("Not enough data to render the heatmap.")
-        else:
-            heatmap_data = (
-                winrate_heat.reset_index()
-                .melt(id_vars="tactic_name", var_name="side", value_name="win_rate_pct")
-            )
-            heatmap_chart = (
-                alt.Chart(heatmap_data)
-                .mark_rect(cornerRadius=3)
-                .encode(
-                    x=alt.X("side:N", title="Side"),
-                    y=alt.Y("tactic_name:N", title="Tactic"),
-                    color=alt.Color("win_rate_pct:Q", title="Win Rate %", scale=alt.Scale(scheme="viridis")),
-                    tooltip=[
-                        alt.Tooltip("tactic_name:N", title="Tactic"),
-                        alt.Tooltip("side:N", title="Side"),
-                        alt.Tooltip("win_rate_pct:Q", title="Win Rate %", format=".1f"),
-                    ],
-                )
-                .properties(height=460, title="Top Tactics Win Rate Heatmap")
-            )
-            st.altair_chart(heatmap_chart, use_container_width=True)
+            with side_col:
+                st.caption(f"{side_name} side")
+                if side_rows.empty:
+                    st.info(f"No {side_name.lower()} side tactic data for selected filters.")
+                else:
+                    side_chart = (
+                        alt.Chart(side_rows)
+                        .mark_bar(cornerRadiusEnd=3)
+                        .encode(
+                            x=alt.X("win_rate_pct:Q", title="Win Rate %"),
+                            y=alt.Y("tactic_name:N", sort="-x", title="Tactic"),
+                            color=alt.Color("win_rate_pct:Q", scale=alt.Scale(scheme=side_scheme), legend=None),
+                            tooltip=["tactic_name", "wins", "losses", "rounds_played", "win_rate_pct"],
+                        )
+                        .properties(height=420)
+                    )
+                    st.altair_chart(side_chart, use_container_width=True)
 
     with viz_col_2:
         st.markdown("#### Altair: Wins vs Losses by Tactic")
@@ -1361,6 +1384,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
 def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
     _inject_styles()
     st.title("Medisports Vs Breakdown")
+    _render_global_branding()
     if st.button("← Back to Home"):
         st.session_state["page"] = "home"
         st.rerun()
@@ -1382,11 +1406,20 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
     overall_draws = int((match_results["match_result"] == "Draw").sum())
     overall_rate = (overall_wins / max(overall_wins + overall_losses, 1)) * 100
 
-    stats = st.columns(4)
-    stats[0].metric("Matches", overall_matches)
-    stats[1].metric("Wins", overall_wins)
-    stats[2].metric("Losses", overall_losses)
-    stats[3].metric("Win Rate", f"{overall_rate:.1f}%")
+    st.markdown(
+        f"""
+        <div class="panel-card">
+            <div class="panel-muted">Overall Medisports form</div>
+            <div class="stats-grid">
+                <div class="stat-chip"><div class="stat-label">Matches</div><div class="stat-value">{overall_matches}</div></div>
+                <div class="stat-chip"><div class="stat-label">Wins</div><div class="stat-value">{overall_wins}</div></div>
+                <div class="stat-chip"><div class="stat-label">Losses</div><div class="stat-value">{overall_losses}</div></div>
+                <div class="stat-chip"><div class="stat-label">Win Rate</div><div class="stat-value">{overall_rate:.1f}%</div></div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.caption(f"Draws: {overall_draws}")
 
     vs_summary = (
@@ -1407,11 +1440,39 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
     )
     st.subheader("How Medisports Performs vs Each Team")
     st.dataframe(vs_summary, use_container_width=True, hide_index=True)
+    spotlight = vs_summary.sort_values(["matches", "win_rate_pct"], ascending=[False, False]).head(3)
+    if not spotlight.empty:
+        st.markdown("#### Opponent Spotlight")
+        spotlight_cols = st.columns(len(spotlight))
+        for i, (_, row) in enumerate(spotlight.iterrows()):
+            with spotlight_cols[i]:
+                st.markdown(
+                    f"""
+                    <div class="panel-card">
+                        <div class="panel-muted">vs {row["opponent_team"]}</div>
+                        <div class="panel-title">{int(row["wins"])}W - {int(row["losses"])}L</div>
+                        <div class="stat-label">Matches: {int(row["matches"])} | WR: {row["win_rate_pct"]:.1f}%</div>
+                        <div class="stat-label">Round diff: {int(row["round_diff"]):+d}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
     chart_col_1, chart_col_2 = st.columns(2)
     with chart_col_1:
-        st.markdown("#### Teams We Beat Most")
-        st.bar_chart(vs_summary.set_index("opponent_team")["wins"])
+        st.markdown("#### Match Wins by Opponent")
+        wins_chart = (
+            alt.Chart(vs_summary.sort_values("wins", ascending=False))
+            .mark_bar(cornerRadiusEnd=4)
+            .encode(
+                x=alt.X("wins:Q", title="Wins"),
+                y=alt.Y("opponent_team:N", sort="-x", title="Opponent"),
+                color=alt.value("#57d28a"),
+                tooltip=["opponent_team", "wins", "losses", "draws", "matches"],
+            )
+            .properties(height=380)
+        )
+        st.altair_chart(wins_chart, use_container_width=True)
     with chart_col_2:
         st.markdown("#### Win Rate by Team (min 1 match)")
         rate_chart = (
@@ -1426,6 +1487,24 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
             .properties(height=380)
         )
         st.altair_chart(rate_chart, use_container_width=True)
+
+    st.markdown("#### Round Differential by Opponent")
+    round_diff_chart = (
+        alt.Chart(vs_summary.sort_values("round_diff", ascending=False))
+        .mark_bar(cornerRadiusEnd=4)
+        .encode(
+            x=alt.X("round_diff:Q", title="Round Differential"),
+            y=alt.Y("opponent_team:N", sort="-x", title="Opponent"),
+            color=alt.condition(
+                "datum.round_diff >= 0",
+                alt.value("#44c06f"),
+                alt.value("#e85c6b"),
+            ),
+            tooltip=["opponent_team", "round_wins", "round_losses", "round_diff", "matches"],
+        )
+        .properties(height=300)
+    )
+    st.altair_chart(round_diff_chart, use_container_width=True)
 
     st.subheader("Match-by-Match Results")
     result_filter = st.multiselect(
