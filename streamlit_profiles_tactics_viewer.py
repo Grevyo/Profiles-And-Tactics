@@ -928,10 +928,17 @@ def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value:
             .lower()
             .translate(str.maketrans({"ᴍ": "m", "ᴀ": "a", "ᴅ": "d", "ᴇ": "e", "ɴ": "n"}))
         )
-        if "madmen" in ascii_value:
-            madmen_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / "madmen.png"
-            if madmen_logo.exists():
-                return madmen_logo
+        competition_logo_overrides = {
+            "nova": "nova-prime.png",
+            "madmen": "madmen.png",
+            "cyberathletes": "cyberathletes.png",
+            "diamond": "diamond.png",
+        }
+        for needle, filename in competition_logo_overrides.items():
+            if needle in ascii_value:
+                override_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / filename
+                if override_logo.exists():
+                    return override_logo
     normalized = _normalize_key(value)
     entries = image_index.get(image_type, {})
     return entries.get(normalized)
