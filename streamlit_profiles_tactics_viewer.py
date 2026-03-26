@@ -2779,17 +2779,21 @@ def _medisports_vs_breakdown(
 
 def main() -> None:
     player_df, tactics_df, achievements_df = _load_data()
-    competition_view = st.sidebar.radio(
-        "Competition View",
-        ["Raw competition names", "Grouped competition names"],
-        index=0,
-    )
-    competition_source_col = "competition" if competition_view == "Raw competition names" else "grouped_competition"
-
     if "page" not in st.session_state:
         st.session_state["page"] = "home"
 
     page = st.session_state["page"]
+    competition_source_col = "competition"
+    if page in {"profiles", "tactics", "medisports_vs"}:
+        competition_view = st.radio(
+            "Competition View",
+            ["Raw competition names", "Grouped competition names"],
+            index=0,
+            horizontal=True,
+            key="competition_view_mode",
+        )
+        competition_source_col = "competition" if competition_view == "Raw competition names" else "grouped_competition"
+
     if page == "profiles":
         _hltv_profile_view(player_df, tactics_df, achievements_df, competition_source_col)
     elif page == "tactics":
