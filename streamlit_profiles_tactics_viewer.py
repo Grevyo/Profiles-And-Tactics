@@ -829,7 +829,24 @@ def _load_player_metadata() -> pd.DataFrame:
     if metadata_path is None:
         return pd.DataFrame()
 
-    metadata = pd.read_csv(metadata_path, sep=None, engine="python")
+    try:
+        metadata = pd.read_csv(metadata_path, sep=None, engine="python", on_bad_lines="skip")
+    except pd.errors.ParserError:
+        # Some exports are malformed enough that separator inference fails.
+        # Fallback through common delimiters and keep whichever parse yields
+        # usable columns.
+        metadata = pd.DataFrame()
+        for sep in (",", "|", ";", "\t"):
+            try:
+                candidate = pd.read_csv(metadata_path, sep=sep, engine="python", on_bad_lines="skip")
+            except pd.errors.ParserError:
+                continue
+            if not candidate.empty and len(candidate.columns) > 1:
+                metadata = candidate
+                break
+        if metadata.empty:
+            return pd.DataFrame()
+
     metadata.columns = metadata.columns.astype(str).str.strip()
     metadata = metadata.apply(lambda col: col.str.strip() if col.dtype == object else col)
     if metadata.empty:
