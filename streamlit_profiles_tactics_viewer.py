@@ -66,6 +66,38 @@ def _inject_styles() -> None:
         }
         .stat-label { color: #9da7bd; font-size: 0.78rem; }
         .stat-value { color: #f5f7fb; font-size: 1rem; font-weight: 650; }
+        .stat-trend { font-size: 0.78rem; margin-top: 4px; font-weight: 600; }
+        .trend-good { color: #31d17b; }
+        .trend-mid { color: #f0be4f; }
+        .trend-bad { color: #ff6c7a; }
+        .stat-meter {
+            width: 100%;
+            background: rgba(151, 166, 195, 0.2);
+            border-radius: 999px;
+            overflow: hidden;
+            height: 6px;
+            margin-top: 6px;
+        }
+        .stat-meter-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #ff6c7a 0%, #f0be4f 50%, #31d17b 100%);
+        }
+        .player-card-layout {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+        .player-headshot {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(151, 166, 195, 0.35);
+        }
+        .form-row {
+            border-bottom: 1px solid rgba(151, 166, 195, 0.2);
+            padding: 6px 0;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -181,8 +213,39 @@ def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: 
         total = wins + losses
         win_rate = (wins / total * 100) if total else 0.0
 
-    impact = (kd * 45.0) + (kpm * 35.0) + (acc * 0.2) + (win_rate * 0.2)
-    grevscore = min(max((impact + (dpm / 60.0)) / 2.0, 0.0), 100.0)
+    hs = float(filtered_players["hs_pct"].mean()) if "hs_pct" in filtered_players.columns else 0.0
+    avg_kpd = float(filtered_players["kpd"].mean()) if "kpd" in filtered_players.columns else 0.0
+    kpd_consistency = 1.0
+    if "kpd" in filtered_players.columns and len(filtered_players) > 1:
+        kpd_std = float(filtered_players["kpd"].std(ddof=0))
+        kpd_consistency = max(0.0, min(1.0, 1.0 - (kpd_std / 1.25)))
+
+    impact = (kd * 28.0) + (kda * 14.0) + (kpm * 22.0) + (acc * 0.14) + (win_rate * 0.22)
+
+    score_components = {
+        "kd": min(max((kd / 1.25) * 100.0, 0.0), 100.0),
+        "kda": min(max((kda / 2.0) * 100.0, 0.0), 100.0),
+        "kpm": min(max((kpm / 1.0) * 100.0, 0.0), 100.0),
+        "dpm": min(max((dpm / 3600.0) * 100.0, 0.0), 100.0),
+        "acc": min(max(acc, 0.0), 100.0),
+        "hs": min(max((hs / 55.0) * 100.0, 0.0), 100.0),
+        "win_rate": min(max(win_rate, 0.0), 100.0),
+        "impact": min(max((impact / 100.0) * 100.0, 0.0), 100.0),
+        "consistency": min(max(kpd_consistency * 100.0, 0.0), 100.0),
+        "avg_kpd": min(max((avg_kpd / 1.5) * 100.0, 0.0), 100.0),
+    }
+    grevscore = (
+        (score_components["kd"] * 0.14)
+        + (score_components["kda"] * 0.11)
+        + (score_components["kpm"] * 0.11)
+        + (score_components["dpm"] * 0.1)
+        + (score_components["acc"] * 0.08)
+        + (score_components["hs"] * 0.06)
+        + (score_components["win_rate"] * 0.15)
+        + (score_components["impact"] * 0.14)
+        + (score_components["consistency"] * 0.06)
+        + (score_components["avg_kpd"] * 0.05)
+    )
     return {
         "matches": float(matches),
         "kills": kills,
@@ -194,8 +257,84 @@ def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: 
         "acc": acc,
         "kpm": kpm,
         "impact": impact,
-        "grevscore": grevscore,
+        "grevscore": min(max(grevscore, 0.0), 100.0),
     }
+
+
+def _stat_visual(value: float, low: float, high: float, invert: bool = False) -> tuple[str, float]:
+    if high <= low:
+        return "trend-mid", 50.0
+    pct = ((value - low) / (high - low)) * 100.0
+    pct = min(max(pct, 0.0), 100.0)
+    if invert:
+        pct = 100.0 - pct
+    if pct >= 70:
+        return "trend-good", pct
+    if pct <= 35:
+        return "trend-bad", pct
+    return "trend-mid", pct
+
+
+def _build_stat_chip(label: str, display: str, value: float, low: float, high: float, invert: bool = False) -> str:
+    tier_class, meter = _stat_visual(value, low, high, invert=invert)
+    arrow = "▲" if tier_class == "trend-good" else ("▼" if tier_class == "trend-bad" else "■")
+    return (
+        f'<div class="stat-chip"><div class="stat-label">{label}</div>'
+        f'<div class="stat-value">{display}</div>'
+        f'<div class="stat-trend {tier_class}">{arrow} {meter:.0f}/100</div>'
+        f'<div class="stat-meter"><div class="stat-meter-fill" style="width:{meter:.0f}%"></div></div></div>'
+    )
+
+
+def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame) -> tuple[float, pd.DataFrame]:
+    if player_rows.empty:
+        return 0.0, pd.DataFrame()
+
+    recent = player_rows.sort_values("date", ascending=False).head(10).copy()
+    match_ids = recent["match_id"].dropna().unique().tolist()
+    tactics_matches = tactics_df[tactics_df["match_id"].isin(match_ids)].copy()
+    tactics_summary = (
+        tactics_matches.groupby("match_id", as_index=False)[["wins", "losses"]].sum()
+        if not tactics_matches.empty
+        else pd.DataFrame(columns=["match_id", "wins", "losses"])
+    )
+    recent = recent.merge(tactics_summary, on="match_id", how="left")
+    recent[["wins", "losses"]] = recent[["wins", "losses"]].fillna(0)
+    recent["kda"] = (recent["kills"] + recent["mvps"]) / recent["deaths"].replace(0, 1)
+    recent["round_diff"] = recent["wins"] - recent["losses"]
+    recent["close_game_bonus"] = (1.0 - (recent["round_diff"].abs() / 16.0)).clip(lower=0.0, upper=1.0)
+    recent["dominance_bonus"] = (recent["round_diff"].abs() / 16.0).clip(lower=0.0, upper=1.0)
+    recent["result_points"] = (recent["wins"] > recent["losses"]).astype(float) * 1.0
+
+    teammate_scope = player_rows[player_rows["match_id"].isin(match_ids)].copy()
+    teammate_top = (
+        teammate_scope.groupby("match_id")
+        .apply(
+            lambda g: (
+                (g["kills"] * 0.25)
+                + (g["kpd"] * 0.25)
+                + (((g["kills"] + g["mvps"]) / g["deaths"].replace(0, 1)) * 0.2)
+                + ((g["damage"] / g["rounds_played"].replace(0, 1)) * 0.2)
+                + (g["mvps"] * 0.1)
+            )
+            .idxmax()
+        )
+        .to_dict()
+    )
+    recent["carried"] = recent.index.map(lambda idx: 1.0 if idx == teammate_top.get(recent.loc[idx, "match_id"]) else 0.0)
+
+    recent["match_form_score"] = (
+        (recent["kpd"] / 1.5).clip(0, 1.2) * 30
+        + (recent["kda"] / 2.2).clip(0, 1.2) * 20
+        + (recent["accuracy_pct"] / 100).clip(0, 1.0) * 10
+        + (recent["hs_pct"] / 60).clip(0, 1.0) * 6
+        + recent["result_points"] * 14
+        + recent["close_game_bonus"] * 6
+        + recent["dominance_bonus"] * 4
+        + recent["carried"] * 10
+    ).clip(lower=0, upper=100)
+    form_score = float(recent["match_form_score"].mean()) if not recent.empty else 0.0
+    return form_score, recent
 
 
 def _home() -> None:
@@ -305,23 +444,16 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 
     first_row = filtered_players.sort_values("date", ascending=False).iloc[0]
 
-    header_cols = st.columns([1, 2, 2, 2])
+    header_cols = st.columns([1, 2])
     player_image = _find_image(image_index, "player", selected_player)
     with header_cols[0]:
-        if player_image:
-            st.image(str(player_image), caption=selected_player, use_container_width=True)
-    with header_cols[1]:
         team_logo = _find_image(image_index, "team", first_row.get("my_team"))
         if team_logo:
-            st.image(str(team_logo), caption=str(first_row.get("my_team", "")), use_container_width=True)
-    with header_cols[2]:
+            st.image(str(team_logo), caption=str(first_row.get("my_team", "")), width=100)
+    with header_cols[1]:
         competition_logo = _find_image(image_index, "competition", first_row.get("competition"))
         if competition_logo:
-            st.image(str(competition_logo), caption=str(first_row.get("competition", "")), use_container_width=True)
-    with header_cols[3]:
-        map_image = _find_image(image_index, "map", first_row.get("map"))
-        if map_image:
-            st.image(str(map_image), caption=str(first_row.get("map", "")), use_container_width=True)
+            st.image(str(competition_logo), caption=str(first_row.get("competition", "")), width=180)
 
     metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
     kills = int(metrics["kills"])
@@ -333,30 +465,61 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     avg_hs = float(filtered_players["hs_pct"].mean()) if not filtered_players.empty else 0.0
     avg_kpd = float(filtered_players["kpd"].mean()) if not filtered_players.empty else 0.0
 
-    card_col1, card_col2 = st.columns([1, 4])
-    with card_col1:
+    stat_chips = [
+        f'<div class="stat-chip"><div class="stat-label">Matches</div><div class="stat-value">{int(metrics["matches"])}</div></div>',
+        _build_stat_chip("K/D", f'{metrics["kd"]:.2f}', metrics["kd"], 0.7, 1.3),
+        _build_stat_chip("KDA", f'{metrics["kda"]:.2f}', metrics["kda"], 1.0, 2.2),
+        f'<div class="stat-chip"><div class="stat-label">K / D / A</div><div class="stat-value">{kills}/{deaths}/{assists}</div></div>',
+        _build_stat_chip("DPM", f'{metrics["dpm"]:.1f}', metrics["dpm"], 1800, 3600),
+        _build_stat_chip("Acc%", f'{metrics["acc"]:.1f}%', metrics["acc"], 45, 80),
+        _build_stat_chip("KPM", f'{metrics["kpm"]:.2f}', metrics["kpm"], 0.45, 1.0),
+        _build_stat_chip("Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
+        _build_stat_chip("GrevScore", f'{metrics["grevscore"]:.1f}', metrics["grevscore"], 35, 85),
+    ]
+    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+    card_left, card_right = st.columns([1, 4])
+    with card_left:
         if player_image:
             st.image(str(player_image), use_container_width=True)
-    with card_col2:
+    with card_right:
         st.markdown(
             f"""
-            <div class="panel-card">
-                <div class="panel-muted">Player card</div>
-                <div class="panel-title">{selected_player}</div>
-                <div class="stats-grid">
-                    <div class="stat-chip"><div class="stat-label">Matches</div><div class="stat-value">{int(metrics["matches"])}</div></div>
-                    <div class="stat-chip"><div class="stat-label">K/D</div><div class="stat-value">{metrics["kd"]:.2f}</div></div>
-                    <div class="stat-chip"><div class="stat-label">KDA</div><div class="stat-value">{metrics["kda"]:.2f}</div></div>
-                    <div class="stat-chip"><div class="stat-label">K / D / A</div><div class="stat-value">{kills}/{deaths}/{assists}</div></div>
-                    <div class="stat-chip"><div class="stat-label">DPM</div><div class="stat-value">{metrics["dpm"]:.1f}</div></div>
-                    <div class="stat-chip"><div class="stat-label">Acc%</div><div class="stat-value">{metrics["acc"]:.1f}%</div></div>
-                    <div class="stat-chip"><div class="stat-label">KPM</div><div class="stat-value">{metrics["kpm"]:.2f}</div></div>
-                    <div class="stat-chip"><div class="stat-label">Impact</div><div class="stat-value">{metrics["impact"]:.1f}</div></div>
-                    <div class="stat-chip"><div class="stat-label">Grevscore</div><div class="stat-value">{metrics["grevscore"]:.1f}</div></div>
-                </div>
+            <div class="panel-muted">Player card</div>
+            <div class="panel-title">{selected_player}</div>
+            <div class="stats-grid">
+                {''.join(stat_chips)}
             </div>
             """,
             unsafe_allow_html=True,
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
+    st.subheader("FORM (Last 10 Games)")
+    st.write(f"Form Score: **{form_score:.1f}/100**")
+    st.progress(min(max(form_score / 100.0, 0.0), 1.0))
+    if recent_form.empty:
+        st.info("Not enough recent match data for form trends.")
+    else:
+        preview_cols = [
+            "date",
+            "map",
+            "opponent_team",
+            "kills",
+            "deaths",
+            "mvps",
+            "kpd",
+            "kda",
+            "wins",
+            "losses",
+            "carried",
+            "match_form_score",
+        ]
+        preview_cols = [c for c in preview_cols if c in recent_form.columns]
+        st.dataframe(
+            recent_form[preview_cols].sort_values("date", ascending=False),
+            use_container_width=True,
+            hide_index=True,
         )
 
     st.subheader("Performance Indicators")
