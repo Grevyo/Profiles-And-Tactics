@@ -1469,234 +1469,309 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         st.warning("No tactics found for selected filters.")
         return
 
-    st.subheader("Round-Type Tactical Breakdown")
-    round_type_summary = (
-        expanded_round_type_df.groupby("round_type", as_index=False)[["wins", "losses", "total_rounds"]]
+    map_side_totals = (
+        df.groupby(["map", "side"], as_index=False)[["wins", "losses"]]
+        .sum()
+        .assign(total_map_side_rounds=lambda d: d["wins"] + d["losses"])
+    )
+    tactic_perf = (
+        df.groupby(["tactic_name", "map", "side"], as_index=False)[["wins", "losses"]]
         .sum()
         .assign(
-            rounds_played=lambda d: d["wins"] + d["losses"],
-            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+            times_used=lambda d: d["wins"] + d["losses"],
+            win_pct=lambda d: (d["wins"] / d["times_used"].clip(lower=1) * 100).round(1),
+            net_rounds=lambda d: d["wins"] - d["losses"],
         )
-        .sort_values("round_type")
+        .merge(map_side_totals[["map", "side", "total_map_side_rounds"]], on=["map", "side"], how="left")
+        .assign(round_share_pct=lambda d: (d["times_used"] / d["total_map_side_rounds"].clip(lower=1) * 100).round(1))
     )
-    st.dataframe(round_type_summary, use_container_width=True, hide_index=True)
+    if tactic_perf.empty:
+        st.warning("No tactics found for selected filters.")
+        return
 
-    uniqueness = (
-        expanded_round_type_df.groupby("tactic_name", as_index=False)
-        .agg(unique_sides=("side", "nunique"), unique_maps=("map", "nunique"))
-        .sort_values(["unique_sides", "unique_maps", "tactic_name"], ascending=[False, False, True])
-    )
-    cross_side_count = int((uniqueness["unique_sides"] > 1).sum())
-    cross_map_count = int((uniqueness["unique_maps"] > 1).sum())
-    st.caption(
-        f"Tactic uniqueness check: {cross_side_count} tactic(s) appear on multiple sides, "
-        f"{cross_map_count} tactic(s) appear on multiple maps."
-    )
+    total_rounds_selected = int(tactic_perf["times_used"].sum())
+    tactic_perf["usage_pct"] = (tactic_perf["times_used"] / max(total_rounds_selected, 1) * 100).round(1)
 
-    summary = (
-        expanded_round_type_df.groupby(["tactic_name", "round_type", "side", "map"], as_index=False)[
-            ["wins", "losses", "total_rounds"]
-        ]
+    tier_perf = (
+        df.groupby(["tactic_name", "map", "side", "tier"], as_index=False)[["wins", "losses"]]
         .sum()
-        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
-        .sort_values(["win_rate_pct", "wins"], ascending=False)
+        .assign(tier_win_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
     )
-    side_tactic_summary = (
-        expanded_round_type_df.groupby(["tactic_name", "round_type", "side"], as_index=False)[["wins", "losses"]]
-        .sum()
-        .assign(
-            rounds_played=lambda d: d["wins"] + d["losses"],
-            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+    tier_pivot = (
+        tier_perf.pivot_table(
+            index=["tactic_name", "map", "side"],
+            columns="tier",
+            values="tier_win_pct",
+            aggfunc="first",
         )
-        .sort_values(["side", "win_rate_pct", "rounds_played"], ascending=[True, False, False])
+        .rename(columns={tier: f"vs {tier} tier win %" for tier in ["S", "A", "B", "C"]})
+        .reset_index()
     )
-    image_index = _build_image_index()
+    tactic_perf = tactic_perf.merge(tier_pivot, on=["tactic_name", "map", "side"], how="left")
 
-    summary["competition_logo"] = (
-        expanded_round_type_df.groupby(["tactic_name", "round_type", "side", "map"])["competition"]
-        .first()
-        .map(lambda comp: _find_image(image_index, "competition", comp))
-        .reindex(summary.set_index(["tactic_name", "round_type", "side", "map"]).index)
-        .values
+    family_map = (
+        expanded_round_type_df.groupby(["tactic_name", "map", "side"], as_index=False)["round_type"]
+        .agg(lambda x: x.dropna().iloc[0] if not x.dropna().empty else "Unspecified")
+        .rename(columns={"round_type": "family"})
     )
-    summary["map_image"] = summary["map"].map(lambda map_name: _find_image(image_index, "map", map_name))
+    tactic_perf = tactic_perf.merge(family_map, on=["tactic_name", "map", "side"], how="left")
+    tactic_perf["family"] = tactic_perf["family"].fillna("Unspecified")
 
-    top_row = summary.head(1)
-    if not top_row.empty:
-        best = top_row.iloc[0]
-        st.markdown(
-            f"""
-            <div class="panel-card">
-                <div class="panel-muted">Best current tactic</div>
-                <div class="panel-title">{best["tactic_name"]}</div>
-                <div class="stats-grid">
-                    <div class="stat-chip"><div class="stat-label">Round Type</div><div class="stat-value">{best["round_type"]}</div></div>
-                    <div class="stat-chip"><div class="stat-label">Side</div><div class="stat-value">{best["side"]}</div></div>
-                    <div class="stat-chip"><div class="stat-label">Wins</div><div class="stat-value">{int(best["wins"])}</div></div>
-                    <div class="stat-chip"><div class="stat-label">Losses</div><div class="stat-value">{int(best["losses"])}</div></div>
-                    <div class="stat-chip"><div class="stat-label">Rounds</div><div class="stat-value">{int(best["total_rounds"])}</div></div>
-                    <div class="stat-chip"><div class="stat-label">Win Rate</div><div class="stat-value">{best["win_rate_pct"]:.1f}%</div></div>
-                </div>
+    round_rows: list[dict[str, object]] = []
+    for row in df.sort_values(["date", "match_id", "tactic_name"]).itertuples(index=False):
+        row_dict = row._asdict()
+        for _ in range(int(max(row_dict.get("wins", 0), 0))):
+            round_rows.append({**row_dict, "round_result": 1})
+        for _ in range(int(max(row_dict.get("losses", 0), 0))):
+            round_rows.append({**row_dict, "round_result": -1})
+    rounds_long = pd.DataFrame(round_rows)
+
+    last10_records = []
+    if not rounds_long.empty:
+        grouped = rounds_long.groupby(["tactic_name", "map", "side"], as_index=False)
+        for _, g in grouped:
+            g = g.sort_values(["date", "match_id"]).copy()
+            wins_last_10 = int((g["round_result"].tail(10) > 0).sum())
+            uses_last_10 = int(min(10, len(g)))
+            wins_last_5 = int((g["round_result"].tail(5) > 0).sum())
+            uses_last_5 = int(min(5, len(g)))
+            last10_records.append(
+                {
+                    "tactic_name": g["tactic_name"].iloc[0],
+                    "map": g["map"].iloc[0],
+                    "side": g["side"].iloc[0],
+                    "last_10_usage_win_pct": round((wins_last_10 / max(uses_last_10, 1)) * 100, 1),
+                    "recent_form_5": f"{wins_last_5}-{uses_last_5 - wins_last_5}",
+                    "recent_form_10": f"{wins_last_10}-{uses_last_10 - wins_last_10}",
+                    "trend_delta": round(((wins_last_5 / max(uses_last_5, 1)) - (wins_last_10 / max(uses_last_10, 1))) * 100, 1),
+                }
+            )
+    last10_df = pd.DataFrame(last10_records)
+    tactic_perf = tactic_perf.merge(last10_df, on=["tactic_name", "map", "side"], how="left")
+    tactic_perf["last_10_usage_win_pct"] = tactic_perf["last_10_usage_win_pct"].fillna(tactic_perf["win_pct"])
+    tactic_perf["trend"] = tactic_perf["trend_delta"].fillna(0).apply(
+        lambda v: "Rising" if v >= 8 else ("Falling" if v <= -8 else "Stable")
+    )
+
+    def _confidence_label(row: pd.Series) -> str:
+        uses = row["times_used"]
+        win = row["win_pct"]
+        if uses < 5:
+            return "Unclear sample"
+        if uses >= 10 and win >= 60:
+            return "Strong"
+        if uses >= 7 and win >= 52:
+            return "Promising"
+        if uses >= 10 and win < 45:
+            return "Underperforming"
+        return "Unclear sample"
+
+    tactic_perf["confidence"] = tactic_perf.apply(_confidence_label, axis=1)
+
+    def _action_label(row: pd.Series, avg_win: float) -> str:
+        if row["win_pct"] > 60 and row["times_used"] >= 10:
+            return "Keep"
+        if row["win_pct"] < 45 and row["times_used"] >= 10:
+            return "Stop using"
+        if row["win_pct"] > 65 and row["times_used"] < 5:
+            return "Test more"
+        if row["usage_pct"] > 12 and row["win_pct"] < avg_win:
+            return "Rework"
+        if row["usage_pct"] < 8 and row["win_pct"] >= 58 and row["times_used"] >= 6:
+            return "Use more"
+        return "Monitor"
+
+    overall_avg_win = float(tactic_perf["win_pct"].mean())
+    tactic_perf["recommended_action"] = tactic_perf.apply(lambda r: _action_label(r, overall_avg_win), axis=1)
+    tactic_perf["tags"] = tactic_perf.apply(
+        lambda r: ", ".join(
+            [
+                tag
+                for tag in [
+                    "Reliable" if (r["confidence"] == "Strong") else None,
+                    "Underused" if (r["recommended_action"] == "Use more") else None,
+                    "Overused" if (r["recommended_action"] == "Rework") else None,
+                    "Falling off" if (r["trend"] == "Falling") else None,
+                    "Map-specific" if (r["round_share_pct"] > 25) else None,
+                ]
+                if tag
+            ]
+        ),
+        axis=1,
+    )
+
+    selected_key = st.selectbox(
+        "Selected tactic summary",
+        tactic_perf.apply(lambda r: f'{r["tactic_name"]} | {r["map"]} | {r["side"]}', axis=1).tolist(),
+        key="selected_tactic_summary",
+    )
+    selected_row = tactic_perf[
+        tactic_perf.apply(lambda r: f'{r["tactic_name"]} | {r["map"]} | {r["side"]}', axis=1) == selected_key
+    ].iloc[0]
+    st.markdown(
+        f"""
+        <div class="panel-card">
+            <div class="panel-muted">Selected tactic summary</div>
+            <div class="panel-title">{selected_row["tactic_name"]}</div>
+            <div class="stats-grid">
+                <div class="stat-chip"><div class="stat-label">Map</div><div class="stat-value">{selected_row["map"]}</div></div>
+                <div class="stat-chip"><div class="stat-label">Side</div><div class="stat-value">{selected_row["side"]}</div></div>
+                <div class="stat-chip"><div class="stat-label">Times used</div><div class="stat-value">{int(selected_row["times_used"])}</div></div>
+                <div class="stat-chip"><div class="stat-label">Rounds won</div><div class="stat-value">{int(selected_row["wins"])}</div></div>
+                <div class="stat-chip"><div class="stat-label">Win rate</div><div class="stat-value">{selected_row["win_pct"]:.1f}%</div></div>
+                <div class="stat-chip"><div class="stat-label">Round share</div><div class="stat-value">{selected_row["round_share_pct"]:.1f}%</div></div>
+                <div class="stat-chip"><div class="stat-label">Recent form (last 5)</div><div class="stat-value">{selected_row.get("recent_form_5", "n/a")}</div></div>
+                <div class="stat-chip"><div class="stat-label">Recent form (last 10)</div><div class="stat-value">{selected_row.get("recent_form_10", "n/a")}</div></div>
+                <div class="stat-chip"><div class="stat-label">Net round impact</div><div class="stat-value">{int(selected_row["net_rounds"])}</div></div>
+                <div class="stat-chip"><div class="stat-label">Confidence</div><div class="stat-value">{selected_row["confidence"]}</div></div>
             </div>
-            """,
-            unsafe_allow_html=True,
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.subheader("Tactic performance table")
+    perf_cols = [
+        "tactic_name",
+        "map",
+        "side",
+        "times_used",
+        "wins",
+        "losses",
+        "win_pct",
+        "net_rounds",
+        "usage_pct",
+        "vs S tier win %",
+        "vs A tier win %",
+        "vs B tier win %",
+        "vs C tier win %",
+        "last_10_usage_win_pct",
+        "trend",
+        "confidence",
+        "tags",
+    ]
+    st.dataframe(tactic_perf[perf_cols].sort_values(["win_pct", "times_used"], ascending=[False, False]), use_container_width=True, hide_index=True)
+
+    st.subheader("Trend over time")
+    selected_rounds = rounds_long[
+        (rounds_long["tactic_name"] == selected_row["tactic_name"])
+        & (rounds_long["map"] == selected_row["map"])
+        & (rounds_long["side"] == selected_row["side"])
+    ].sort_values(["date", "match_id"])
+    if selected_rounds.empty:
+        st.info("No round-level trend data available.")
+    else:
+        selected_rounds = selected_rounds.assign(
+            use_idx=range(1, len(selected_rounds) + 1),
+            rolling_5=lambda d: (d["round_result"].gt(0).rolling(5, min_periods=1).mean() * 100).round(1),
+            rolling_10=lambda d: (d["round_result"].gt(0).rolling(10, min_periods=1).mean() * 100).round(1),
         )
-
-    st.subheader("Top Tactical Outcomes")
-    st.dataframe(
-        summary.head(30),
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "competition_logo": st.column_config.ImageColumn("Competition"),
-            "map_image": st.column_config.ImageColumn("Map"),
-        },
-    )
-    st.bar_chart(summary.head(15).set_index("tactic_name")["win_rate_pct"])
-    st.subheader("Visual Tactical Insights")
-    viz_col_1, viz_col_2 = st.columns(2)
-
-    with viz_col_1:
-        st.markdown("#### Win % by Tactic (Red vs Blue)")
-        red_blue_cols = st.columns(2)
-        for side_name, side_scheme, side_col in [
-            ("Red", "reds", red_blue_cols[0]),
-            ("Blue", "blues", red_blue_cols[1]),
-        ]:
-            side_rows = (
-                side_tactic_summary[side_tactic_summary["side"].astype(str).str.lower() == side_name.lower()]
-                .head(12)
-                .copy()
+        trend_chart = (
+            alt.Chart(selected_rounds)
+            .transform_fold(["rolling_5", "rolling_10"], as_=["metric", "value"])
+            .mark_line(point=True)
+            .encode(
+                x=alt.X("use_idx:Q", title="Match/Round order"),
+                y=alt.Y("value:Q", title="Rolling win rate %"),
+                color=alt.Color("metric:N", title="Window"),
+                tooltip=["date", "match_id", "round_result", "rolling_5", "rolling_10"],
             )
-            with side_col:
-                st.caption(f"{side_name} side")
-                if side_rows.empty:
-                    st.info(f"No {side_name.lower()} side tactic data for selected filters.")
-                else:
-                    side_chart = (
-                        alt.Chart(side_rows)
-                        .mark_bar(cornerRadiusEnd=3)
-                        .encode(
-                            x=alt.X("win_rate_pct:Q", title="Win Rate %"),
-                            y=alt.Y("tactic_name:N", sort="-x", title="Tactic"),
-                            color=alt.Color("win_rate_pct:Q", scale=alt.Scale(scheme=side_scheme), legend=None),
-                            tooltip=["tactic_name", "wins", "losses", "rounds_played", "win_rate_pct"],
-                        )
-                        .properties(height=420)
-                    )
-                    st.altair_chart(side_chart, use_container_width=True)
-
-    with viz_col_2:
-        st.markdown("#### Altair: Wins vs Losses by Tactic")
-        altair_data = summary.head(15).copy()
-        if altair_data.empty:
-            st.info("Not enough data to render the Altair chart.")
-        else:
-            altair_long = altair_data.melt(
-                id_vars=["tactic_name", "round_type", "side"],
-                value_vars=["wins", "losses"],
-                var_name="result",
-                value_name="round_outcomes",
-            )
-            altair_chart = (
-                alt.Chart(altair_long)
-                .mark_bar()
-                .encode(
-                    x=alt.X("tactic_name:N", sort="-y", title="Tactic"),
-                    y=alt.Y("round_outcomes:Q", title="Rounds"),
-                    color=alt.Color("result:N", title="Outcome"),
-                    tooltip=["tactic_name", "round_type", "side", "result", "round_outcomes"],
-                )
-                .properties(height=430)
-            )
-            st.altair_chart(altair_chart, use_container_width=True)
-
-    st.subheader("Opponent Impact")
-    opponent_summary = (
-        expanded_round_type_df.groupby(["opponent_team", "tactic_name", "round_type"], as_index=False)[["wins", "losses"]]
-        .sum()
-        .assign(
-            rounds_played=lambda d: d["wins"] + d["losses"],
-            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+            .properties(height=320)
         )
-        .sort_values(["rounds_played", "win_rate_pct"], ascending=[False, False])
-    )
-    opp_col_1, opp_col_2 = st.columns(2)
-    with opp_col_1:
-        st.markdown("#### Win Rate by Opponent + Tactic")
-        heat_source = opponent_summary[opponent_summary["rounds_played"] >= 2].copy()
-        if heat_source.empty:
-            st.info("Need more rounds against opponents to build this heatmap.")
-        else:
-            heat = (
-                alt.Chart(heat_source)
-                .mark_rect()
-                .encode(
-                    x=alt.X("opponent_team:N", title="Opponent"),
-                    y=alt.Y("tactic_name:N", title="Tactic", sort="-x"),
-                    color=alt.Color("win_rate_pct:Q", title="Win Rate %", scale=alt.Scale(scheme="redyellowgreen")),
-                    tooltip=["opponent_team", "tactic_name", "round_type", "wins", "losses", "win_rate_pct"],
-                )
-                .properties(height=460)
+        outcome_scatter = (
+            alt.Chart(selected_rounds)
+            .mark_circle(size=65, opacity=0.65)
+            .encode(
+                x=alt.X("use_idx:Q", title="Use order"),
+                y=alt.Y("round_result:Q", title="Round result (+1/-1)"),
+                color=alt.condition("datum.round_result > 0", alt.value("#31d17b"), alt.value("#ff6c7a")),
+                tooltip=["date", "match_id", "round_result"],
             )
-            st.altair_chart(heat, use_container_width=True)
-    with opp_col_2:
-        st.markdown("#### Tactical Results vs Selected Opponent")
-        opponent_opts = sorted(expanded_round_type_df["opponent_team"].dropna().unique().tolist())
-        selected_opp = st.selectbox("Opponent team", opponent_opts, key="tactic_vs_opponent_select")
-        opp_view = opponent_summary[opponent_summary["opponent_team"] == selected_opp].copy()
-        if opp_view.empty:
-            st.info("No tactic rows for this opponent.")
-        else:
-            st.dataframe(
-                opp_view[["tactic_name", "round_type", "wins", "losses", "rounds_played", "win_rate_pct"]].head(25),
-                use_container_width=True,
-                hide_index=True,
-            )
-            opp_bar = (
-                alt.Chart(opp_view.head(15))
-                .mark_bar()
-                .encode(
-                    x=alt.X("tactic_name:N", sort="-y", title="Tactic"),
-                    y=alt.Y("win_rate_pct:Q", title="Win Rate %"),
-                    color=alt.Color("win_rate_pct:Q", scale=alt.Scale(scheme="teals"), legend=None),
-                    tooltip=["tactic_name", "round_type", "wins", "losses", "rounds_played", "win_rate_pct"],
-                )
-                .properties(height=350)
-            )
-            st.altair_chart(opp_bar, use_container_width=True)
+            .properties(height=140)
+        )
+        st.altair_chart(outcome_scatter & trend_chart, use_container_width=True)
 
-    st.subheader("Side Breakdown")
-    side_summary = (
-        expanded_round_type_df.groupby(["side", "round_type"], as_index=False)[["wins", "losses", "total_rounds"]]
-        .sum()
-        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
-        .sort_values(["side", "round_type", "win_rate_pct"], ascending=[True, True, False])
+    st.subheader("Map + side split heatmap")
+    heatmap_data = tactic_perf.copy()
+    heatmap_data["map_side"] = heatmap_data["map"].astype(str) + " " + heatmap_data["side"].astype(str)
+    heat = (
+        alt.Chart(heatmap_data)
+        .mark_rect()
+        .encode(
+            x=alt.X("map_side:N", title="Map + Side"),
+            y=alt.Y("tactic_name:N", title="Tactic", sort="-x"),
+            color=alt.Color("win_pct:Q", title="Win %", scale=alt.Scale(scheme="redyellowgreen")),
+            tooltip=["tactic_name", "map", "side", "times_used", "win_pct", "round_share_pct"],
+        )
+        .properties(height=420)
     )
-    st.dataframe(side_summary, use_container_width=True, hide_index=True)
+    st.altair_chart(heat, use_container_width=True)
 
-    red_col, blue_col = st.columns(2)
-    for col, side_name in [(red_col, "Red"), (blue_col, "Blue")]:
-        side_view = summary[summary["side"].astype(str).str.lower() == side_name.lower()].copy()
-        with col:
-            st.markdown(f"### {side_name} Side Tactics")
-            if side_view.empty:
-                st.info(f"No {side_name.lower()} side tactics for the selected filters.")
-            else:
-                st.dataframe(
-                    side_view.head(15)[["tactic_name", "map", "wins", "losses", "total_rounds", "win_rate_pct"]],
-                    use_container_width=True,
-                    hide_index=True,
-                )
-
-    st.subheader("Map Breakdown")
-    map_summary = (
-        expanded_round_type_df.groupby(["map", "side", "round_type"], as_index=False)[["wins", "losses", "total_rounds"]]
-        .sum()
-        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
-        .sort_values(["map", "side", "round_type"])
+    st.subheader("Round share vs success")
+    scatter = (
+        alt.Chart(tactic_perf)
+        .mark_circle(opacity=0.8)
+        .encode(
+            x=alt.X("usage_pct:Q", title="Usage rate / round share %"),
+            y=alt.Y("win_pct:Q", title="Win rate %"),
+            size=alt.Size("times_used:Q", title="Times used"),
+            color=alt.Color("confidence:N", title="Confidence"),
+            tooltip=["tactic_name", "map", "side", "times_used", "usage_pct", "win_pct", "confidence", "recommended_action"],
+        )
+        .properties(height=380)
     )
-    st.dataframe(map_summary, use_container_width=True, hide_index=True)
+    st.altair_chart(scatter, use_container_width=True)
+
+    st.subheader("By enemy tier")
+    sel_tier = tier_perf[
+        (tier_perf["tactic_name"] == selected_row["tactic_name"])
+        & (tier_perf["map"] == selected_row["map"])
+        & (tier_perf["side"] == selected_row["side"])
+    ].copy()
+    if sel_tier.empty:
+        st.info("No tier-split data for selected tactic.")
+    else:
+        sel_tier["tier_adjusted_score"] = sel_tier["tier_win_pct"] * sel_tier["tier"].map({"S": 1.35, "A": 1.15, "B": 1.0, "C": 0.85}).fillna(1.0)
+        tier_chart = (
+            alt.Chart(sel_tier)
+            .mark_bar()
+            .encode(
+                x=alt.X("tier:N", sort=["S", "A", "B", "C"], title="Tier"),
+                y=alt.Y("tier_win_pct:Q", title="Win rate %"),
+                color=alt.Color("tier:N", legend=None),
+                tooltip=["tier", "wins", "losses", "tier_win_pct", "tier_adjusted_score"],
+            )
+            .properties(height=300)
+        )
+        st.altair_chart(tier_chart, use_container_width=True)
+
+    st.subheader("Tactic family grouping")
+    family_summary = (
+        tactic_perf.groupby("family", as_index=False)
+        .agg(
+            total_rounds_played=("times_used", "sum"),
+            total_wins=("wins", "sum"),
+            total_losses=("losses", "sum"),
+            most_used_tactic=("tactic_name", lambda s: s.value_counts().index[0] if not s.empty else None),
+        )
+        .assign(total_win_pct=lambda d: (d["total_wins"] / (d["total_wins"] + d["total_losses"]).clip(lower=1) * 100).round(1))
+    )
+    st.dataframe(family_summary, use_container_width=True, hide_index=True)
+
+    st.subheader("Recommended actions")
+    recs = tactic_perf[["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "trend", "confidence", "recommended_action"]].sort_values(
+        ["recommended_action", "win_pct"], ascending=[True, False]
+    )
+    st.dataframe(recs, use_container_width=True, hide_index=True)
+
+    st.subheader("Match context drilldown")
+    drilldown = df[
+        (df["tactic_name"] == selected_row["tactic_name"])
+        & (df["map"] == selected_row["map"])
+        & (df["side"] == selected_row["side"])
+    ].copy()
+    drill_cols = ["match_id", "opponent_team", "tier", "map", "side", "wins", "losses", "competition", "date"]
+    st.dataframe(drilldown[drill_cols].sort_values("date", ascending=False), use_container_width=True, hide_index=True)
 
 
 def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
