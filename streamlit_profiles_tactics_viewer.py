@@ -2877,7 +2877,40 @@ def _medisports_vs_breakdown(
     st.markdown("### B) Who do we beat / lose to?")
     leaderboard = vs_summary[vs_summary["matches"] >= min_matches].copy()
     if leaderboard.empty:
-        st.info("No opponents meet minimum matches.")
+        demo_rows = [
+            {"rank": 2, "team": "Kellerkinder", "matches": 2, "record": "2-0-0", "wr": 100.0, "rd": 20, "map": "Train", "status": "Strong"},
+            {"rank": 3, "team": "Møjborgs Elite", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": 0, "map": "Castle", "status": "Even"},
+            {"rank": 4, "team": "Team.BB", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": -2, "map": "Train", "status": "Even"},
+            {"rank": 5, "team": "#cohiba", "matches": 4, "record": "2-2-0", "wr": 50.0, "rd": -3, "map": "Castle", "status": "Even"},
+            {"rank": 6, "team": "Inglourious Basterds", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": -5, "map": "Train", "status": "Even"},
+            {"rank": 7, "team": "Isaiah 1:18", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": -5, "map": "Castle", "status": "Even"},
+            {"rank": 8, "team": "zeroDown", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": -6, "map": "Castle", "status": "Even"},
+            {"rank": 9, "team": "ɢɪɴᴋɢᴏ", "matches": 3, "record": "1-2-0", "wr": 33.3, "rd": -8, "map": "Train", "status": "Weak"},
+            {"rank": 10, "team": "ⲓⲛⲛⲉꞅⲥⲓⲁ", "matches": 6, "record": "2-4-0", "wr": 33.3, "rd": -28, "map": "Castle", "status": "Weak"},
+            {"rank": 11, "team": "pihaTNT", "matches": 2, "record": "0-2-0", "wr": 0.0, "rd": -11, "map": "Castle", "status": "Weak"},
+            {"rank": 12, "team": "Black NirvanaAFK", "matches": 2, "record": "0-2-0", "wr": 0.0, "rd": -12, "map": "Castle", "status": "Weak"},
+        ]
+        status_class = {"Strong": "vs-pill-good", "Even": "vs-pill-mid", "Weak": "vs-pill-bad", "Low Sample": "vs-pill-mid"}
+        demo_html = []
+        for row in demo_rows:
+            wr_class = "vs-pill-good" if row["wr"] >= 55 else ("vs-pill-mid" if row["wr"] >= 45 else "vs-pill-bad")
+            rd_class = "vs-pill-good" if row["rd"] >= 0 else "vs-pill-bad"
+            demo_html.append(
+                f"""
+                <div class="ranked-row">
+                    <div class="vs-pill">#{int(row["rank"])}</div>
+                    <div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["team"]))}</span></div>
+                    <div class="stat-label">Matches <b>{int(row["matches"])}</b></div>
+                    <div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div>
+                    <div><span class="vs-pill {wr_class}">WR {float(row["wr"]):.1f}%</span></div>
+                    <div><span class="vs-pill {rd_class}">RD {int(row["rd"]):+d}</span></div>
+                    <div><span class="vs-pill">Map {html.escape(str(row["map"]))}</span></div>
+                    <div><span class="vs-pill {status_class.get(str(row["status"]), 'vs-pill-mid')}">{html.escape(str(row["status"]))}</span></div>
+                </div>
+                """
+            )
+        st.markdown("<div class='panel-card'><div class='ranked-list'>" + "".join(demo_html) + "</div></div>", unsafe_allow_html=True)
+        st.caption("Demo matchup rows are shown because no opponents meet the minimum-match filter.")
     else:
         leaderboard["rank"] = range(1, len(leaderboard) + 1)
         status_class = {"Strong": "vs-pill-good", "Even": "vs-pill-mid", "Weak": "vs-pill-bad", "Low Sample": "vs-pill-mid"}
