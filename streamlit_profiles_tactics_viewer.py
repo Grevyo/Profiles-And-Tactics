@@ -12,7 +12,6 @@ import re
 
 import altair as alt
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
 st.set_page_config(page_title="Grevs CPL Pages", layout="wide")
@@ -1179,7 +1178,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     viz_col_1, viz_col_2 = st.columns(2)
 
     with viz_col_1:
-        st.markdown("#### Plotly: Win Rate by Tactic and Side")
+        st.markdown("#### Heatmap: Win Rate by Tactic and Side")
         winrate_heat = (
             summary.pivot_table(
                 index="tactic_name",
@@ -1191,18 +1190,28 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
             .head(12)
         )
         if winrate_heat.empty:
-            st.info("Not enough data to render the Plotly chart.")
+            st.info("Not enough data to render the heatmap.")
         else:
-            fig = px.imshow(
-                winrate_heat,
-                text_auto=".1f",
-                aspect="auto",
-                color_continuous_scale="Viridis",
-                labels={"color": "Win Rate %", "x": "Side", "y": "Tactic"},
-                title="Top Tactics Win Rate Heatmap",
+            heatmap_data = (
+                winrate_heat.reset_index()
+                .melt(id_vars="tactic_name", var_name="side", value_name="win_rate_pct")
             )
-            fig.update_layout(height=460, margin=dict(l=20, r=20, t=56, b=20))
-            st.plotly_chart(fig, use_container_width=True)
+            heatmap_chart = (
+                alt.Chart(heatmap_data)
+                .mark_rect(cornerRadius=3)
+                .encode(
+                    x=alt.X("side:N", title="Side"),
+                    y=alt.Y("tactic_name:N", title="Tactic"),
+                    color=alt.Color("win_rate_pct:Q", title="Win Rate %", scale=alt.Scale(scheme="viridis")),
+                    tooltip=[
+                        alt.Tooltip("tactic_name:N", title="Tactic"),
+                        alt.Tooltip("side:N", title="Side"),
+                        alt.Tooltip("win_rate_pct:Q", title="Win Rate %", format=".1f"),
+                    ],
+                )
+                .properties(height=460, title="Top Tactics Win Rate Heatmap")
+            )
+            st.altair_chart(heatmap_chart, use_container_width=True)
 
     with viz_col_2:
         st.markdown("#### Altair: Wins vs Losses by Tactic")
