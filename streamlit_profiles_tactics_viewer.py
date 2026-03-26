@@ -26,6 +26,7 @@ IMAGE_FOLDERS = {
     "player": "player_photos",
 }
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+APP_ROOT = Path(__file__).parent
 
 
 def _inject_styles() -> None:
@@ -86,7 +87,7 @@ def _normalize_key(value: str) -> str:
 def _build_image_index() -> dict[str, dict[str, Path]]:
     image_index: dict[str, dict[str, Path]] = {}
     for image_type, folder_name in IMAGE_FOLDERS.items():
-        folder = DATA_DIR / folder_name
+        folder = APP_ROOT / folder_name
         entries: dict[str, Path] = {}
         if folder.exists():
             for path in folder.iterdir():
@@ -148,20 +149,53 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return players, tactics, achievements
 
 
-def _multiselect_with_all(label: str, options: list[str], key: str) -> list[str]:
-    choices = ["All"] + options
-    selected = st.multiselect(label, choices, default=["All"], key=key)
-
+def _multiselect_filter(label: str, options: list[str], key: str) -> list[str]:
+    selected = st.multiselect(label, options, default=options, key=key)
     if not selected:
         st.caption(f"Selected {label}: None")
         return []
-
-    if "All" in selected or set(selected) == set(options):
+    if len(selected) == len(options):
         st.caption(f"Selected {label}: All")
-        return options
+    else:
+        st.caption(f"Selected {label}: {', '.join(selected)}")
+    return selected
 
-    st.caption(f"Selected {label}: {', '.join(selected)}")
-    return [value for value in selected if value != "All"]
+
+def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: pd.DataFrame) -> dict[str, float]:
+    matches = max(int(filtered_players["match_id"].nunique()), 1)
+    kills = float(filtered_players["kills"].sum())
+    deaths = float(filtered_players["deaths"].sum())
+    assists = float(filtered_players["mvps"].sum())
+    damage = float(filtered_players["damage"].sum())
+    acc = float(filtered_players["accuracy_pct"].mean()) if not filtered_players.empty else 0.0
+
+    kda = (kills + assists) / deaths if deaths else kills + assists
+    kd = kills / deaths if deaths else kills
+    dpm = damage / matches
+    kpm = kills / matches
+
+    win_rate = 0.0
+    if not filtered_tactics.empty and {"wins", "losses"}.issubset(filtered_tactics.columns):
+        wins = float(filtered_tactics["wins"].sum())
+        losses = float(filtered_tactics["losses"].sum())
+        total = wins + losses
+        win_rate = (wins / total * 100) if total else 0.0
+
+    impact = (kd * 45.0) + (kpm * 35.0) + (acc * 0.2) + (win_rate * 0.2)
+    grevscore = min(max((impact + (dpm / 60.0)) / 2.0, 0.0), 100.0)
+    return {
+        "matches": float(matches),
+        "kills": kills,
+        "deaths": deaths,
+        "assists": assists,
+        "kda": kda,
+        "kd": kd,
+        "dpm": dpm,
+        "acc": acc,
+        "kpm": kpm,
+        "impact": impact,
+        "grevscore": grevscore,
+    }
 
 
 def _home() -> None:
@@ -193,19 +227,19 @@ def _apply_shared_filters(
     filter_cols = st.columns(5)
     tier_options = sorted(filtered_players["tier"].dropna().unique().tolist())
     with filter_cols[0]:
-        selected_tiers = _multiselect_with_all("Tier of Team", tier_options, key="profile_tier")
+        selected_tiers = _multiselect_filter("Tier of Team", tier_options, key="profile_tier")
 
     event_options = sorted(filtered_players["competition"].dropna().unique().tolist())
     with filter_cols[1]:
-        selected_events = _multiselect_with_all("Event", event_options, key="profile_event")
+        selected_events = _multiselect_filter("Event", event_options, key="profile_event")
 
     opp_options = sorted(filtered_players["opponent_team"].dropna().unique().tolist())
     with filter_cols[2]:
-        selected_opp = _multiselect_with_all("Opponent", opp_options, key="profile_opp")
+        selected_opp = _multiselect_filter("Opponent", opp_options, key="profile_opp")
 
     side_options = sorted(tactics_df["side"].dropna().unique().tolist()) if "side" in tactics_df else []
     with filter_cols[3]:
-        selected_sides = _multiselect_with_all("Side (Red/Blue)", side_options, key="profile_side")
+        selected_sides = _multiselect_filter("Side (Red/Blue)", side_options, key="profile_side")
 
     date_range = filter_cols[4].date_input(
         "Date Range",
@@ -289,33 +323,41 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         if map_image:
             st.image(str(map_image), caption=str(first_row.get("map", "")), use_container_width=True)
 
-    kills = int(filtered_players["kills"].sum())
-    deaths = int(filtered_players["deaths"].sum())
-    mvps = int(filtered_players["mvps"].sum())
+    metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
+    kills = int(metrics["kills"])
+    deaths = int(metrics["deaths"])
+    assists = int(metrics["assists"])
     damage = int(filtered_players["damage"].sum())
     rounds = int(filtered_players["rounds_played"].sum())
-    kd_ratio = (kills / deaths) if deaths else 0.0
     avg_acc = float(filtered_players["accuracy_pct"].mean()) if not filtered_players.empty else 0.0
     avg_hs = float(filtered_players["hs_pct"].mean()) if not filtered_players.empty else 0.0
     avg_kpd = float(filtered_players["kpd"].mean()) if not filtered_players.empty else 0.0
 
-    st.markdown(
-        f"""
-        <div class="panel-card">
-            <div class="panel-muted">Player overview</div>
-            <div class="panel-title">{selected_player}</div>
-            <div class="stats-grid">
-                <div class="stat-chip"><div class="stat-label">Matches</div><div class="stat-value">{filtered_players["match_id"].nunique()}</div></div>
-                <div class="stat-chip"><div class="stat-label">Kills</div><div class="stat-value">{kills}</div></div>
-                <div class="stat-chip"><div class="stat-label">Deaths</div><div class="stat-value">{deaths}</div></div>
-                <div class="stat-chip"><div class="stat-label">K/D Ratio</div><div class="stat-value">{kd_ratio:.2f}</div></div>
-                <div class="stat-chip"><div class="stat-label">MVPs</div><div class="stat-value">{mvps}</div></div>
-                <div class="stat-chip"><div class="stat-label">Damage</div><div class="stat-value">{damage:,}</div></div>
+    card_col1, card_col2 = st.columns([1, 4])
+    with card_col1:
+        if player_image:
+            st.image(str(player_image), use_container_width=True)
+    with card_col2:
+        st.markdown(
+            f"""
+            <div class="panel-card">
+                <div class="panel-muted">Player card</div>
+                <div class="panel-title">{selected_player}</div>
+                <div class="stats-grid">
+                    <div class="stat-chip"><div class="stat-label">Matches</div><div class="stat-value">{int(metrics["matches"])}</div></div>
+                    <div class="stat-chip"><div class="stat-label">K/D</div><div class="stat-value">{metrics["kd"]:.2f}</div></div>
+                    <div class="stat-chip"><div class="stat-label">KDA</div><div class="stat-value">{metrics["kda"]:.2f}</div></div>
+                    <div class="stat-chip"><div class="stat-label">K / D / A</div><div class="stat-value">{kills}/{deaths}/{assists}</div></div>
+                    <div class="stat-chip"><div class="stat-label">DPM</div><div class="stat-value">{metrics["dpm"]:.1f}</div></div>
+                    <div class="stat-chip"><div class="stat-label">Acc%</div><div class="stat-value">{metrics["acc"]:.1f}%</div></div>
+                    <div class="stat-chip"><div class="stat-label">KPM</div><div class="stat-value">{metrics["kpm"]:.2f}</div></div>
+                    <div class="stat-chip"><div class="stat-label">Impact</div><div class="stat-value">{metrics["impact"]:.1f}</div></div>
+                    <div class="stat-chip"><div class="stat-label">Grevscore</div><div class="stat-value">{metrics["grevscore"]:.1f}</div></div>
+                </div>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.subheader("Performance Indicators")
     ind1, ind2, ind3 = st.columns(3)
@@ -425,18 +467,18 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     filter_cols = st.columns(4)
     side_opts = sorted(df["side"].dropna().unique().tolist())
     with filter_cols[0]:
-        sides = _multiselect_with_all("Side", side_opts, key="tactic_side")
+        sides = _multiselect_filter("Side", side_opts, key="tactic_side")
     tier_opts = sorted(df["tier"].dropna().unique().tolist())
     with filter_cols[1]:
-        tiers = _multiselect_with_all("Tier", tier_opts, key="tactic_tier")
+        tiers = _multiselect_filter("Tier", tier_opts, key="tactic_tier")
 
     comp_opts = sorted(df["competition"].dropna().unique().tolist())
     with filter_cols[2]:
-        comps = _multiselect_with_all("Event", comp_opts, key="tactic_event")
+        comps = _multiselect_filter("Event", comp_opts, key="tactic_event")
 
     opp_opts = sorted(df["opponent_team"].dropna().unique().tolist())
     with filter_cols[3]:
-        opps = _multiselect_with_all("Opponent", opp_opts, key="tactic_opp")
+        opps = _multiselect_filter("Opponent", opp_opts, key="tactic_opp")
 
     if sides:
         df = df[df["side"].isin(sides)]
