@@ -760,6 +760,16 @@ def _build_image_index() -> dict[str, dict[str, Path]]:
 def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value: str | None) -> Path | None:
     if not value:
         return None
+    if image_type == "competition":
+        ascii_value = (
+            str(value)
+            .lower()
+            .translate(str.maketrans({"ᴍ": "m", "ᴀ": "a", "ᴅ": "d", "ᴇ": "e", "ɴ": "n"}))
+        )
+        if "madmen" in ascii_value:
+            madmen_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / "madmen.png"
+            if madmen_logo.exists():
+                return madmen_logo
     normalized = _normalize_key(value)
     entries = image_index.get(image_type, {})
     return entries.get(normalized)
@@ -2314,30 +2324,39 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
         st.warning("No match-level results available.")
         return
 
-    overall_matches = int(match_results["match_id"].nunique())
-    overall_wins = int((match_results["match_result"] == "Win").sum())
-    overall_losses = int((match_results["match_result"] == "Loss").sum())
-    overall_draws = int((match_results["match_result"] == "Draw").sum())
-    overall_rate = (overall_wins / max(overall_wins + overall_losses, 1)) * 100
+    st.markdown("### A) Overall team health")
+    c1, c2, c3 = st.columns([1.1, 1.2, 1.7])
+    with c1:
+        min_matches = int(st.slider("Minimum matches", 1, 8, 2, key="medisports_min_matches"))
+    with c2:
+        form_window = st.selectbox(
+            "Form window",
+            ["All time", "Last 10", "Last 20", "Last 30"],
+            index=0,
+            key="medisports_form_window",
+        )
+    with c3:
+        comp_options = sorted(match_results["competition"].dropna().astype(str).unique().tolist())
+        selected_comp = st.multiselect(
+            "Tournament filter",
+            comp_options,
+            default=[],
+            placeholder="All tournaments",
+            key="medisports_comp_filter",
+        )
 
-    st.markdown(
-        f"""
-        <div class="panel-card">
-            <div class="panel-muted">Overall Medisports form</div>
-            <div class="stats-grid">
-                <div class="stat-chip"><div class="stat-label">Matches</div><div class="stat-value">{overall_matches}</div></div>
-                <div class="stat-chip"><div class="stat-label">Wins</div><div class="stat-value">{overall_wins}</div></div>
-                <div class="stat-chip"><div class="stat-label">Losses</div><div class="stat-value">{overall_losses}</div></div>
-                <div class="stat-chip"><div class="stat-label">Win Rate</div><div class="stat-value">{overall_rate:.1f}%</div></div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.caption(f"Draws: {overall_draws}")
+    filtered = match_results.copy()
+    if selected_comp:
+        filtered = filtered[filtered["competition"].isin(selected_comp)]
+    if form_window != "All time":
+        n_recent = int(form_window.split(" ")[1])
+        filtered = filtered.sort_values("date", ascending=False).head(n_recent)
+    if filtered.empty:
+        st.info("No matches left after filters.")
+        return
 
     vs_summary = (
-        match_results.groupby("opponent_team", as_index=False)
+        filtered.groupby("opponent_team", as_index=False)
         .agg(
             matches=("match_id", "nunique"),
             wins=("match_result", lambda s: int((s == "Win").sum())),
@@ -2345,128 +2364,325 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
             draws=("match_result", lambda s: int((s == "Draw").sum())),
             round_wins=("round_wins", "sum"),
             round_losses=("round_losses", "sum"),
+            tier=("tier", lambda s: s.dropna().astype(str).mode().iloc[0] if not s.dropna().empty else "—"),
+            most_played_map=("map", lambda s: s.dropna().astype(str).mode().iloc[0] if not s.dropna().empty else "—"),
         )
         .assign(
-            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
             round_diff=lambda d: d["round_wins"] - d["round_losses"],
+            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+            round_win_pct=lambda d: (d["round_wins"] / (d["round_wins"] + d["round_losses"]).clip(lower=1) * 100).round(1),
+            round_diff_per_match=lambda d: (d["round_diff"] / d["matches"].clip(lower=1)).round(2),
+            record=lambda d: d["wins"].astype(str) + "-" + d["losses"].astype(str) + "-" + d["draws"].astype(str),
         )
-        .sort_values(["win_rate_pct", "wins", "matches"], ascending=[False, False, False])
+        .sort_values(["round_diff", "win_rate_pct"], ascending=[False, False])
     )
-    st.subheader("How Medisports Performs vs Each Team")
-    st.dataframe(vs_summary, use_container_width=True, hide_index=True)
-    map_summary = (
-        match_results.groupby(["map", "opponent_team"], as_index=False)
+
+    vs_summary["confidence"] = pd.cut(
+        vs_summary["matches"],
+        bins=[0, 1, 3, 5, 1000],
+        labels=["Unreliable", "Limited", "Decent", "Strong"],
+        include_lowest=True,
+    ).astype(str)
+    vs_summary["status"] = "Even"
+    vs_summary.loc[(vs_summary["round_diff"] >= 8) | (vs_summary["win_rate_pct"] >= 65), "status"] = "Strong"
+    vs_summary.loc[(vs_summary["round_diff"] <= -8) | (vs_summary["win_rate_pct"] <= 40), "status"] = "Weak"
+    vs_summary.loc[vs_summary["matches"] < min_matches, "status"] = "Low Sample"
+
+    map_rollup = (
+        filtered.groupby("map", as_index=False)
         .agg(
             matches=("match_id", "nunique"),
             wins=("match_result", lambda s: int((s == "Win").sum())),
             losses=("match_result", lambda s: int((s == "Loss").sum())),
+            round_diff=("round_diff", "sum"),
         )
         .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
     )
-    spotlight = vs_summary.sort_values(["matches", "win_rate_pct"], ascending=[False, False]).head(3)
-    if not spotlight.empty:
-        st.markdown("#### Opponent Spotlight")
-        spotlight_cols = st.columns(len(spotlight))
-        for i, (_, row) in enumerate(spotlight.iterrows()):
-            with spotlight_cols[i]:
+    tier_rollup = (
+        filtered.groupby("tier", as_index=False)
+        .agg(
+            matches=("match_id", "nunique"),
+            wins=("match_result", lambda s: int((s == "Win").sum())),
+            losses=("match_result", lambda s: int((s == "Loss").sum())),
+            round_diff=("round_diff", "sum"),
+        )
+        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+    )
+    tournament_rollup = (
+        filtered.groupby("competition", as_index=False)
+        .agg(
+            matches=("match_id", "nunique"),
+            wins=("match_result", lambda s: int((s == "Win").sum())),
+            losses=("match_result", lambda s: int((s == "Loss").sum())),
+            draws=("match_result", lambda s: int((s == "Draw").sum())),
+            round_diff=("round_diff", "sum"),
+            best_map=("map", lambda s: s.dropna().astype(str).mode().iloc[0] if not s.dropna().empty else "—"),
+        )
+        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+    )
+
+    overall_matches = int(filtered["match_id"].nunique())
+    overall_wins = int((filtered["match_result"] == "Win").sum())
+    overall_losses = int((filtered["match_result"] == "Loss").sum())
+    overall_win_rate = (overall_wins / max(overall_wins + overall_losses, 1)) * 100
+    overall_round_diff = int(filtered["round_diff"].sum())
+    overall_round_win_pct = (
+        filtered["round_wins"].sum() / max(filtered["round_wins"].sum() + filtered["round_losses"].sum(), 1) * 100
+    )
+
+    best_map = map_rollup.sort_values(["win_rate_pct", "round_diff"], ascending=[False, False]).head(1)
+    worst_map = map_rollup.sort_values(["win_rate_pct", "round_diff"], ascending=[True, True]).head(1)
+    best_tier = tier_rollup.sort_values(["win_rate_pct", "round_diff"], ascending=[False, False]).head(1)
+    worst_tier = tier_rollup.sort_values(["win_rate_pct", "round_diff"], ascending=[True, True]).head(1)
+    reliable = vs_summary[vs_summary["matches"] >= min_matches]
+    best_seg = reliable.head(1)
+    worst_seg = reliable.sort_values(["round_diff", "win_rate_pct"], ascending=[True, True]).head(1)
+
+    cards = [
+        ("Matches", str(overall_matches)),
+        ("Win rate", f"{overall_win_rate:.1f}%"),
+        ("Round diff", f"{overall_round_diff:+d}"),
+        ("Round win %", f"{overall_round_win_pct:.1f}%"),
+        ("Best map", f'{best_map.iloc[0]["map"]} ({best_map.iloc[0]["win_rate_pct"]:.1f}%)' if not best_map.empty else "n/a"),
+        ("Worst map", f'{worst_map.iloc[0]["map"]} ({worst_map.iloc[0]["win_rate_pct"]:.1f}%)' if not worst_map.empty else "n/a"),
+        ("Best tier", f'{best_tier.iloc[0]["tier"]} ({best_tier.iloc[0]["win_rate_pct"]:.1f}%)' if not best_tier.empty else "n/a"),
+        ("Worst tier", f'{worst_tier.iloc[0]["tier"]} ({worst_tier.iloc[0]["win_rate_pct"]:.1f}%)' if not worst_tier.empty else "n/a"),
+        ("Best opponent segment", f'{best_seg.iloc[0]["opponent_team"]} ({int(best_seg.iloc[0]["round_diff"]):+d})' if not best_seg.empty else "n/a"),
+        ("Worst opponent segment", f'{worst_seg.iloc[0]["opponent_team"]} ({int(worst_seg.iloc[0]["round_diff"]):+d})' if not worst_seg.empty else "n/a"),
+    ]
+    cards_html = "".join(
+        f'<div class="stat-chip"><div class="stat-label">{label}</div><div class="stat-value">{value}</div></div>'
+        for label, value in cards
+    )
+    st.markdown(
+        f"""
+        <div class="panel-card">
+            <div class="panel-muted">At-a-glance layer</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(5, minmax(0, 1fr));">{cards_html}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("### D) What needs fixing? (Auto insights)")
+    insights = []
+    if overall_win_rate < 50 and overall_round_diff > 0:
+        insights.append("Win rate is low while round differential is positive (close losses / unstable conversion).")
+    if not vs_summary[(vs_summary["win_rate_pct"] >= 70) & (vs_summary["matches"] < min_matches)].empty:
+        insights.append("Several great-looking matchups are low sample and should be treated as tentative.")
+    if not worst_map.empty:
+        insights.append(
+            f'Lowest-impact map is {worst_map.iloc[0]["map"]} with {worst_map.iloc[0]["win_rate_pct"]:.1f}% WR and {int(worst_map.iloc[0]["round_diff"]):+d} round diff.'
+        )
+    same_tier = tier_rollup[tier_rollup["tier"].astype(str).str.upper() == "A"]
+    if not same_tier.empty and float(same_tier.iloc[0]["win_rate_pct"]) + 8 < overall_win_rate:
+        insights.append("A-tier performance is significantly below your current baseline.")
+    weak_tournaments = tournament_rollup[tournament_rollup["win_rate_pct"] < max(overall_win_rate - 10, 0)]
+    if not weak_tournaments.empty:
+        insights.append("At least one tournament underperforms your overall baseline by 10+ percentage points.")
+    if not insights:
+        insights.append("No major red flags triggered for the current filter setup.")
+    st.markdown(
+        "<div class='panel-card'>" + "".join(f"<div class='stat-label'>• {html.escape(i)}</div>" for i in insights[:6]) + "</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("### B) Who do we beat / lose to?")
+    leaderboard = vs_summary[vs_summary["matches"] >= min_matches].copy()
+    if leaderboard.empty:
+        st.info("No opponents meet minimum matches.")
+    else:
+        leaderboard["rank"] = range(1, len(leaderboard) + 1)
+        leaderboard["status"] = leaderboard["status"].map(
+            {"Strong": "🟢 Strong", "Even": "🟡 Even", "Weak": "🔴 Weak", "Low Sample": "⚪ Low Sample"}
+        ).fillna("🟡 Even")
+        board = leaderboard[
+            [
+                "rank",
+                "opponent_team",
+                "matches",
+                "record",
+                "win_rate_pct",
+                "round_diff",
+                "round_win_pct",
+                "most_played_map",
+                "tier",
+                "confidence",
+                "status",
+            ]
+        ].rename(
+            columns={
+                "opponent_team": "Opponent",
+                "record": "Record",
+                "win_rate_pct": "Win rate %",
+                "round_diff": "Round diff",
+                "round_win_pct": "Round win %",
+                "most_played_map": "Most played map",
+                "tier": "Tier",
+                "confidence": "Sample",
+                "status": "Status",
+            }
+        )
+        st.dataframe(board.style.background_gradient(subset=["Round diff"], cmap="RdYlGn"), use_container_width=True, hide_index=True)
+
+    st.markdown("### Spotlight")
+    if not leaderboard.empty:
+        cards = []
+        cards.append(("Best matchup", leaderboard.sort_values(["round_diff", "win_rate_pct"], ascending=[False, False]).head(1)))
+        cards.append(("Most played", leaderboard.sort_values("matches", ascending=False).head(1)))
+        cards.append(("Worst matchup", leaderboard.sort_values(["round_diff", "win_rate_pct"], ascending=[True, True]).head(1)))
+        rivalry = leaderboard[(leaderboard["matches"] >= max(2, min_matches)) & (leaderboard["round_diff"].abs() <= 4)]
+        if not rivalry.empty:
+            cards.append(("Rivalry", rivalry.sort_values("matches", ascending=False).head(1)))
+        trap = leaderboard[(leaderboard["win_rate_pct"] >= 50) & (leaderboard["round_diff"] < 0)]
+        if not trap.empty:
+            cards.append(("Trap matchup", trap.sort_values("round_diff").head(1)))
+
+        cols = st.columns(len(cards))
+        for i, (label, frame) in enumerate(cards):
+            row = frame.iloc[0]
+            with cols[i]:
                 st.markdown(
                     f"""
                     <div class="panel-card">
-                        <div class="panel-muted">vs {row["opponent_team"]}</div>
-                        <div class="panel-title">{int(row["wins"])}W - {int(row["losses"])}L</div>
-                        <div class="stat-label">Matches: {int(row["matches"])} | WR: {row["win_rate_pct"]:.1f}%</div>
-                        <div class="stat-label">Round diff: {int(row["round_diff"]):+d}</div>
+                        <div class="panel-muted">{label}</div>
+                        <div class="panel-title">{row["opponent_team"]}</div>
+                        <div class="stat-label">{int(row["wins"])}W-{int(row["losses"])}L-{int(row["draws"])}D · WR {float(row["win_rate_pct"]):.1f}%</div>
+                        <div class="stat-label">Round diff {int(row["round_diff"]):+d} · Map {row["most_played_map"]}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
+    st.markdown("### C) Where do we perform best?")
     chart_col_1, chart_col_2 = st.columns(2)
     with chart_col_1:
-        st.markdown("#### Match Wins/Losses by Opponent")
-        wins_chart = (
-            alt.Chart(vs_summary.sort_values("wins", ascending=False))
+        st.markdown("#### Matchup strength (round differential)")
+        diff_data = vs_summary[vs_summary["matches"] >= min_matches].sort_values("round_diff", ascending=False)
+        diff_chart = (
+            alt.Chart(diff_data)
             .mark_bar(cornerRadiusEnd=4)
             .encode(
-                x=alt.X("wins:Q", title="Wins"),
+                x=alt.X("round_diff:Q", title="Round differential"),
                 y=alt.Y("opponent_team:N", sort="-x", title="Opponent"),
-                color=alt.value("#57d28a"),
-                tooltip=["opponent_team", "wins", "losses", "draws", "matches"],
+                color=alt.condition("datum.round_diff >= 0", alt.value("#44c06f"), alt.value("#e85c6b")),
+                tooltip=["opponent_team", "record", "matches", "round_diff", "round_diff_per_match"],
             )
             .properties(height=380)
         )
-        st.altair_chart(wins_chart, use_container_width=True)
+        st.altair_chart(diff_chart, use_container_width=True)
     with chart_col_2:
-        st.markdown("#### Win Rate by Team (min 1 match)")
-        rate_chart = (
-            alt.Chart(vs_summary)
+        st.markdown(f"#### Win rate by opponent (min {min_matches})")
+        wr_data = vs_summary[vs_summary["matches"] >= min_matches]
+        wr_chart = (
+            alt.Chart(wr_data)
             .mark_bar()
             .encode(
                 x=alt.X("opponent_team:N", sort="-y", title="Opponent"),
-                y=alt.Y("win_rate_pct:Q", title="Win Rate %"),
+                y=alt.Y("win_rate_pct:Q", title="Win rate %"),
                 color=alt.Color("matches:Q", title="Matches", scale=alt.Scale(scheme="blues")),
-                tooltip=["opponent_team", "matches", "wins", "losses", "draws", "win_rate_pct", "round_diff"],
+                tooltip=["opponent_team", "matches", "record", "win_rate_pct", "round_diff"],
             )
             .properties(height=380)
         )
-        st.altair_chart(rate_chart, use_container_width=True)
+        st.altair_chart(wr_chart, use_container_width=True)
 
-    st.markdown("#### Round Differential by Opponent")
-    round_diff_chart = (
-        alt.Chart(vs_summary.sort_values("round_diff", ascending=False))
-        .mark_bar(cornerRadiusEnd=4)
-        .encode(
-            x=alt.X("round_diff:Q", title="Round Differential"),
-            y=alt.Y("opponent_team:N", sort="-x", title="Opponent"),
-            color=alt.condition(
-                "datum.round_diff >= 0",
-                alt.value("#44c06f"),
-                alt.value("#e85c6b"),
-            ),
-            tooltip=["opponent_team", "round_wins", "round_losses", "round_diff", "matches"],
+    st.markdown("#### Opponent × Map heatmap")
+    map_summary = (
+        filtered.groupby(["map", "opponent_team"], as_index=False)
+        .agg(
+            matches=("match_id", "nunique"),
+            wins=("match_result", lambda s: int((s == "Win").sum())),
+            losses=("match_result", lambda s: int((s == "Loss").sum())),
+            round_diff=("round_diff", "sum"),
         )
-        .properties(height=300)
+        .assign(
+            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+            record=lambda d: d["wins"].astype(str) + "-" + d["losses"].astype(str),
+        )
     )
-    st.altair_chart(round_diff_chart, use_container_width=True)
-
-    st.markdown("#### Opponent x Map win-rate plot map")
-    if map_summary.empty:
-        st.info("No map-level records available.")
+    map_heat = map_summary[map_summary["matches"] >= min_matches]
+    if map_heat.empty:
+        st.info("No opponent-map pairs meet minimum matches.")
     else:
-        plot_map = (
-            alt.Chart(map_summary)
-            .mark_circle(opacity=0.9)
+        base = (
+            alt.Chart(map_heat)
+            .mark_rect()
             .encode(
                 x=alt.X("map:N", title="Map"),
-                y=alt.Y("opponent_team:N", title="Opponent"),
-                size=alt.Size("matches:Q", title="Matches", scale=alt.Scale(range=[100, 1200])),
+                y=alt.Y("opponent_team:N", title="Opponent", sort="-color"),
                 color=alt.Color(
                     "win_rate_pct:Q",
                     title="Win rate %",
                     scale=alt.Scale(domain=[0, 100], range=["#e85c6b", "#f0be4f", "#44c06f"]),
                 ),
-                tooltip=["map", "opponent_team", "matches", "wins", "losses", "win_rate_pct"],
+                tooltip=["opponent_team", "map", "matches", "record", "win_rate_pct", "round_diff"],
             )
             .properties(height=420)
         )
-        st.altair_chart(plot_map, use_container_width=True)
+        text = base.mark_text(fontSize=11).encode(
+            text="matches:Q",
+            color=alt.condition("datum.win_rate_pct > 55", alt.value("#08111f"), alt.value("#f5f7fb")),
+        )
+        st.altair_chart(base + text, use_container_width=True)
 
-    st.subheader("Match-by-Match Results")
+    st.markdown("### Context sections")
+    tcol1, tcol2 = st.columns(2)
+    with tcol1:
+        st.markdown("#### Tournament performance")
+        st.dataframe(
+            tournament_rollup.sort_values(["round_diff", "win_rate_pct"], ascending=[False, False])[
+                ["competition", "matches", "wins", "losses", "draws", "win_rate_pct", "round_diff", "best_map"]
+            ].rename(
+                columns={
+                    "competition": "Tournament",
+                    "wins": "W",
+                    "losses": "L",
+                    "draws": "D",
+                    "win_rate_pct": "Win rate %",
+                    "round_diff": "Round diff",
+                    "best_map": "Best/most map",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+    with tcol2:
+        st.markdown("#### Tier performance ladder")
+        ladder = tier_rollup.copy()
+        ladder["Read"] = ladder["win_rate_pct"].apply(lambda v: "Strong" if v >= 60 else ("Shaky" if v >= 45 else "Struggling"))
+        st.dataframe(
+            ladder[["tier", "matches", "wins", "losses", "win_rate_pct", "round_diff", "Read"]].rename(
+                columns={"tier": "Tier", "wins": "W", "losses": "L", "win_rate_pct": "Win rate %", "round_diff": "Round diff"}
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.subheader("Match-by-match explorer")
     result_filter = st.multiselect(
         "Result filter",
         ["Win", "Loss", "Draw"],
         default=["Win", "Loss", "Draw"],
         key="medisports_result_filter",
     )
-    filtered_matches = match_results[match_results["match_result"].isin(result_filter)].sort_values("date", ascending=False)
+    opp_filter = st.multiselect(
+        "Opponent filter",
+        sorted(filtered["opponent_team"].dropna().astype(str).unique().tolist()),
+        default=[],
+        key="medisports_opp_filter",
+    )
+    match_table = filtered[filtered["match_result"].isin(result_filter)].copy()
+    if opp_filter:
+        match_table = match_table[match_table["opponent_team"].isin(opp_filter)]
+
     st.dataframe(
-        filtered_matches[
-            ["date", "opponent_team", "map", "competition", "round_wins", "round_losses", "round_diff", "match_result"]
+        match_table.sort_values("date", ascending=False)[
+            ["date", "opponent_team", "map", "competition", "tier", "round_wins", "round_losses", "round_diff", "match_result"]
         ],
         use_container_width=True,
         hide_index=True,
     )
-
 
 def main() -> None:
     player_df, tactics_df, achievements_df = _load_data()
