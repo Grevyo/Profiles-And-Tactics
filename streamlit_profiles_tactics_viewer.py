@@ -2373,8 +2373,22 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
         )
         .assign(
             round_diff=lambda d: d["round_wins"] - d["round_losses"],
-            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
-            round_win_pct=lambda d: (d["round_wins"] / (d["round_wins"] + d["round_losses"]).clip(lower=1) * 100).round(1),
+            win_rate_pct=lambda d: (
+                pd.to_numeric(d["wins"], errors="coerce").fillna(0)
+                / (
+                    pd.to_numeric(d["wins"], errors="coerce").fillna(0)
+                    + pd.to_numeric(d["losses"], errors="coerce").fillna(0)
+                ).clip(lower=1)
+                * 100
+            ).round(1),
+            round_win_pct=lambda d: (
+                pd.to_numeric(d["round_wins"], errors="coerce").fillna(0)
+                / (
+                    pd.to_numeric(d["round_wins"], errors="coerce").fillna(0)
+                    + pd.to_numeric(d["round_losses"], errors="coerce").fillna(0)
+                ).clip(lower=1)
+                * 100
+            ).round(1),
             round_diff_per_match=lambda d: (d["round_diff"] / d["matches"].clip(lower=1)).round(2),
             record=lambda d: d["wins"].astype(str) + "-" + d["losses"].astype(str) + "-" + d["draws"].astype(str),
         )
@@ -2400,7 +2414,16 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
             losses=("match_result", lambda s: int((s == "Loss").sum())),
             round_diff=("round_diff", "sum"),
         )
-        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+        .assign(
+            win_rate_pct=lambda d: (
+                pd.to_numeric(d["wins"], errors="coerce").fillna(0)
+                / (
+                    pd.to_numeric(d["wins"], errors="coerce").fillna(0)
+                    + pd.to_numeric(d["losses"], errors="coerce").fillna(0)
+                ).clip(lower=1)
+                * 100
+            ).round(1)
+        )
     )
     tier_rollup = (
         filtered.groupby("tier", as_index=False)
@@ -2410,7 +2433,16 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
             losses=("match_result", lambda s: int((s == "Loss").sum())),
             round_diff=("round_diff", "sum"),
         )
-        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+        .assign(
+            win_rate_pct=lambda d: (
+                pd.to_numeric(d["wins"], errors="coerce").fillna(0)
+                / (
+                    pd.to_numeric(d["wins"], errors="coerce").fillna(0)
+                    + pd.to_numeric(d["losses"], errors="coerce").fillna(0)
+                ).clip(lower=1)
+                * 100
+            ).round(1)
+        )
     )
     tournament_rollup = (
         filtered.groupby("competition", as_index=False)
@@ -2422,7 +2454,16 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
             round_diff=("round_diff", "sum"),
             best_map=("map", lambda s: s.dropna().astype(str).mode().iloc[0] if not s.dropna().empty else "—"),
         )
-        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+        .assign(
+            win_rate_pct=lambda d: (
+                pd.to_numeric(d["wins"], errors="coerce").fillna(0)
+                / (
+                    pd.to_numeric(d["wins"], errors="coerce").fillna(0)
+                    + pd.to_numeric(d["losses"], errors="coerce").fillna(0)
+                ).clip(lower=1)
+                * 100
+            ).round(1)
+        )
     )
 
     overall_matches = int(filtered["match_id"].nunique())
