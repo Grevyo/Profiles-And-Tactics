@@ -6,6 +6,7 @@ Run:
 
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 import re
 
@@ -34,12 +35,12 @@ def _inject_styles() -> None:
         """
         <style>
         .panel-card {
-            background: linear-gradient(145deg, #131722 0%, #0e1118 100%);
-            border: 1px solid rgba(151, 166, 195, 0.35);
-            border-radius: 14px;
-            padding: 16px 18px;
+            background: radial-gradient(circle at top, #1a2234 0%, #0b0f17 68%);
+            border: 1px solid rgba(151, 166, 195, 0.45);
+            border-radius: 16px;
+            padding: 18px 20px;
             margin-bottom: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.32);
         }
         .panel-muted {
             color: #9da7bd;
@@ -61,11 +62,11 @@ def _inject_styles() -> None:
         .stat-chip {
             border: 1px solid rgba(151, 166, 195, 0.35);
             border-radius: 10px;
-            padding: 8px 10px;
+            padding: 10px 12px;
             background: rgba(18, 25, 40, 0.8);
         }
         .stat-label { color: #9da7bd; font-size: 0.78rem; }
-        .stat-value { color: #f5f7fb; font-size: 1rem; font-weight: 650; }
+        .stat-value { color: #f5f7fb; font-size: 1.45rem; font-weight: 800; line-height: 1.15; }
         .stat-trend { font-size: 0.78rem; margin-top: 4px; font-weight: 600; }
         .trend-good { color: #31d17b; }
         .trend-mid { color: #f0be4f; }
@@ -93,6 +94,45 @@ def _inject_styles() -> None:
             width: 100%;
             border-radius: 12px;
             border: 1px solid rgba(151, 166, 195, 0.35);
+        }
+        .player-card-main {
+            position: relative;
+            padding-right: 96px;
+        }
+        .team-logo-topright {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 78px;
+            border-radius: 10px;
+            border: 1px solid rgba(151, 166, 195, 0.4);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px;
+        }
+        .hero-grevscore {
+            margin: 8px 0 12px 0;
+            border: 1px solid rgba(118, 168, 255, 0.45);
+            border-radius: 14px;
+            padding: 10px 12px;
+            background: linear-gradient(120deg, rgba(54, 87, 155, 0.45) 0%, rgba(35, 57, 103, 0.2) 100%);
+        }
+        .hero-grevscore-label {
+            color: #b8caf0;
+            font-size: 0.82rem;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+        }
+        .hero-grevscore-value {
+            color: #f5f8ff;
+            font-size: 2.25rem;
+            font-weight: 900;
+            line-height: 1.05;
+        }
+        .filter-shell {
+            border: 1px solid rgba(151, 166, 195, 0.3);
+            border-radius: 10px;
+            padding: 6px 10px;
+            background: rgba(15, 20, 32, 0.65);
         }
         .form-row {
             border-bottom: 1px solid rgba(151, 166, 195, 0.2);
@@ -182,15 +222,20 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
 
 def _multiselect_filter(label: str, options: list[str], key: str) -> list[str]:
-    selected = st.multiselect(label, options, default=options, key=key)
-    if not selected:
-        st.caption(f"Selected {label}: None")
+    if not options:
+        st.caption(f"{label}: no options")
         return []
-    if len(selected) == len(options):
-        st.caption(f"Selected {label}: All")
-    else:
-        st.caption(f"Selected {label}: {', '.join(selected)}")
-    return selected
+    selected = st.multiselect(
+        label,
+        options,
+        default=[],
+        key=key,
+        placeholder="All (no filter)",
+    )
+    active = selected if selected else options
+    summary = "All" if not selected else f"{len(selected)} selected"
+    st.markdown(f'<div class="panel-muted">{label}: {summary}</div>', unsafe_allow_html=True)
+    return active
 
 
 def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: pd.DataFrame) -> dict[str, float]:
@@ -446,10 +491,9 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 
     header_cols = st.columns([1, 2])
     player_image = _find_image(image_index, "player", selected_player)
+    team_logo = _find_image(image_index, "team", first_row.get("my_team"))
     with header_cols[0]:
-        team_logo = _find_image(image_index, "team", first_row.get("my_team"))
-        if team_logo:
-            st.image(str(team_logo), caption=str(first_row.get("my_team", "")), width=100)
+        st.caption(f"Team: {first_row.get('my_team', '-')}")
     with header_cols[1]:
         competition_logo = _find_image(image_index, "competition", first_row.get("competition"))
         if competition_logo:
@@ -474,7 +518,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         _build_stat_chip("Acc%", f'{metrics["acc"]:.1f}%', metrics["acc"], 45, 80),
         _build_stat_chip("KPM", f'{metrics["kpm"]:.2f}', metrics["kpm"], 0.45, 1.0),
         _build_stat_chip("Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
-        _build_stat_chip("GrevScore", f'{metrics["grevscore"]:.1f}', metrics["grevscore"], 35, 85),
+        _build_stat_chip("Avg KPD", f"{avg_kpd:.2f}", avg_kpd, 0.8, 1.5),
     ]
     st.markdown('<div class="panel-card">', unsafe_allow_html=True)
     card_left, card_right = st.columns([1, 4])
@@ -482,12 +526,24 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         if player_image:
             st.image(str(player_image), use_container_width=True)
     with card_right:
+        team_logo_html = ""
+        if team_logo:
+            team_logo_html = (
+                f'<img class="team-logo-topright" src="data:image/png;base64,{base64.b64encode(team_logo.read_bytes()).decode("utf-8")}">'
+            )
         st.markdown(
             f"""
-            <div class="panel-muted">Player card</div>
-            <div class="panel-title">{selected_player}</div>
-            <div class="stats-grid">
-                {''.join(stat_chips)}
+            <div class="player-card-main">
+                {team_logo_html}
+                <div class="panel-muted">Player card</div>
+                <div class="panel-title">{selected_player}</div>
+                <div class="hero-grevscore">
+                    <div class="hero-grevscore-label">GrevScore</div>
+                    <div class="hero-grevscore-value">{metrics["grevscore"]:.1f}</div>
+                </div>
+                <div class="stats-grid">
+                    {''.join(stat_chips)}
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -501,6 +557,20 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     if recent_form.empty:
         st.info("Not enough recent match data for form trends.")
     else:
+        form_timeline = recent_form.sort_values("date").copy()
+        graph_col1, graph_col2, graph_col3 = st.columns(3)
+        with graph_col1:
+            st.caption("Form Score Momentum")
+            st.line_chart(form_timeline.set_index("date")["match_form_score"], use_container_width=True)
+        with graph_col2:
+            st.caption("KPD Trend")
+            st.area_chart(form_timeline.set_index("date")["kpd"], use_container_width=True)
+        with graph_col3:
+            winloss = form_timeline.copy()
+            winloss["result"] = (winloss["wins"] > winloss["losses"]).astype(int)
+            st.caption("Win/Loss Pattern")
+            st.bar_chart(winloss.set_index("date")["result"], use_container_width=True)
+
         preview_cols = [
             "date",
             "map",
