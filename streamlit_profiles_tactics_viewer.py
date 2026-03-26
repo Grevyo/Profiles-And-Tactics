@@ -758,17 +758,33 @@ def _expand_tactics_by_round_type(df: pd.DataFrame) -> pd.DataFrame:
     expanded = df.copy()
     tactic_names = expanded["tactic_name"].fillna("").astype(str)
     round_types: list[list[str]] = []
+
+    bracket_pattern = re.compile(r"[\(\[\{<]([^)\]}>]+)[\)\]\}>]")
+
     for tactic_name in tactic_names:
         tags: list[str] = []
-        if "(P)" in tactic_name:
+        upper_name = tactic_name.upper()
+
+        bracket_matches = bracket_pattern.findall(upper_name)
+        bracket_tokens = "".join(bracket_matches)
+
+        if "P" in bracket_tokens:
             # Pistol tactics are also available as eco + standard callups.
             tags.extend(["Pistol", "Eco", "Standard"])
-        elif "(E)" in tactic_name:
+        elif "E" in bracket_tokens:
             tags.append("Eco")
-        elif "(S)" in tactic_name:
+        elif "S" in bracket_tokens:
             tags.append("Standard")
         else:
-            tags.append("Unspecified")
+            stripped_name = upper_name.lstrip()
+            if stripped_name.startswith("P"):
+                tags.extend(["Pistol", "Eco", "Standard"])
+            elif stripped_name.startswith("E"):
+                tags.append("Eco")
+            elif stripped_name.startswith("S"):
+                tags.append("Standard")
+            else:
+                tags.append("Unspecified")
         round_types.append(tags)
 
     expanded["round_type"] = round_types
@@ -1613,11 +1629,11 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
 
     selected_key = st.selectbox(
         "Selected tactic summary",
-        tactic_perf.apply(lambda r: f'{r["tactic_name"]} | {r["map"]} | {r["side"]}', axis=1).tolist(),
+        tactic_perf.apply(lambda r: f'{r["map"]} | {r["side"]} | {r["tactic_name"]}', axis=1).tolist(),
         key="selected_tactic_summary",
     )
     selected_row = tactic_perf[
-        tactic_perf.apply(lambda r: f'{r["tactic_name"]} | {r["map"]} | {r["side"]}', axis=1) == selected_key
+        tactic_perf.apply(lambda r: f'{r["map"]} | {r["side"]} | {r["tactic_name"]}', axis=1) == selected_key
     ].iloc[0]
     st.markdown(
         f"""
