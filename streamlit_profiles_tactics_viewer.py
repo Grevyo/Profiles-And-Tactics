@@ -12,6 +12,7 @@ import importlib.util
 from pathlib import Path
 import re
 import textwrap
+import unicodedata
 
 import pandas as pd
 import streamlit as st
@@ -905,6 +906,17 @@ def _normalize_key(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", str(value).lower())
 
 
+def _ascii_small_caps(value: str) -> str:
+    converted_chars: list[str] = []
+    for char in str(value):
+        char_name = unicodedata.name(char, "")
+        if "LATIN LETTER SMALL CAPITAL" in char_name:
+            converted_chars.append(char_name.rsplit(" ", 1)[-1].lower())
+            continue
+        converted_chars.append(char)
+    return "".join(converted_chars).lower()
+
+
 @st.cache_data(show_spinner=False)
 def _build_image_index() -> dict[str, dict[str, Path]]:
     image_index: dict[str, dict[str, Path]] = {}
@@ -923,11 +935,7 @@ def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value:
     if not value:
         return None
     if image_type == "competition":
-        ascii_value = (
-            str(value)
-            .lower()
-            .translate(str.maketrans({"ᴍ": "m", "ᴀ": "a", "ᴅ": "d", "ᴇ": "e", "ɴ": "n"}))
-        )
+        ascii_value = _ascii_small_caps(value)
         competition_logo_overrides = {
             "nova": "nova-prime.png",
             "cyberathletes": "cyberathletes.png",
