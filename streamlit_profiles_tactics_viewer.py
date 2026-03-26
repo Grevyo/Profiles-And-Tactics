@@ -15,8 +15,12 @@ import textwrap
 
 import altair as alt
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
+
+try:
+    import plotly.graph_objects as go
+except ModuleNotFoundError:
+    go = None
 
 st.set_page_config(page_title="Grevs CPL Pages", layout="wide")
 
@@ -2654,43 +2658,58 @@ def _medisports_vs_breakdown(
     with chart_col_1:
         st.markdown("#### Matchup strength (round differential)")
         diff_data = vs_summary[vs_summary["matches"] >= min_matches].sort_values("round_diff", ascending=False)
-        wrapped_labels = []
-        wrap_width = 26
-        for label in diff_data["opponent_team"].astype(str):
-            wrapped_labels.append("<br>".join(textwrap.wrap(label, width=wrap_width, break_long_words=False)) or label)
+        if go is not None:
+            wrapped_labels = []
+            wrap_width = 26
+            for label in diff_data["opponent_team"].astype(str):
+                wrapped_labels.append("<br>".join(textwrap.wrap(label, width=wrap_width, break_long_words=False)) or label)
 
-        bar_height = 30
-        min_height = 340
-        chart_height = max(min_height, len(diff_data) * bar_height + 80)
-        longest_label = max((len(name) for name in diff_data["opponent_team"].astype(str)), default=0)
-        left_margin = min(420, max(170, 80 + longest_label * 6))
+            bar_height = 30
+            min_height = 340
+            chart_height = max(min_height, len(diff_data) * bar_height + 80)
+            longest_label = max((len(name) for name in diff_data["opponent_team"].astype(str)), default=0)
+            left_margin = min(420, max(170, 80 + longest_label * 6))
 
-        diff_chart = go.Figure(
-            go.Bar(
-                x=diff_data["round_diff"],
-                y=wrapped_labels,
-                orientation="h",
-                marker_color=["#44c06f" if value >= 0 else "#e85c6b" for value in diff_data["round_diff"]],
-                customdata=diff_data[["opponent_team", "record", "matches", "round_diff_per_match"]],
-                hovertemplate=(
-                    "<b>%{customdata[0]}</b><br>"
-                    "Record: %{customdata[1]}<br>"
-                    "Matches: %{customdata[2]}<br>"
-                    "Round diff: %{x:+d}<br>"
-                    "Round diff / match: %{customdata[3]:+.2f}<extra></extra>"
-                ),
+            diff_chart = go.Figure(
+                go.Bar(
+                    x=diff_data["round_diff"],
+                    y=wrapped_labels,
+                    orientation="h",
+                    marker_color=["#44c06f" if value >= 0 else "#e85c6b" for value in diff_data["round_diff"]],
+                    customdata=diff_data[["opponent_team", "record", "matches", "round_diff_per_match"]],
+                    hovertemplate=(
+                        "<b>%{customdata[0]}</b><br>"
+                        "Record: %{customdata[1]}<br>"
+                        "Matches: %{customdata[2]}<br>"
+                        "Round diff: %{x:+d}<br>"
+                        "Round diff / match: %{customdata[3]:+.2f}<extra></extra>"
+                    ),
+                )
             )
-        )
-        diff_chart.update_layout(
-            height=chart_height,
-            margin=dict(l=left_margin, r=20, t=20, b=45),
-            bargap=0.22,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-        )
-        diff_chart.update_yaxes(automargin=True, showticklabels=True, title_text="Opponent", tickfont=dict(size=12))
-        diff_chart.update_xaxes(title_text="Round differential", zeroline=True, zerolinewidth=1)
-        st.plotly_chart(diff_chart, use_container_width=True)
+            diff_chart.update_layout(
+                height=chart_height,
+                margin=dict(l=left_margin, r=20, t=20, b=45),
+                bargap=0.22,
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+            )
+            diff_chart.update_yaxes(automargin=True, showticklabels=True, title_text="Opponent", tickfont=dict(size=12))
+            diff_chart.update_xaxes(title_text="Round differential", zeroline=True, zerolinewidth=1)
+            st.plotly_chart(diff_chart, use_container_width=True)
+        else:
+            st.info("Plotly is not installed, showing a fallback chart.")
+            fallback_chart = (
+                alt.Chart(diff_data)
+                .mark_bar()
+                .encode(
+                    x=alt.X("round_diff:Q", title="Round differential"),
+                    y=alt.Y("opponent_team:N", sort="-x", title="Opponent"),
+                    color=alt.condition(alt.datum.round_diff >= 0, alt.value("#44c06f"), alt.value("#e85c6b")),
+                    tooltip=["opponent_team", "record", "matches", "round_diff", "round_diff_per_match"],
+                )
+                .properties(height=max(340, len(diff_data) * 30))
+            )
+            st.altair_chart(fallback_chart, use_container_width=True)
     with chart_col_2:
         st.markdown(f"#### Win rate by opponent (min {min_matches})")
         wr_data = vs_summary[vs_summary["matches"] >= min_matches]
