@@ -930,7 +930,6 @@ def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value:
         )
         competition_logo_overrides = {
             "nova": "nova-prime.png",
-            "madmen": "madmen.png",
             "cyberathletes": "cyberathletes.png",
             "diamond": "diamond.png",
         }
@@ -939,6 +938,10 @@ def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value:
                 override_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / filename
                 if override_logo.exists():
                     return override_logo
+        if re.search(r"\bmadmen\b", ascii_value):
+            madmen_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / "madmen.png"
+            if madmen_logo.exists():
+                return madmen_logo
     normalized = _normalize_key(value)
     entries = image_index.get(image_type, {})
     return entries.get(normalized)
