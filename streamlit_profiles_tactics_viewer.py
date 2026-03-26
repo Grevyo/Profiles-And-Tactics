@@ -38,8 +38,8 @@ def _inject_styles() -> None:
             background: radial-gradient(circle at top, #1a2234 0%, #0b0f17 68%);
             border: 1px solid rgba(151, 166, 195, 0.45);
             border-radius: 16px;
-            padding: 18px 20px;
-            margin-bottom: 12px;
+            padding: 20px 22px;
+            margin-bottom: 16px;
             box-shadow: 0 16px 32px rgba(0, 0, 0, 0.32);
         }
         .panel-muted {
@@ -56,17 +56,18 @@ def _inject_styles() -> None:
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 8px;
-            margin-top: 8px;
+            gap: 10px;
+            margin-top: 10px;
         }
         .stat-chip {
             border: 1px solid rgba(151, 166, 195, 0.35);
             border-radius: 10px;
-            padding: 10px 12px;
+            padding: 12px 14px;
             background: rgba(18, 25, 40, 0.8);
+            min-height: 108px;
         }
         .stat-label { color: #9da7bd; font-size: 0.78rem; }
-        .stat-value { color: #f5f7fb; font-size: 1.45rem; font-weight: 800; line-height: 1.15; }
+        .stat-value { color: #f5f7fb; font-size: 1.55rem; font-weight: 800; line-height: 1.15; }
         .stat-trend { font-size: 0.78rem; margin-top: 4px; font-weight: 600; }
         .trend-good { color: #31d17b; }
         .trend-mid { color: #f0be4f; }
@@ -95,54 +96,70 @@ def _inject_styles() -> None:
             border-radius: 12px;
             border: 1px solid rgba(151, 166, 195, 0.35);
         }
-        .player-card-main {
-            position: relative;
-            padding-right: 96px;
-        }
-        .team-logo-topright {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 78px;
-            border-radius: 10px;
-            border: 1px solid rgba(151, 166, 195, 0.4);
-            background: rgba(255, 255, 255, 0.03);
-            padding: 6px;
-        }
-        .hero-grevscore {
-            margin: 8px 0 12px 0;
-            border: 1px solid rgba(118, 168, 255, 0.45);
-            border-radius: 14px;
-            padding: 10px 12px;
-            background: linear-gradient(120deg, rgba(54, 87, 155, 0.45) 0%, rgba(35, 57, 103, 0.2) 100%);
-        }
-        .hero-score-grid {
+        .top-identity-grid {
             display: grid;
-            grid-template-columns: 1fr 1.3fr 1fr;
-            gap: 8px;
-            margin: 8px 0 12px 0;
+            grid-template-columns: 170px 1.5fr 1fr;
+            gap: 14px;
+            align-items: stretch;
         }
-        .side-score-card {
+        .portrait-frame {
+            border: 1px solid rgba(104, 143, 210, 0.6);
+            border-radius: 14px;
+            padding: 8px;
+            background: linear-gradient(180deg, rgba(41, 59, 97, 0.35), rgba(15, 21, 34, 0.65));
+            box-shadow: 0 0 18px rgba(58, 102, 189, 0.24);
+        }
+        .portrait-strip {
+            margin-top: 8px;
+            font-size: 0.74rem;
+            color: #b5c3e2;
+            display: grid;
+            gap: 3px;
+        }
+        .identity-card {
             border: 1px solid rgba(151, 166, 195, 0.35);
             border-radius: 12px;
-            padding: 10px;
-            background: rgba(18, 25, 40, 0.75);
-            text-align: center;
+            padding: 14px;
+            background: rgba(14, 20, 32, 0.78);
         }
-        .side-red { border-color: rgba(255, 108, 122, 0.55); }
-        .side-blue { border-color: rgba(78, 170, 255, 0.55); }
-        .side-score-label {
-            font-size: 0.74rem;
+        .profile-label {
+            font-size: 0.73rem;
             color: #9da7bd;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.09em;
         }
-        .side-score-value {
-            font-size: 1.35rem;
+        .profile-name {
+            font-size: 2rem;
+            color: #f5f7fb;
+            font-weight: 900;
+            margin-top: 2px;
+            line-height: 1.05;
+        }
+        .identity-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .identity-kv {
+            border: 1px solid rgba(151, 166, 195, 0.28);
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: rgba(18, 25, 40, 0.72);
+            min-height: 64px;
+        }
+        .identity-kv-value {
+            font-size: 1.2rem;
             color: #f5f7fb;
             font-weight: 800;
-            line-height: 1.1;
-            margin-top: 2px;
+            line-height: 1.15;
+        }
+        .hero-grevscore {
+            border: 1px solid rgba(118, 168, 255, 0.45);
+            border-radius: 14px;
+            padding: 14px;
+            background: linear-gradient(120deg, rgba(54, 87, 155, 0.45) 0%, rgba(35, 57, 103, 0.2) 100%);
+            box-shadow: 0 0 18px rgba(54, 116, 255, 0.22);
         }
         .hero-grevscore-label {
             color: #b8caf0;
@@ -152,7 +169,7 @@ def _inject_styles() -> None:
         }
         .hero-grevscore-value {
             color: #f5f8ff;
-            font-size: 2.25rem;
+            font-size: 2.6rem;
             font-weight: 900;
             line-height: 1.05;
         }
@@ -162,43 +179,68 @@ def _inject_styles() -> None:
             margin-top: 3px;
             letter-spacing: 0.04em;
         }
-        .grev-meter {
+        .gauge-wrap {
             margin-top: 10px;
             position: relative;
-            height: 38px;
-            border-radius: 999px;
-            border: 1px solid rgba(151, 166, 195, 0.38);
-            background:
-                repeating-linear-gradient(
-                    90deg,
-                    rgba(255, 255, 255, 0.13) 0px,
-                    rgba(255, 255, 255, 0.13) 1px,
-                    transparent 1px,
-                    transparent 28px
-                ),
-                linear-gradient(90deg, rgba(255, 108, 122, 0.35) 0%, rgba(240, 190, 79, 0.35) 45%, rgba(49, 209, 123, 0.35) 100%);
-            overflow: hidden;
+            width: 100%;
+            height: 120px;
         }
-        .grev-meter-needle {
+        .gauge-arc {
             position: absolute;
-            top: 4px;
-            width: 2px;
-            height: 28px;
+            left: 50%;
+            top: 56px;
+            width: 170px;
+            height: 86px;
+            transform: translateX(-50%);
+            border-radius: 170px 170px 0 0;
+            border: 11px solid rgba(0, 0, 0, 0);
+            border-bottom: 0;
+            background:
+                linear-gradient(90deg, #ff6c7a 0%, #f0be4f 50%, #31d17b 100%);
+            -webkit-mask: radial-gradient(circle at bottom, transparent 53px, #000 54px);
+            mask: radial-gradient(circle at bottom, transparent 53px, #000 54px);
+        }
+        .gauge-needle {
+            position: absolute;
+            left: 50%;
+            top: 73px;
+            width: 3px;
+            height: 66px;
             background: #f5f8ff;
+            transform-origin: bottom center;
             box-shadow: 0 0 10px rgba(245, 248, 255, 0.65);
+            border-radius: 999px;
+        }
+        .gauge-hub {
+            position: absolute;
+            left: 50%;
+            top: 132px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #f5f8ff;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px rgba(245, 248, 255, 0.75);
         }
         .grev-meter-labels {
             display: flex;
             justify-content: space-between;
             font-size: 0.68rem;
             color: #b8caf0;
-            margin-top: 4px;
+            margin-top: 18px;
+        }
+        .section-label {
+            font-size: 0.78rem;
+            color: #9eb0d4;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-top: 8px;
         }
         .filter-shell {
             border: 1px solid rgba(151, 166, 195, 0.3);
-            border-radius: 10px;
-            padding: 4px 8px;
-            background: rgba(15, 20, 32, 0.65);
+            border-radius: 12px;
+            padding: 8px 10px;
+            background: rgba(8, 12, 21, 0.7);
         }
         .form-row {
             border-bottom: 1px solid rgba(151, 166, 195, 0.2);
@@ -401,21 +443,6 @@ def _score_tier_label(score: float) -> str:
     return "Very Poor"
 
 
-def _side_grevscore(filtered_players: pd.DataFrame, filtered_tactics: pd.DataFrame, side_name: str) -> float:
-    if filtered_players.empty or filtered_tactics.empty or "side" not in filtered_tactics.columns:
-        return 0.0
-    side_matches = filtered_tactics[
-        filtered_tactics["side"].astype(str).str.lower().str.contains(side_name.lower(), na=False)
-    ]["match_id"].dropna().unique()
-    if len(side_matches) == 0:
-        return 0.0
-    side_players = filtered_players[filtered_players["match_id"].isin(side_matches)]
-    side_tactics = filtered_tactics[filtered_tactics["match_id"].isin(side_matches)]
-    if side_players.empty:
-        return 0.0
-    return _calc_player_card_metrics(side_players, side_tactics)["grevscore"]
-
-
 def _stat_visual(value: float, low: float, high: float, invert: bool = False) -> tuple[str, float]:
     if high <= low:
         return "trend-mid", 50.0
@@ -590,7 +617,8 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 
     selected_player = st.selectbox('Pick a player (names containing "ⓜ")', players)
 
-    filtered_players, filtered_tactics = _apply_shared_filters(player_df, tactics_df, selected_player)
+    with st.expander("Profile Filters", expanded=False):
+        filtered_players, filtered_tactics = _apply_shared_filters(player_df, tactics_df, selected_player)
     image_index = _build_image_index()
 
     if filtered_players.empty:
@@ -599,21 +627,14 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 
     first_row = filtered_players.sort_values("date", ascending=False).iloc[0]
 
-    header_cols = st.columns([1, 2])
     player_image = _find_image(image_index, "player", selected_player)
     team_logo = _find_image(image_index, "team", first_row.get("my_team"))
-    with header_cols[0]:
-        st.caption(f"Team: {first_row.get('my_team', '-')}")
-    with header_cols[1]:
-        competition_logo = _find_image(image_index, "competition", first_row.get("competition"))
-        if competition_logo:
-            st.image(str(competition_logo), caption=str(first_row.get("competition", "")), width=180)
+    competition_logo = _find_image(image_index, "competition", first_row.get("competition"))
 
     metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
-    red_score = _side_grevscore(filtered_players, filtered_tactics, "red")
-    blue_score = _side_grevscore(filtered_players, filtered_tactics, "blue")
     score_tier = _score_tier_label(metrics["grevscore"])
-    grev_meter_pos = min(max(((metrics["grevscore"] - 0.75) / (1.5 - 0.75)) * 100.0, 0.0), 100.0)
+    gauge_pct = min(max(((metrics["grevscore"] - 0.75) / (1.5 - 0.75)) * 100.0, 0.0), 100.0)
+    gauge_angle = -90 + (gauge_pct * 1.8)
     kills = int(metrics["kills"])
     deaths = int(metrics["deaths"])
     assists = int(metrics["assists"])
@@ -634,56 +655,77 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         _build_stat_chip("Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
         _build_stat_chip("Avg KPD", f"{avg_kpd:.2f}", avg_kpd, 0.8, 1.5),
     ]
-    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-    card_left, card_right = st.columns([1, 4])
-    with card_left:
-        if player_image:
-            st.image(str(player_image), use_container_width=True)
-    with card_right:
-        team_logo_html = ""
-        if team_logo:
-            team_logo_html = (
-                f'<img class="team-logo-topright" src="data:image/png;base64,{base64.b64encode(team_logo.read_bytes()).decode("utf-8")}">'
-            )
-        st.markdown(
-            f"""
-            <div class="player-card-main">
-                {team_logo_html}
-                <div class="panel-muted">Player card</div>
-                <div class="panel-title">{selected_player}</div>
-                <div class="hero-score-grid">
-                    <div class="side-score-card side-red">
-                        <div class="side-score-label">Red Score</div>
-                        <div class="side-score-value">{red_score:.2f}</div>
-                    </div>
-                    <div class="hero-grevscore">
-                        <div class="hero-grevscore-label">GrevScore</div>
-                        <div class="hero-grevscore-value">{metrics["grevscore"]:.2f}</div>
-                        <div class="hero-grevscore-tier">{score_tier}</div>
-                        <div class="grev-meter">
-                            <div class="grev-meter-needle" style="left: calc({grev_meter_pos:.1f}% - 1px);"></div>
-                        </div>
-                        <div class="grev-meter-labels">
-                            <span>0.75 Poor</span>
-                            <span>0.9 Avg</span>
-                            <span>1.0 Okay</span>
-                            <span>1.2 Good</span>
-                            <span>1.5 Amazing</span>
-                        </div>
-                    </div>
-                    <div class="side-score-card side-blue">
-                        <div class="side-score-label">Blue Score</div>
-                        <div class="side-score-value">{blue_score:.2f}</div>
+    team_logo_html = ""
+    if team_logo:
+        team_logo_html = (
+            f'<img style="width:42px;border-radius:8px;vertical-align:middle;margin-right:8px;" src="data:image/png;base64,{base64.b64encode(team_logo.read_bytes()).decode("utf-8")}">'
+        )
+    competition_logo_html = ""
+    if competition_logo:
+        competition_logo_html = (
+            f'<img style="width:34px;border-radius:8px;vertical-align:middle;margin-right:6px;" src="data:image/png;base64,{base64.b64encode(competition_logo.read_bytes()).decode("utf-8")}">'
+        )
+    st.markdown(
+        f"""
+        <div class="panel-card">
+            <div class="top-identity-grid">
+                <div class="portrait-frame">
+                    {"<img class='player-headshot' src='data:image/png;base64," + base64.b64encode(player_image.read_bytes()).decode("utf-8") + "'>" if player_image else "<div class='panel-muted'>No portrait found.</div>"}
+                    <div class="portrait-strip">
+                        <div>Team: <strong>{first_row.get("my_team", "-")}</strong></div>
+                        <div>Matches: <strong>{int(metrics["matches"])}</strong></div>
+                        <div>Form: <strong>{score_tier}</strong></div>
                     </div>
                 </div>
-                <div class="stats-grid">
-                    {''.join(stat_chips)}
+                <div class="identity-card">
+                    <div class="profile-label">Player Profile</div>
+                    <div class="profile-name">{selected_player}</div>
+                    <div class="panel-muted">{team_logo_html}<span>{first_row.get("my_team", "-")}</span></div>
+                    <div class="identity-grid">
+                        <div class="identity-kv">
+                            <div class="profile-label">Role</div>
+                            <div class="identity-kv-value">{first_row.get("role", "Player")}</div>
+                        </div>
+                        <div class="identity-kv">
+                            <div class="profile-label">Record</div>
+                            <div class="identity-kv-value">{kills}/{deaths}/{assists}</div>
+                        </div>
+                        <div class="identity-kv">
+                            <div class="profile-label">Best Map</div>
+                            <div class="identity-kv-value">{filtered_players.groupby("map")["kills"].sum().sort_values(ascending=False).index[0] if "map" in filtered_players.columns and not filtered_players.empty else "-"}</div>
+                        </div>
+                        <div class="identity-kv">
+                            <div class="profile-label">Latest Event</div>
+                            <div class="identity-kv-value">{first_row.get("competition", "-")}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-grevscore">
+                    <div class="hero-grevscore-label">GrevScore</div>
+                    <div class="hero-grevscore-value">{metrics["grevscore"]:.2f}</div>
+                    <div class="hero-grevscore-tier">{score_tier}</div>
+                    <div class="gauge-wrap">
+                        <div class="gauge-arc"></div>
+                        <div class="gauge-needle" style="transform: translateX(-50%) rotate({gauge_angle:.1f}deg);"></div>
+                        <div class="gauge-hub"></div>
+                    </div>
+                    <div class="grev-meter-labels">
+                        <span>Poor</span>
+                        <span>Average</span>
+                        <span>Good</span>
+                        <span>Star</span>
+                    </div>
+                    <div class="section-label">{competition_logo_html}{first_row.get("competition", "-")}</div>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="panel-card"><div class="section-label">Core Performance</div><div class="stats-grid">', unsafe_allow_html=True)
+    st.markdown("".join(stat_chips), unsafe_allow_html=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
     form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
     st.subheader("FORM (Last 10 Games)")
@@ -693,6 +735,14 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         st.info("Not enough recent match data for form trends.")
     else:
         form_timeline = recent_form.sort_values("date").copy()
+        block_cols = st.columns(10)
+        recent_blocks = form_timeline["match_form_score"].tail(10).tolist()
+        for idx, score in enumerate(recent_blocks):
+            color = "#31d17b" if score >= 70 else ("#f0be4f" if score >= 45 else "#ff6c7a")
+            block_cols[idx].markdown(
+                f"<div style='height:30px;border-radius:6px;background:{color};opacity:0.9;'></div>",
+                unsafe_allow_html=True,
+            )
         graph_col1, graph_col2, graph_col3 = st.columns(3)
         with graph_col1:
             st.caption("Form Score Momentum")
