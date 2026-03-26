@@ -1473,23 +1473,26 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         return
 
     st.subheader("Tactics Filters")
-    filter_cols = st.columns(5)
-    side_opts = sorted(df["side"].dropna().unique().tolist())
+    filter_cols = st.columns(6)
+    map_opts = sorted(df["map"].dropna().unique().tolist())
     with filter_cols[0]:
+        maps = _multiselect_filter("Map", map_opts, key="tactic_map")
+    side_opts = sorted(df["side"].dropna().unique().tolist())
+    with filter_cols[1]:
         sides = _multiselect_filter("Side", side_opts, key="tactic_side")
     tier_opts = sorted(df["tier"].dropna().unique().tolist())
-    with filter_cols[1]:
+    with filter_cols[2]:
         tiers = _multiselect_filter("Tier", tier_opts, key="tactic_tier")
 
     comp_opts = sorted(df["competition"].dropna().unique().tolist())
-    with filter_cols[2]:
+    with filter_cols[3]:
         comps = _multiselect_filter("Event", comp_opts, key="tactic_event")
 
     opp_opts = sorted(df["opponent_team"].dropna().unique().tolist())
-    with filter_cols[3]:
+    with filter_cols[4]:
         opps = _multiselect_filter("Opponent", opp_opts, key="tactic_opp")
     round_type_opts = ["Pistol", "Eco", "Standard"]
-    with filter_cols[4]:
+    with filter_cols[5]:
         selected_round_types = st.multiselect(
             "Round Type",
             round_type_opts,
@@ -1519,6 +1522,8 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
 
     if sides:
         df = df[df["side"].isin(sides)]
+    if maps:
+        df = df[df["map"].isin(maps)]
     if tiers:
         df = df[df["tier"].isin(tiers)]
     if comps:
@@ -1558,6 +1563,20 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     )
     if tactic_perf.empty:
         st.warning("No tactics found for selected filters.")
+        return
+
+    min_sample = int(
+        st.slider(
+            "Minimum sample (uses)",
+            min_value=1,
+            max_value=max(int(tactic_perf["times_used"].max()), 1),
+            value=1,
+            key="tactic_min_sample",
+        )
+    )
+    tactic_perf = tactic_perf[tactic_perf["times_used"] >= min_sample].copy()
+    if tactic_perf.empty:
+        st.warning("No tactics meet the minimum sample threshold.")
         return
 
     total_rounds_selected = int(tactic_perf["times_used"].sum())
@@ -1631,28 +1650,35 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         uses = row["times_used"]
         win = row["win_pct"]
         if uses < 5:
-            return "Unclear sample"
+            return "Too little sample"
+        if uses < 8:
+            return "Early signal"
         if uses >= 10 and win >= 60:
-            return "Strong"
-        if uses >= 7 and win >= 52:
-            return "Promising"
+            return "Proven good"
         if uses >= 10 and win < 45:
-            return "Underperforming"
-        return "Unclear sample"
+            return "Proven poor"
+        return "Early signal"
 
     tactic_perf["confidence"] = tactic_perf.apply(_confidence_label, axis=1)
+    confidence_badges = {
+        "Too little sample": "⚪ Too little sample",
+        "Early signal": "🟡 Early signal",
+        "Proven good": "🟢 Proven good",
+        "Proven poor": "🔴 Proven poor",
+    }
+    tactic_perf["confidence_badge"] = tactic_perf["confidence"].map(confidence_badges).fillna("⚪ Too little sample")
 
     def _action_label(row: pd.Series, avg_win: float) -> str:
-        if row["win_pct"] > 60 and row["times_used"] >= 10:
+        if row["win_pct"] >= 58 and row["times_used"] >= 10:
             return "Keep"
         if row["win_pct"] < 45 and row["times_used"] >= 10:
-            return "Stop using"
-        if row["win_pct"] > 65 and row["times_used"] < 5:
-            return "Test more"
+            return "Drop"
+        if row["win_pct"] >= 60 and row["times_used"] < 6:
+            return "Test More"
         if row["usage_pct"] > 12 and row["win_pct"] < avg_win:
             return "Rework"
         if row["usage_pct"] < 8 and row["win_pct"] >= 58 and row["times_used"] >= 6:
-            return "Use more"
+            return "Use More"
         return "Monitor"
 
     overall_avg_win = float(tactic_perf["win_pct"].mean())
@@ -1662,9 +1688,10 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
             [
                 tag
                 for tag in [
-                    "Reliable" if (r["confidence"] == "Strong") else None,
-                    "Underused" if (r["recommended_action"] == "Use more") else None,
+                    "Reliable" if (r["confidence"] == "Proven good") else None,
+                    "Underused" if (r["recommended_action"] == "Use More") else None,
                     "Overused" if (r["recommended_action"] == "Rework") else None,
+                    "Unclear sample" if (r["confidence"] == "Too little sample") else None,
                     "Falling off" if (r["trend"] == "Falling") else None,
                     "Map-specific" if (r["round_share_pct"] > 25) else None,
                 ]
@@ -1693,6 +1720,36 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         key="selected_tactic_summary",
     )
     selected_row = summary_key_df[summary_key_df["summary_key"] == selected_key].iloc[0]
+
+    overall_wr = float((tactic_perf["wins"].sum() / max((tactic_perf["wins"].sum() + tactic_perf["losses"].sum()), 1)) * 100)
+    proven = tactic_perf[tactic_perf["times_used"] >= max(min_sample, 8)].copy()
+    if proven.empty:
+        proven = tactic_perf.copy()
+    best_proven = proven.sort_values(["win_pct", "times_used"], ascending=[False, False]).iloc[0]
+    worst_proven = proven.sort_values(["win_pct", "times_used"], ascending=[True, False]).iloc[0]
+    usage_avg = float(tactic_perf["usage_pct"].mean())
+    overused_weak_pool = tactic_perf[(tactic_perf["usage_pct"] >= usage_avg) & (tactic_perf["win_pct"] < overall_avg_win)]
+    overused_weak = (
+        overused_weak_pool.sort_values(["usage_pct", "win_pct"], ascending=[False, True]).iloc[0]
+        if not overused_weak_pool.empty
+        else worst_proven
+    )
+    underused_strong_pool = tactic_perf[
+        (tactic_perf["usage_pct"] < usage_avg) & (tactic_perf["win_pct"] >= max(overall_avg_win, 55)) & (tactic_perf["times_used"] >= 6)
+    ]
+    underused_strong = (
+        underused_strong_pool.sort_values(["win_pct", "usage_pct"], ascending=[False, True]).iloc[0]
+        if not underused_strong_pool.empty
+        else best_proven
+    )
+
+    top_cards = st.columns(5)
+    top_cards[0].metric("Overall tactic round win %", f"{overall_wr:.1f}%")
+    top_cards[1].metric("Best proven tactic", f'{best_proven["map"]} - {best_proven["tactic_name"]}')
+    top_cards[2].metric("Worst proven tactic", f'{worst_proven["map"]} - {worst_proven["tactic_name"]}')
+    top_cards[3].metric("Overused weak tactic", f'{overused_weak["map"]} - {overused_weak["tactic_name"]}')
+    top_cards[4].metric("Underused strong tactic", f'{underused_strong["map"]} - {underused_strong["tactic_name"]}')
+
     st.markdown(
         f"""
         <div class="panel-card">
@@ -1708,7 +1765,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
                 <div class="stat-chip"><div class="stat-label">Recent form (last 5)</div><div class="stat-value">{selected_row.get("recent_form_5", "n/a")}</div></div>
                 <div class="stat-chip"><div class="stat-label">Recent form (last 10)</div><div class="stat-value">{selected_row.get("recent_form_10", "n/a")}</div></div>
                 <div class="stat-chip"><div class="stat-label">Net round impact</div><div class="stat-value">{int(selected_row["net_rounds"])}</div></div>
-                <div class="stat-chip"><div class="stat-label">Confidence</div><div class="stat-value">{selected_row["confidence"]}</div></div>
+                <div class="stat-chip"><div class="stat-label">Confidence</div><div class="stat-value">{selected_row["confidence_badge"]}</div></div>
             </div>
         </div>
         """,
@@ -1716,26 +1773,58 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     )
 
     st.subheader("Tactic performance table")
-    perf_cols = [
-        "tactic_name",
-        "map",
-        "side",
-        "times_used",
-        "wins",
-        "losses",
-        "win_pct",
-        "net_rounds",
-        "usage_pct",
-        "vs S tier win %",
-        "vs A tier win %",
-        "vs B tier win %",
-        "vs C tier win %",
-        "last_10_usage_win_pct",
-        "trend",
-        "confidence",
-        "tags",
-    ]
-    st.dataframe(tactic_perf[perf_cols].sort_values(["win_pct", "times_used"], ascending=[False, False]), use_container_width=True, hide_index=True)
+    perf_table = tactic_perf.rename(
+        columns={
+            "tactic_name": "Tactic",
+            "map": "Map",
+            "side": "Side",
+            "times_used": "Uses",
+            "wins": "Wins",
+            "losses": "Losses",
+            "win_pct": "Win %",
+            "net_rounds": "Net rounds",
+            "usage_pct": "Usage %",
+            "last_10_usage_win_pct": "Last 10 Win %",
+            "vs S tier win %": "vs S",
+            "vs A tier win %": "vs A",
+            "vs B tier win %": "vs B",
+            "vs C tier win %": "vs C",
+            "confidence_badge": "Confidence",
+            "recommended_action": "Action",
+        }
+    )
+    perf_cols = ["Tactic", "Map", "Side", "Uses", "Wins", "Losses", "Win %", "Net rounds", "Usage %", "Last 10 Win %", "vs S", "vs A", "vs B", "vs C", "Confidence", "Action"]
+    st.dataframe(perf_table[perf_cols].sort_values(["Win %", "Uses"], ascending=[False, False]), use_container_width=True, hide_index=True)
+
+    st.subheader("Needs Attention")
+    needs_attention = tactic_perf[
+        (tactic_perf["recommended_action"].isin(["Drop", "Rework", "Test More", "Use More"]))
+    ].copy()
+    if needs_attention.empty:
+        st.info("No urgent tactics flagged by the current rules.")
+    else:
+        st.dataframe(
+            needs_attention[
+                ["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "last_10_usage_win_pct", "trend", "recommended_action", "confidence_badge"]
+            ]
+            .rename(
+                columns={
+                    "tactic_name": "Tactic",
+                    "map": "Map",
+                    "side": "Side",
+                    "times_used": "Uses",
+                    "win_pct": "Win %",
+                    "usage_pct": "Usage %",
+                    "last_10_usage_win_pct": "Last 10 Win %",
+                    "trend": "Trend",
+                    "recommended_action": "Action",
+                    "confidence_badge": "Confidence",
+                }
+            )
+            .sort_values(["Action", "Uses", "Win %"], ascending=[True, False, True]),
+            use_container_width=True,
+            hide_index=True,
+        )
 
     st.subheader("Trend over time")
     selected_rounds = rounds_long[
