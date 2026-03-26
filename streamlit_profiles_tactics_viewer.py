@@ -1762,7 +1762,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     base_heat = alt.Chart(heatmap_data).encode(
         x=alt.X("map:N", title="Map", sort=alt.SortField("round_share_pct", order="descending"), axis=alt.Axis(labelAngle=-20)),
         y=alt.Y("tactic_name:N", title="Tactic", sort=tactic_order),
-        column=alt.Column("side:N", title="Side", sort=side_order, spacing=18),
         tooltip=["tactic_name", "map", "side", "times_used", "win_pct", "round_share_pct"],
     )
     heat = base_heat.mark_rect().encode(
@@ -1772,7 +1771,10 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         text=alt.Text("win_pct:Q", format=".0f"),
         color=alt.condition("datum.win_pct >= 55", alt.value("#111827"), alt.value("#f9fafb")),
     )
-    st.altair_chart((heat + labels).properties(height=460), use_container_width=True)
+    heatmap_chart = (heat + labels).properties(height=460).facet(
+        column=alt.Column("side:N", title="Side", sort=side_order, spacing=18)
+    )
+    st.altair_chart(heatmap_chart, use_container_width=True)
 
     st.subheader("Round share vs success")
     scatter = (
