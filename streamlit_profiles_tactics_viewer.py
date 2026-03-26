@@ -57,7 +57,7 @@ def _inject_styles() -> None:
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 10px;
-            margin-top: 10px;
+            margin-top: 12px;
         }
         .stat-chip {
             border: 1px solid rgba(151, 166, 195, 0.35);
@@ -72,6 +72,18 @@ def _inject_styles() -> None:
         .trend-good { color: #31d17b; }
         .trend-mid { color: #f0be4f; }
         .trend-bad { color: #ff6c7a; }
+        .chip-good {
+            border-color: rgba(49, 209, 123, 0.6);
+            background: linear-gradient(180deg, rgba(25, 56, 45, 0.92), rgba(16, 30, 26, 0.84));
+        }
+        .chip-mid {
+            border-color: rgba(240, 190, 79, 0.58);
+            background: linear-gradient(180deg, rgba(66, 54, 24, 0.92), rgba(31, 27, 17, 0.84));
+        }
+        .chip-bad {
+            border-color: rgba(255, 108, 122, 0.62);
+            background: linear-gradient(180deg, rgba(72, 31, 37, 0.92), rgba(32, 18, 22, 0.84));
+        }
         .stat-meter {
             width: 100%;
             background: rgba(151, 166, 195, 0.2);
@@ -98,7 +110,7 @@ def _inject_styles() -> None:
         }
         .top-identity-grid {
             display: grid;
-            grid-template-columns: 170px 1.5fr 1fr;
+            grid-template-columns: 170px 1fr 1.35fr;
             gap: 14px;
             align-items: stretch;
         }
@@ -160,18 +172,13 @@ def _inject_styles() -> None:
             padding: 14px;
             background: linear-gradient(120deg, rgba(54, 87, 155, 0.45) 0%, rgba(35, 57, 103, 0.2) 100%);
             box-shadow: 0 0 18px rgba(54, 116, 255, 0.22);
+            text-align: center;
         }
         .hero-grevscore-label {
             color: #b8caf0;
             font-size: 0.82rem;
             letter-spacing: 0.09em;
             text-transform: uppercase;
-        }
-        .hero-grevscore-value {
-            color: #f5f8ff;
-            font-size: 2.6rem;
-            font-weight: 900;
-            line-height: 1.05;
         }
         .hero-grevscore-tier {
             font-size: 0.8rem;
@@ -180,30 +187,34 @@ def _inject_styles() -> None:
             letter-spacing: 0.04em;
         }
         .gauge-wrap {
-            margin-top: 10px;
+            margin-top: 6px;
             position: relative;
             width: 100%;
-            height: 120px;
+            height: 148px;
+        }
+        .gauge-score {
+            color: #f5f8ff;
+            font-size: 2.55rem;
+            font-weight: 900;
+            line-height: 1.05;
+            margin-bottom: 4px;
         }
         .gauge-arc {
             position: absolute;
             left: 50%;
-            top: 56px;
-            width: 170px;
-            height: 86px;
+            top: 62px;
+            width: 176px;
+            height: 90px;
             transform: translateX(-50%);
-            border-radius: 170px 170px 0 0;
-            border: 11px solid rgba(0, 0, 0, 0);
-            border-bottom: 0;
-            background:
-                linear-gradient(90deg, #ff6c7a 0%, #f0be4f 50%, #31d17b 100%);
-            -webkit-mask: radial-gradient(circle at bottom, transparent 53px, #000 54px);
-            mask: radial-gradient(circle at bottom, transparent 53px, #000 54px);
+            border-radius: 176px 176px 0 0;
+            background: linear-gradient(90deg, #ff6c7a 0%, #f0be4f 50%, #31d17b 100%);
+            clip-path: polygon(0% 100%, 0% 60%, 50% 0%, 100% 60%, 100% 100%);
+            opacity: 0.95;
         }
         .gauge-needle {
             position: absolute;
             left: 50%;
-            top: 73px;
+            top: 79px;
             width: 3px;
             height: 66px;
             background: #f5f8ff;
@@ -214,7 +225,7 @@ def _inject_styles() -> None:
         .gauge-hub {
             position: absolute;
             left: 50%;
-            top: 132px;
+            top: 144px;
             width: 14px;
             height: 14px;
             border-radius: 50%;
@@ -227,7 +238,7 @@ def _inject_styles() -> None:
             justify-content: space-between;
             font-size: 0.68rem;
             color: #b8caf0;
-            margin-top: 18px;
+            margin-top: 2px;
         }
         .section-label {
             font-size: 0.78rem;
@@ -460,8 +471,9 @@ def _stat_visual(value: float, low: float, high: float, invert: bool = False) ->
 def _build_stat_chip(label: str, display: str, value: float, low: float, high: float, invert: bool = False) -> str:
     tier_class, meter = _stat_visual(value, low, high, invert=invert)
     arrow = "▲" if tier_class == "trend-good" else ("▼" if tier_class == "trend-bad" else "■")
+    chip_class = "chip-good" if tier_class == "trend-good" else ("chip-bad" if tier_class == "trend-bad" else "chip-mid")
     return (
-        f'<div class="stat-chip"><div class="stat-label">{label}</div>'
+        f'<div class="stat-chip {chip_class}"><div class="stat-label">{label}</div>'
         f'<div class="stat-value">{display}</div>'
         f'<div class="stat-trend {tier_class}">{arrow} {meter:.0f}/100</div>'
         f'<div class="stat-meter"><div class="stat-meter-fill" style="width:{meter:.0f}%"></div></div></div>'
@@ -629,7 +641,6 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 
     player_image = _find_image(image_index, "player", selected_player)
     team_logo = _find_image(image_index, "team", first_row.get("my_team"))
-    competition_logo = _find_image(image_index, "competition", first_row.get("competition"))
 
     metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
     score_tier = _score_tier_label(metrics["grevscore"])
@@ -645,10 +656,10 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     avg_kpd = float(filtered_players["kpd"].mean()) if not filtered_players.empty else 0.0
 
     stat_chips = [
-        f'<div class="stat-chip"><div class="stat-label">Matches</div><div class="stat-value">{int(metrics["matches"])}</div></div>',
+        _build_stat_chip("Matches", f'{int(metrics["matches"])}', metrics["matches"], 3, 16),
         _build_stat_chip("K/D", f'{metrics["kd"]:.2f}', metrics["kd"], 0.7, 1.3),
         _build_stat_chip("KDA", f'{metrics["kda"]:.2f}', metrics["kda"], 1.0, 2.2),
-        f'<div class="stat-chip"><div class="stat-label">K / D / A</div><div class="stat-value">{kills}/{deaths}/{assists}</div></div>',
+        _build_stat_chip("K / D / A", f"{kills}/{deaths}/{assists}", metrics["kda"], 1.0, 2.2),
         _build_stat_chip("DPM", f'{metrics["dpm"]:.1f}', metrics["dpm"], 1800, 3600),
         _build_stat_chip("Acc%", f'{metrics["acc"]:.1f}%', metrics["acc"], 45, 80),
         _build_stat_chip("KPM", f'{metrics["kpm"]:.2f}', metrics["kpm"], 0.45, 1.0),
@@ -659,11 +670,6 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     if team_logo:
         team_logo_html = (
             f'<img style="width:42px;border-radius:8px;vertical-align:middle;margin-right:8px;" src="data:image/png;base64,{base64.b64encode(team_logo.read_bytes()).decode("utf-8")}">'
-        )
-    competition_logo_html = ""
-    if competition_logo:
-        competition_logo_html = (
-            f'<img style="width:34px;border-radius:8px;vertical-align:middle;margin-right:6px;" src="data:image/png;base64,{base64.b64encode(competition_logo.read_bytes()).decode("utf-8")}">'
         )
     st.markdown(
         f"""
@@ -683,10 +689,6 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                     <div class="panel-muted">{team_logo_html}<span>{first_row.get("my_team", "-")}</span></div>
                     <div class="identity-grid">
                         <div class="identity-kv">
-                            <div class="profile-label">Role</div>
-                            <div class="identity-kv-value">{first_row.get("role", "Player")}</div>
-                        </div>
-                        <div class="identity-kv">
                             <div class="profile-label">Record</div>
                             <div class="identity-kv-value">{kills}/{deaths}/{assists}</div>
                         </div>
@@ -702,9 +704,9 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                 </div>
                 <div class="hero-grevscore">
                     <div class="hero-grevscore-label">GrevScore</div>
-                    <div class="hero-grevscore-value">{metrics["grevscore"]:.2f}</div>
                     <div class="hero-grevscore-tier">{score_tier}</div>
                     <div class="gauge-wrap">
+                        <div class="gauge-score">{metrics["grevscore"]:.2f}</div>
                         <div class="gauge-arc"></div>
                         <div class="gauge-needle" style="transform: translateX(-50%) rotate({gauge_angle:.1f}deg);"></div>
                         <div class="gauge-hub"></div>
@@ -715,17 +717,16 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                         <span>Good</span>
                         <span>Star</span>
                     </div>
-                    <div class="section-label">{competition_logo_html}{first_row.get("competition", "-")}</div>
                 </div>
+            </div>
+            <div class="section-label">Core Performance</div>
+            <div class="stats-grid">
+                {"".join(stat_chips)}
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-    st.markdown('<div class="panel-card"><div class="section-label">Core Performance</div><div class="stats-grid">', unsafe_allow_html=True)
-    st.markdown("".join(stat_chips), unsafe_allow_html=True)
-    st.markdown("</div></div>", unsafe_allow_html=True)
 
     form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
     st.subheader("FORM (Last 10 Games)")
