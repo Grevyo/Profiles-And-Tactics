@@ -2896,18 +2896,7 @@ def _medisports_vs_breakdown(
             wr_class = "vs-pill-good" if row["wr"] >= 55 else ("vs-pill-mid" if row["wr"] >= 45 else "vs-pill-bad")
             rd_class = "vs-pill-good" if row["rd"] >= 0 else "vs-pill-bad"
             demo_html.append(
-                f"""
-                <div class="ranked-row">
-                    <div class="vs-pill">#{int(row["rank"])}</div>
-                    <div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["team"]))}</span></div>
-                    <div class="stat-label">Matches <b>{int(row["matches"])}</b></div>
-                    <div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div>
-                    <div><span class="vs-pill {wr_class}">WR {float(row["wr"]):.1f}%</span></div>
-                    <div><span class="vs-pill {rd_class}">RD {int(row["rd"]):+d}</span></div>
-                    <div><span class="vs-pill">Map {html.escape(str(row["map"]))}</span></div>
-                    <div><span class="vs-pill {status_class.get(str(row["status"]), 'vs-pill-mid')}">{html.escape(str(row["status"]))}</span></div>
-                </div>
-                """
+                f'<div class="ranked-row"><div class="vs-pill">#{int(row["rank"])}</div><div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["team"]))}</span></div><div class="stat-label">Matches <b>{int(row["matches"])}</b></div><div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div><div><span class="vs-pill {wr_class}">WR {float(row["wr"]):.1f}%</span></div><div><span class="vs-pill {rd_class}">RD {int(row["rd"]):+d}</span></div><div><span class="vs-pill">Map {html.escape(str(row["map"]))}</span></div><div><span class="vs-pill {status_class.get(str(row["status"]), "vs-pill-mid")}">{html.escape(str(row["status"]))}</span></div></div>'
             )
         st.markdown("<div class='panel-card'><div class='ranked-list'>" + "".join(demo_html) + "</div></div>", unsafe_allow_html=True)
         st.caption("Demo matchup rows are shown because no opponents meet the minimum-match filter.")
@@ -2920,18 +2909,7 @@ def _medisports_vs_breakdown(
             wr_class = "vs-pill-good" if float(row["win_rate_pct"]) >= 55 else ("vs-pill-mid" if float(row["win_rate_pct"]) >= 45 else "vs-pill-bad")
             status = str(row["status"])
             rows_html.append(
-                f"""
-                <div class="ranked-row">
-                    <div class="vs-pill">#{int(row["rank"])}</div>
-                    <div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["opponent_team"]))}</span></div>
-                    <div class="stat-label">Matches <b>{int(row["matches"])}</b></div>
-                    <div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div>
-                    <div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div>
-                    <div><span class="vs-pill {round_class}">RD {int(row["round_diff"]):+d}</span></div>
-                    <div><span class="vs-pill">Map {html.escape(str(row["most_played_map"]))}</span></div>
-                    <div><span class="vs-pill {status_class.get(status, 'vs-pill-mid')}">{html.escape(status)}</span></div>
-                </div>
-                """
+                f'<div class="ranked-row"><div class="vs-pill">#{int(row["rank"])}</div><div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["opponent_team"]))}</span></div><div class="stat-label">Matches <b>{int(row["matches"])}</b></div><div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div><div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div><div><span class="vs-pill {round_class}">RD {int(row["round_diff"]):+d}</span></div><div><span class="vs-pill">Map {html.escape(str(row["most_played_map"]))}</span></div><div><span class="vs-pill {status_class.get(status, "vs-pill-mid")}">{html.escape(status)}</span></div></div>'
             )
         st.markdown("<div class='panel-card'><div class='ranked-list'>" + "".join(rows_html) + "</div></div>", unsafe_allow_html=True)
 
