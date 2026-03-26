@@ -722,6 +722,105 @@ def _inject_styles() -> None:
         [data-testid="stMultiSelect"] input {
             font-size: 0.8rem;
         }
+        .vs-role-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .vs-role-chip {
+            border: 1px solid rgba(151, 166, 195, 0.28);
+            border-radius: 12px;
+            padding: 8px 10px;
+            background: rgba(11, 17, 27, 0.75);
+        }
+        .vs-role-label {
+            color: #9da7bd;
+            font-size: 0.69rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .vs-role-value {
+            color: #eef4ff;
+            font-size: 0.82rem;
+            font-weight: 800;
+            margin-top: 4px;
+            line-height: 1.25;
+        }
+        .ranked-list {
+            display: grid;
+            gap: 10px;
+        }
+        .ranked-row {
+            border: 1px solid rgba(151, 166, 195, 0.24);
+            border-radius: 12px;
+            background: rgba(10, 16, 26, 0.7);
+            padding: 10px 12px;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1.6fr) repeat(6, minmax(0, 1fr));
+            gap: 8px;
+            align-items: center;
+        }
+        .rank-cell-main {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+        .rank-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            border: 1px solid rgba(151, 166, 195, 0.32);
+            background: rgba(14, 22, 34, 0.9);
+            object-fit: contain;
+            padding: 2px;
+        }
+        .rank-name {
+            color: #edf3ff;
+            font-size: 0.84rem;
+            font-weight: 800;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .vs-pill {
+            border-radius: 999px;
+            border: 1px solid rgba(151, 166, 195, 0.35);
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            display: inline-block;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: #eaf1ff;
+            background: rgba(20, 30, 46, 0.85);
+        }
+        .vs-pill-good { border-color: rgba(49, 209, 123, 0.52); color: #8cf0bb; }
+        .vs-pill-mid { border-color: rgba(240, 190, 79, 0.48); color: #ffd27a; }
+        .vs-pill-bad { border-color: rgba(255, 108, 122, 0.54); color: #ff9daa; }
+        .tier-strip-grid {
+            display: grid;
+            gap: 10px;
+        }
+        .tier-strip {
+            border: 1px solid rgba(151, 166, 195, 0.23);
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: rgba(12, 18, 29, 0.7);
+        }
+        .tier-strip-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .tier-strip-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            font-size: 0.76rem;
+            color: #d4e1fb;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -836,6 +935,15 @@ def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value:
     normalized = _normalize_key(value)
     entries = image_index.get(image_type, {})
     return entries.get(normalized)
+
+
+def _competition_logo_uri(image_index: dict[str, dict[str, Path]], competition: str | None) -> str:
+    competition_logo = _find_image(image_index, "competition", competition)
+    fallback_logo = CPL_LOGO if CPL_LOGO.exists() else None
+    chosen_logo = competition_logo or fallback_logo
+    if chosen_logo is None:
+        return ""
+    return _image_to_data_uri(chosen_logo)
 
 
 def _find_achievement_image(
@@ -2571,6 +2679,24 @@ def _medisports_vs_breakdown(
     if filtered.empty:
         st.info("No matches left after filters.")
         return
+    image_index = _build_image_index()
+    role_blocks = [
+        ("Top summary / health", "summary cards"),
+        ("Auto insights", "summary cards"),
+        ("Opponent summary / spotlight", "ranked visual rows"),
+        ("Matchup strength + heatmap", "hero chart"),
+        ("Tournament + tier context", "ranked visual rows"),
+        ("Match explorer + opponent table", "detailed table"),
+    ]
+    st.markdown(
+        "<div class='panel-card'><div class='panel-muted'>Section role map</div><div class='vs-role-grid'>"
+        + "".join(
+            f"<div class='vs-role-chip'><div class='vs-role-label'>{label}</div><div class='vs-role-value'>{value}</div></div>"
+            for label, value in role_blocks
+        )
+        + "</div></div>",
+        unsafe_allow_html=True,
+    )
 
     vs_summary = (
         filtered.groupby("opponent_team", as_index=False)
@@ -2678,6 +2804,9 @@ def _medisports_vs_breakdown(
             ).round(1)
         )
     )
+    tournament_rollup["competition_logo"] = tournament_rollup["competition"].apply(
+        lambda comp: _competition_logo_uri(image_index, comp)
+    )
 
     overall_matches = int(filtered["match_id"].nunique())
     overall_wins = int((filtered["match_result"] == "Win").sum())
@@ -2751,41 +2880,27 @@ def _medisports_vs_breakdown(
         st.info("No opponents meet minimum matches.")
     else:
         leaderboard["rank"] = range(1, len(leaderboard) + 1)
-        leaderboard["status"] = leaderboard["status"].map(
-            {"Strong": "🟢 Strong", "Even": "🟡 Even", "Weak": "🔴 Weak", "Low Sample": "⚪ Low Sample"}
-        ).fillna("🟡 Even")
-        board = leaderboard[
-            [
-                "rank",
-                "opponent_team",
-                "matches",
-                "record",
-                "win_rate_pct",
-                "round_diff",
-                "round_win_pct",
-                "most_played_map",
-                "tier",
-                "confidence",
-                "status",
-            ]
-        ].rename(
-            columns={
-                "opponent_team": "Opponent",
-                "record": "Record",
-                "win_rate_pct": "Win rate %",
-                "round_diff": "Round diff",
-                "round_win_pct": "Round win %",
-                "most_played_map": "Most played map",
-                "tier": "Tier",
-                "confidence": "Sample",
-                "status": "Status",
-            }
-        )
-        if importlib.util.find_spec("matplotlib") is not None:
-            board_display = board.style.background_gradient(subset=["Round diff"], cmap="RdYlGn")
-        else:
-            board_display = board
-        st.dataframe(board_display, use_container_width=True, hide_index=True)
+        status_class = {"Strong": "vs-pill-good", "Even": "vs-pill-mid", "Weak": "vs-pill-bad", "Low Sample": "vs-pill-mid"}
+        rows_html = []
+        for _, row in leaderboard.head(12).iterrows():
+            round_class = "vs-pill-good" if float(row["round_diff"]) >= 0 else "vs-pill-bad"
+            wr_class = "vs-pill-good" if float(row["win_rate_pct"]) >= 55 else ("vs-pill-mid" if float(row["win_rate_pct"]) >= 45 else "vs-pill-bad")
+            status = str(row["status"])
+            rows_html.append(
+                f"""
+                <div class="ranked-row">
+                    <div class="vs-pill">#{int(row["rank"])}</div>
+                    <div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["opponent_team"]))}</span></div>
+                    <div class="stat-label">Matches <b>{int(row["matches"])}</b></div>
+                    <div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div>
+                    <div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div>
+                    <div><span class="vs-pill {round_class}">RD {int(row["round_diff"]):+d}</span></div>
+                    <div><span class="vs-pill">Map {html.escape(str(row["most_played_map"]))}</span></div>
+                    <div><span class="vs-pill {status_class.get(status, 'vs-pill-mid')}">{html.escape(status)}</span></div>
+                </div>
+                """
+            )
+        st.markdown("<div class='panel-card'><div class='ranked-list'>" + "".join(rows_html) + "</div></div>", unsafe_allow_html=True)
 
     st.markdown("### Spotlight")
     if not leaderboard.empty:
@@ -2809,8 +2924,13 @@ def _medisports_vs_breakdown(
                     <div class="panel-card">
                         <div class="panel-muted">{label}</div>
                         <div class="panel-title">{row["opponent_team"]}</div>
-                        <div class="stat-label">{int(row["wins"])}W-{int(row["losses"])}L-{int(row["draws"])}D · WR {float(row["win_rate_pct"]):.1f}%</div>
-                        <div class="stat-label">Round diff {int(row["round_diff"]):+d} · Map {row["most_played_map"]}</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+                            <span class="vs-pill">{int(row["wins"])}W-{int(row["losses"])}L-{int(row["draws"])}D</span>
+                            <span class="vs-pill {'vs-pill-good' if float(row["win_rate_pct"]) >= 55 else 'vs-pill-bad'}">WR {float(row["win_rate_pct"]):.1f}%</span>
+                            <span class="vs-pill {'vs-pill-good' if int(row["round_diff"]) >= 0 else 'vs-pill-bad'}">RD {int(row["round_diff"]):+d}</span>
+                            <span class="vs-pill">Map {row["most_played_map"]}</span>
+                            <span class="vs-pill">Tier {row["tier"]}</span>
+                        </div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -2967,34 +3087,86 @@ def _medisports_vs_breakdown(
     tcol1, tcol2 = st.columns(2)
     with tcol1:
         st.markdown("#### Tournament performance")
-        st.dataframe(
-            tournament_rollup.sort_values(["round_diff", "win_rate_pct"], ascending=[False, False])[
-                ["competition", "matches", "wins", "losses", "draws", "win_rate_pct", "round_diff", "best_map"]
-            ].rename(
-                columns={
-                    "competition": "Tournament",
-                    "wins": "W",
-                    "losses": "L",
-                    "draws": "D",
-                    "win_rate_pct": "Win rate %",
-                    "round_diff": "Round diff",
-                    "best_map": "Best/most map",
-                }
-            ),
-            use_container_width=True,
-            hide_index=True,
-        )
+        t_rows = []
+        sorted_tournament = tournament_rollup.sort_values(["round_diff", "win_rate_pct"], ascending=[False, False])
+        for _, row in sorted_tournament.iterrows():
+            wr_class = "vs-pill-good" if float(row["win_rate_pct"]) >= 55 else ("vs-pill-mid" if float(row["win_rate_pct"]) >= 45 else "vs-pill-bad")
+            rd_class = "vs-pill-good" if int(row["round_diff"]) >= 0 else "vs-pill-bad"
+            logo_html = (
+                f'<img class="rank-logo" src="{row["competition_logo"]}" alt="competition logo">'
+                if row["competition_logo"]
+                else '<span class="rank-logo"></span>'
+            )
+            t_rows.append(
+                f"""
+                <div class="ranked-row" style="grid-template-columns: minmax(0, 1.8fr) repeat(6, minmax(0, 1fr));">
+                    <div class="rank-cell-main">{logo_html}<span class="rank-name">{html.escape(str(row["competition"]))}</span></div>
+                    <div class="stat-label">Matches <b>{int(row["matches"])}</b></div>
+                    <div class="stat-label">Record <b>{int(row["wins"])}-{int(row["losses"])}-{int(row["draws"])}</b></div>
+                    <div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div>
+                    <div><span class="vs-pill {rd_class}">RD {int(row["round_diff"]):+d}</span></div>
+                    <div><span class="vs-pill">Best map {html.escape(str(row["best_map"]))}</span></div>
+                    <div></div>
+                </div>
+                """
+            )
+        st.markdown("<div class='panel-card'><div class='ranked-list'>" + "".join(t_rows) + "</div></div>", unsafe_allow_html=True)
     with tcol2:
         st.markdown("#### Tier performance ladder")
         ladder = tier_rollup.copy()
-        ladder["Read"] = ladder["win_rate_pct"].apply(lambda v: "Strong" if v >= 60 else ("Shaky" if v >= 45 else "Struggling"))
-        st.dataframe(
-            ladder[["tier", "matches", "wins", "losses", "win_rate_pct", "round_diff", "Read"]].rename(
-                columns={"tier": "Tier", "wins": "W", "losses": "L", "win_rate_pct": "Win rate %", "round_diff": "Round diff"}
-            ),
-            use_container_width=True,
-            hide_index=True,
+        ladder["Read"] = ladder["win_rate_pct"].apply(
+            lambda v: "Strong" if v >= 60 else ("Even" if v >= 50 else ("Shaky" if v >= 45 else "Struggling"))
         )
+        tier_order = pd.Categorical(ladder["tier"], categories=["S", "A", "B", "C"], ordered=True)
+        ladder = ladder.assign(_tier_order=tier_order).sort_values("_tier_order").drop(columns="_tier_order")
+        tier_rows = []
+        for _, row in ladder.iterrows():
+            read_class = "vs-pill-good" if row["Read"] == "Strong" else ("vs-pill-mid" if row["Read"] in {"Even", "Shaky"} else "vs-pill-bad")
+            rd_class = "vs-pill-good" if int(row["round_diff"]) >= 0 else "vs-pill-bad"
+            tier_rows.append(
+                f"""
+                <div class="tier-strip">
+                    <div class="tier-strip-top">
+                        <div class="panel-title">Tier {html.escape(str(row["tier"]))}</div>
+                        <span class="vs-pill {read_class}">{row["Read"]}</span>
+                    </div>
+                    <div class="tier-strip-metrics">
+                        <div>Matches <b>{int(row["matches"])}</b></div>
+                        <div>Record <b>{int(row["wins"])}-{int(row["losses"])}</b></div>
+                        <div><span class="vs-pill {'vs-pill-good' if float(row["win_rate_pct"]) >= 55 else 'vs-pill-bad'}">WR {float(row["win_rate_pct"]):.1f}%</span></div>
+                        <div><span class="vs-pill {rd_class}">RD {int(row["round_diff"]):+d}</span></div>
+                    </div>
+                </div>
+                """
+            )
+        st.markdown("<div class='panel-card'><div class='tier-strip-grid'>" + "".join(tier_rows) + "</div></div>", unsafe_allow_html=True)
+
+    st.subheader("Full opponent table")
+    opponent_table = vs_summary.copy()
+    opponent_table["status_dot"] = opponent_table["status"].map(
+        {"Strong": "🟢", "Even": "🟡", "Weak": "🔴", "Low Sample": "⚪"}
+    ).fillna("🟡")
+    opponent_table["map_pill"] = "🗺️ " + opponent_table["most_played_map"].astype(str)
+    opponent_table["tier_pill"] = "🏷️ " + opponent_table["tier"].astype(str)
+    opponent_table["status"] = opponent_table["status_dot"] + " " + opponent_table["status"].astype(str)
+    st.dataframe(
+        opponent_table[
+            ["opponent_team", "matches", "record", "win_rate_pct", "round_diff", "map_pill", "tier_pill", "confidence", "status"]
+        ].rename(
+            columns={
+                "opponent_team": "Opponent",
+                "record": "Record",
+                "win_rate_pct": "WR %",
+                "round_diff": "RD",
+                "map_pill": "Most played map",
+                "tier_pill": "Tier",
+                "confidence": "Sample",
+                "status": "Status",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
 
     st.subheader("Match-by-match explorer")
     result_filter = st.multiselect(
@@ -3012,11 +3184,37 @@ def _medisports_vs_breakdown(
     match_table = filtered[filtered["match_result"].isin(result_filter)].copy()
     if opp_filter:
         match_table = match_table[match_table["opponent_team"].isin(opp_filter)]
+    match_table["competition_logo"] = match_table["competition"].apply(lambda comp: _competition_logo_uri(image_index, comp))
+    match_table["result_pill"] = match_table["match_result"].map({"Win": "🟢 Win", "Loss": "🔴 Loss", "Draw": "🟡 Draw"}).fillna("⚪ Unknown")
+    match_table["map_badge"] = "🗺️ " + match_table["map"].astype(str)
+    match_table["tier_badge"] = "🏷️ " + match_table["tier"].astype(str)
 
     st.dataframe(
         match_table.sort_values("date", ascending=False)[
-            ["date", "opponent_team", "map", "competition", "tier", "round_wins", "round_losses", "round_diff", "match_result"]
+            [
+                "date",
+                "competition_logo",
+                "competition",
+                "opponent_team",
+                "map_badge",
+                "tier_badge",
+                "round_wins",
+                "round_losses",
+                "round_diff",
+                "result_pill",
+            ]
         ],
+        column_config={
+            "competition_logo": st.column_config.ImageColumn("Logo", width="small"),
+            "competition": st.column_config.TextColumn("Competition", width="medium"),
+            "opponent_team": st.column_config.TextColumn("Opponent", width="medium"),
+            "map_badge": st.column_config.TextColumn("Map"),
+            "tier_badge": st.column_config.TextColumn("Tier"),
+            "result_pill": st.column_config.TextColumn("Result"),
+            "round_wins": st.column_config.NumberColumn("RW"),
+            "round_losses": st.column_config.NumberColumn("RL"),
+            "round_diff": st.column_config.NumberColumn("RD"),
+        },
         use_container_width=True,
         hide_index=True,
     )
