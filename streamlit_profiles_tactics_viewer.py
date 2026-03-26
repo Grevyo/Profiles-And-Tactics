@@ -1772,7 +1772,8 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         color=alt.condition("datum.win_pct >= 55", alt.value("#111827"), alt.value("#f9fafb")),
     )
     heatmap_chart = (heat + labels).properties(height=460).facet(
-        column=alt.Column("side:N", title="Side", sort=side_order, spacing=18)
+        column=alt.Column("side:N", title="Side", sort=side_order),
+        spacing=18,
     )
     st.altair_chart(heatmap_chart, use_container_width=True)
 
