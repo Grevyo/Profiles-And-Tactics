@@ -37,6 +37,7 @@ IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 APP_ROOT = Path(__file__).parent
 MEDISPORTS_LOGO = APP_ROOT / "team_logos" / "ᴍᴇᴅɪꜱᴘᴏʀᴛꜱ ⓜ.png"
 CPL_LOGO = APP_ROOT / "competition_logos" / "cpl.png"
+TIER_COLOR_MAP = {"S": "#f5c451", "A": "#9c6df6", "B": "#5ea9ff", "C": "#4ed083"}
 
 
 def _inject_styles() -> None:
@@ -579,8 +580,6 @@ def _render_top_hero(active_page: str, subtitle: str) -> None:
                     <div class="hero-subtitle">{subtitle}</div>
                     <div class="hero-pill-row">
                         <span class="hero-pill">S10 Active</span>
-                        <span class="hero-pill">HLTV Style</span>
-                        <span class="hero-pill">Medicart Data</span>
                     </div>
                 </div>
                 <div class="hero-logo-badge hero-logo-badge-right">{cpl_logo_html}</div>
@@ -1797,11 +1796,15 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     heat = base_heat.mark_rect().encode(
         color=alt.Color("win_pct:Q", title="Win %", scale=alt.Scale(scheme="redyellowgreen", domain=[0, 100]))
     )
-    labels = base_heat.mark_text(fontSize=10).encode(
+    labels = base_heat.mark_text(fontSize=11, fontWeight="bold").encode(
+        text=alt.Text("times_used:Q", format=".0f"),
+        color=alt.condition("datum.win_pct >= 55", alt.value("#111827"), alt.value("#f9fafb")),
+    )
+    win_rate_labels = base_heat.mark_text(dy=14, fontSize=9).encode(
         text=alt.Text("win_pct:Q", format=".0f"),
         color=alt.condition("datum.win_pct >= 55", alt.value("#111827"), alt.value("#f9fafb")),
     )
-    heatmap_chart = (heat + labels).properties(height=460).facet(
+    heatmap_chart = (heat + labels + win_rate_labels).properties(width=430, height=620).facet(
         column=alt.Column("side:N", title="Side", sort=side_order),
         spacing=18,
     )
@@ -1832,13 +1835,19 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         st.info("No tier-split data for selected tactic.")
     else:
         sel_tier["tier_adjusted_score"] = sel_tier["tier_win_pct"] * sel_tier["tier"].map({"S": 1.35, "A": 1.15, "B": 1.0, "C": 0.85}).fillna(1.0)
+        tier_palette_domain = ["S", "A", "B", "C"]
+        tier_palette_range = [TIER_COLOR_MAP[t] for t in tier_palette_domain]
         tier_chart = (
             alt.Chart(sel_tier)
             .mark_bar()
             .encode(
                 x=alt.X("tier:N", sort=["S", "A", "B", "C"], title="Tier"),
                 y=alt.Y("tier_win_pct:Q", title="Win rate %"),
-                color=alt.Color("tier:N", legend=None),
+                color=alt.Color(
+                    "tier:N",
+                    legend=None,
+                    scale=alt.Scale(domain=tier_palette_domain, range=tier_palette_range),
+                ),
                 tooltip=["tier", "wins", "losses", "tier_win_pct", "tier_adjusted_score"],
             )
             .properties(height=300)
@@ -1986,6 +1995,15 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
     )
     st.subheader("How Medisports Performs vs Each Team")
     st.dataframe(vs_summary, use_container_width=True, hide_index=True)
+    map_summary = (
+        match_results.groupby(["map", "opponent_team"], as_index=False)
+        .agg(
+            matches=("match_id", "nunique"),
+            wins=("match_result", lambda s: int((s == "Win").sum())),
+            losses=("match_result", lambda s: int((s == "Loss").sum())),
+        )
+        .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+    )
     spotlight = vs_summary.sort_values(["matches", "win_rate_pct"], ascending=[False, False]).head(3)
     if not spotlight.empty:
         st.markdown("#### Opponent Spotlight")
@@ -2051,6 +2069,28 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
         .properties(height=300)
     )
     st.altair_chart(round_diff_chart, use_container_width=True)
+
+    st.markdown("#### Opponent x Map win-rate plot map")
+    if map_summary.empty:
+        st.info("No map-level records available.")
+    else:
+        plot_map = (
+            alt.Chart(map_summary)
+            .mark_circle(opacity=0.9)
+            .encode(
+                x=alt.X("map:N", title="Map"),
+                y=alt.Y("opponent_team:N", title="Opponent"),
+                size=alt.Size("matches:Q", title="Matches", scale=alt.Scale(range=[100, 1200])),
+                color=alt.Color(
+                    "win_rate_pct:Q",
+                    title="Win rate %",
+                    scale=alt.Scale(domain=[0, 100], range=["#e85c6b", "#f0be4f", "#44c06f"]),
+                ),
+                tooltip=["map", "opponent_team", "matches", "wins", "losses", "win_rate_pct"],
+            )
+            .properties(height=420)
+        )
+        st.altair_chart(plot_map, use_container_width=True)
 
     st.subheader("Match-by-Match Results")
     result_filter = st.multiselect(
