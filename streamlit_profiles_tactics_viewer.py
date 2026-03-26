@@ -1408,9 +1408,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         subtitle="Team tactical breakdowns, map outcomes, and strategic performance context.",
     )
 
-    recent_cutoff = pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=10)
-    player_recent = player_df[player_df["date"] >= recent_cutoff].copy()
-    recent_match_ids = player_recent["match_id"].dropna().unique().tolist()
     tier_lookup = (
         player_df.groupby("match_id", as_index=False)["tier"]
         .agg(lambda s: s.dropna().iloc[0] if not s.dropna().empty else None)
@@ -1430,10 +1427,9 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         st.warning("No tactic data found.")
         return
 
-    recent_df = df[df["match_id"].isin(recent_match_ids) & (df["date"] >= recent_cutoff)].copy()
-    recent_tactic_opts = sorted(recent_df["tactic_name"].dropna().unique().tolist())
-    if not recent_tactic_opts:
-        st.warning("No tactics have been used within the last 10 days.")
+    tactic_opts = sorted(df["tactic_name"].dropna().unique().tolist())
+    if not tactic_opts:
+        st.warning("No tactics found in the selected data.")
         return
 
     st.subheader("Tactics Filters")
@@ -1466,7 +1462,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
             unsafe_allow_html=True,
         )
 
-    tactic_opts = recent_tactic_opts
     with st.container():
         selected_tactics = st.multiselect(
             "Tactics",
