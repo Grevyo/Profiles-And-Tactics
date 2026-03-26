@@ -54,7 +54,8 @@ def _inject_styles() -> None:
         }
         .panel-muted {
             color: #9da7bd;
-            font-size: 0.85rem;
+            font-size: 0.76rem;
+            opacity: 0.78;
             margin-bottom: 0.2rem;
         }
         .panel-title {
@@ -75,13 +76,13 @@ def _inject_styles() -> None:
         .stat-chip {
             border: 1px solid rgba(151, 166, 195, 0.2);
             border-radius: 10px;
-            padding: 8px 10px;
+            padding: 7px 9px;
             background: rgba(16, 23, 36, 0.72);
-            min-height: 76px;
+            min-height: 70px;
         }
         .stat-label { color: #9da7bd; font-size: 0.78rem; }
-        .stat-value { color: #f5f7fb; font-size: 1.25rem; font-weight: 800; line-height: 1.15; }
-        .stat-trend { font-size: 0.74rem; margin-top: 5px; font-weight: 600; }
+        .stat-value { color: #f5f7fb; font-size: 1.15rem; font-weight: 800; line-height: 1.12; }
+        .stat-trend { font-size: 0.66rem; margin-top: 4px; font-weight: 600; opacity: 0.72; }
         .trend-good { color: #31d17b; }
         .trend-mid { color: #f0be4f; }
         .trend-bad { color: #ff6c7a; }
@@ -124,7 +125,7 @@ def _inject_styles() -> None:
         .top-identity-grid {
             display: grid;
             grid-template-columns: 1.4fr 1fr 1.05fr;
-            gap: 12px;
+            gap: 10px;
             align-items: stretch;
         }
         .identity-strip {
@@ -135,14 +136,14 @@ def _inject_styles() -> None:
         }
         .identity-strip-main {
             display: grid;
-            grid-template-columns: 94px 1fr;
-            gap: 12px;
+            grid-template-columns: 114px 1fr;
+            gap: 10px;
             align-items: center;
         }
         .portrait-frame {
             border: 1px solid rgba(104, 143, 210, 0.5);
             border-radius: 10px;
-            padding: 6px;
+            padding: 4px;
             background: linear-gradient(180deg, rgba(41, 59, 97, 0.25), rgba(15, 21, 34, 0.5));
         }
         .portrait-strip {
@@ -164,20 +165,20 @@ def _inject_styles() -> None:
             flex-wrap: wrap;
             justify-content: flex-start;
             align-items: flex-start;
-            gap: 8px;
-            margin-top: 6px;
+            gap: 6px;
+            margin-top: 4px;
         }
         .achievement-inline-list-single {
             justify-content: flex-start;
         }
         .achievement-inline-item {
-            width: 132px;
-            height: 162px;
+            width: 112px;
+            height: 136px;
             border: 1px solid rgba(151, 166, 195, 0.34);
             border-radius: 10px;
             background: linear-gradient(180deg, rgba(22, 31, 47, 0.92), rgba(10, 16, 27, 0.94));
             display: block;
-            flex: 0 0 132px;
+            flex: 0 0 112px;
             overflow: hidden;
             box-shadow: inset 0 0 0 1px rgba(9, 13, 21, 0.65);
         }
@@ -215,7 +216,7 @@ def _inject_styles() -> None:
             object-fit: contain;
             object-position: center;
             display: block;
-            padding: 22px 10px 30px;
+            padding: 18px 8px 22px;
             box-sizing: border-box;
         }
         .achievement-tier-icon {
@@ -243,7 +244,7 @@ def _inject_styles() -> None:
             color: #f5f7fb;
             font-weight: 800;
             line-height: 1.2;
-            font-size: 0.66rem;
+            font-size: 0.59rem;
             letter-spacing: 0.04em;
             text-transform: uppercase;
             text-align: center;
@@ -266,16 +267,16 @@ def _inject_styles() -> None:
             letter-spacing: 0.09em;
         }
         .profile-name {
-            font-size: 2.2rem;
+            font-size: 2.4rem;
             color: #f5f7fb;
             font-weight: 900;
-            margin-top: 2px;
+            margin-top: 1px;
             line-height: 1.05;
         }
         .identity-meta-line {
             color: #c9d5ef;
-            margin-top: 6px;
-            font-size: 0.86rem;
+            margin-top: 3px;
+            font-size: 0.8rem;
         }
         .identity-grid {
             display: grid;
@@ -396,8 +397,8 @@ def _inject_styles() -> None:
             color: #9eb0d4;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            margin-top: 12px;
-            margin-bottom: 5px;
+            margin-top: 8px;
+            margin-bottom: 4px;
         }
         .context-summary {
             margin-top: 10px;
@@ -1236,10 +1237,10 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     avg_kpd = float(filtered_players["kpd"].mean()) if not filtered_players.empty else 0.0
 
     stat_chips_overview = [
-        _build_stat_chip("Rating", f'{metrics["grevscore"]:.2f}', metrics["grevscore"], 0.65, 1.35),
-        _build_stat_chip("Matches", f'{int(metrics["matches"])}', metrics["matches"], 3, 16),
-        _build_stat_chip("K/D", f'{metrics["kd"]:.2f}', metrics["kd"], 0.7, 1.3),
-        _build_stat_chip("Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
+        _build_stat_chip("🎯 Rating", f'{metrics["grevscore"]:.2f}', metrics["grevscore"], 0.65, 1.35),
+        _build_stat_chip("🏆 Matches", f'{int(metrics["matches"])}', metrics["matches"], 3, 16),
+        _build_stat_chip("🗡️ K/D", f'{metrics["kd"]:.2f}', metrics["kd"], 0.7, 1.3),
+        _build_stat_chip("🛡️ Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
     ]
     stat_chips_core = [
         _build_stat_chip("DPM", f'{metrics["dpm"]:.1f}', metrics["dpm"], 1800, 3600),
@@ -1252,6 +1253,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         _build_stat_chip("Kills", f"{kills}", float(kills), 80, 260),
     ]
     side_split = "-"
+    side_chart_data = pd.DataFrame(columns=["side", "rating"])
     if not filtered_tactics.empty and "side" in filtered_tactics.columns:
         side_summary = (
             filtered_tactics.groupby("side", as_index=False)[["wins", "losses"]].sum().sort_values("wins", ascending=False)
@@ -1259,6 +1261,14 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         if not side_summary.empty:
             s = side_summary.iloc[0]
             side_split = f'{s["side"]}: {int(s["wins"])}W-{int(s["losses"])}L'
+    if "side" in filtered_players.columns:
+        side_chart_data = (
+            filtered_players.dropna(subset=["side"])
+            .groupby("side", as_index=False)["kpd"]
+            .mean()
+            .rename(columns={"kpd": "rating"})
+            .sort_values("rating", ascending=False)
+        )
     best_map = (
         filtered_players.groupby("map")["kills"].sum().sort_values(ascending=False).index[0]
         if "map" in filtered_players.columns and not filtered_players.empty
@@ -1363,80 +1373,117 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         unsafe_allow_html=True,
     )
 
-    st.subheader("Form Detail")
-    if recent_form.empty:
-        st.info("Not enough recent match data for form trends.")
-    else:
-        form_timeline = recent_form.sort_values("date").copy()
-        block_cols = st.columns(10)
-        recent_blocks = form_timeline["match_form_score"].tail(10).tolist()
-        for idx, score in enumerate(recent_blocks):
-            color = "#31d17b" if score >= 70 else ("#f0be4f" if score >= 45 else "#ff6c7a")
-            block_cols[idx].markdown(
-                f"<div style='height:30px;border-radius:6px;background:{color};opacity:0.9;'></div>",
-                unsafe_allow_html=True,
+    st.subheader("Player Analytics")
+    recent_window = (
+        filtered_players.sort_values("date", ascending=False)
+        .head(20)
+        .sort_values("date")
+        .copy()
+    )
+    if not recent_window.empty:
+        recent_window["match_index"] = range(1, len(recent_window) + 1)
+        recent_window["rating"] = recent_window["kpd"].fillna(0.0)
+        recent_window["wins"] = recent_window["wins"] if "wins" in recent_window.columns else 0
+        recent_window["losses"] = recent_window["losses"] if "losses" in recent_window.columns else 0
+        recent_window["result"] = recent_window["wins"].fillna(0) > recent_window["losses"].fillna(0)
+        trend_chart = (
+            alt.Chart(recent_window)
+            .mark_line(point=True, strokeWidth=2.4)
+            .encode(
+                x=alt.X("match_index:Q", title="Recent matches"),
+                y=alt.Y("rating:Q", title="Rating", scale=alt.Scale(zero=False)),
+                color=alt.value("#63b8ff"),
+                tooltip=["date:T", "map:N", "opponent_team:N", "rating:Q", "kpd:Q"],
             )
-        graph_col1, graph_col2, graph_col3 = st.columns(3)
-        with graph_col1:
-            st.caption("Form Score Momentum")
-            st.line_chart(form_timeline.set_index("date")["match_form_score"], use_container_width=True)
-        with graph_col2:
-            st.caption("KPD Trend")
-            st.area_chart(form_timeline.set_index("date")["kpd"], use_container_width=True)
-        with graph_col3:
-            winloss = form_timeline.copy()
-            winloss["result"] = (winloss["wins"] > winloss["losses"]).astype(int)
-            st.caption("Win/Loss Pattern")
-            st.bar_chart(winloss.set_index("date")["result"], use_container_width=True)
-
-        preview_cols = [
-            "date",
-            "map",
-            "opponent_team",
-            "kills",
-            "deaths",
-            "mvps",
-            "kpd",
-            "kda",
-            "wins",
-            "losses",
-            "carried",
-            "match_form_score",
-        ]
-        preview_cols = [c for c in preview_cols if c in recent_form.columns]
-        st.dataframe(
-            recent_form[preview_cols].sort_values("date", ascending=False),
-            use_container_width=True,
-            hide_index=True,
+            .properties(height=250, title="Recent Form (Last 20)")
         )
+        trend_points = (
+            alt.Chart(recent_window)
+            .mark_circle(size=68)
+            .encode(
+                x="match_index:Q",
+                y="rating:Q",
+                color=alt.condition("datum.result", alt.value("#31d17b"), alt.value("#ff6c7a")),
+                tooltip=["date:T", "wins:Q", "losses:Q", "rating:Q"],
+            )
+        )
+    else:
+        trend_chart = None
 
-    st.subheader("Performance Indicators")
-    ind1, ind2, ind3 = st.columns(3)
-    with ind1:
-        st.write(f"Accuracy: **{avg_acc:.1f}%**")
-        st.progress(min(max(avg_acc / 100, 0.0), 1.0))
-    with ind2:
-        st.write(f"Headshot %: **{avg_hs:.1f}%**")
-        st.progress(min(max(avg_hs / 100, 0.0), 1.0))
-    with ind3:
-        kpd_scaled = min(max(avg_kpd / 2.5, 0.0), 1.0)
-        st.write(f"KPD: **{avg_kpd:.2f}**")
-        st.progress(kpd_scaled)
+    map_perf = (
+        filtered_players.groupby("map", as_index=False)["kpd"]
+        .mean()
+        .rename(columns={"kpd": "rating"})
+        .sort_values("rating", ascending=False)
+    )
+    map_chart = (
+        alt.Chart(map_perf)
+        .mark_bar(cornerRadiusEnd=4, color="#5ea9ff")
+        .encode(
+            x=alt.X("rating:Q", title="Rating", scale=alt.Scale(zero=False)),
+            y=alt.Y("map:N", title=None, sort="-x"),
+            tooltip=["map:N", "rating:Q"],
+        )
+        .properties(height=250, title="Map Performance")
+    ) if not map_perf.empty else None
+
+    comparison_metrics = pd.DataFrame(
+        [
+            {"metric": "Rating", "player": metrics["grevscore"], "team_avg": team_scope["kpd"].mean()},
+            {"metric": "K/D", "player": metrics["kd"], "team_avg": team_scope["kpd"].mean()},
+            {"metric": "Impact", "player": metrics["impact"], "team_avg": team_scope["impact_score"].mean()},
+            {"metric": "HS%", "player": avg_hs, "team_avg": team_scope["hs_pct"].mean()},
+            {"metric": "Acc%", "player": avg_acc, "team_avg": team_scope["accuracy_pct"].mean()},
+            {"metric": "DPM", "player": metrics["dpm"], "team_avg": (team_scope["damage"] / team_scope["rounds_played"].replace(0, 1)).mean()},
+        ]
+    ).melt("metric", var_name="group", value_name="value")
+    comparison_metrics["group"] = comparison_metrics["group"].map({"player": selected_player, "team_avg": "Team Avg"})
+    comparison_chart = (
+        alt.Chart(comparison_metrics)
+        .mark_bar(cornerRadiusEnd=4)
+        .encode(
+            x=alt.X("value:Q", title="Value"),
+            y=alt.Y("metric:N", title=None),
+            color=alt.Color("group:N", title=None, scale=alt.Scale(domain=[selected_player, "Team Avg"], range=["#31d17b", "#9da7bd"])),
+            xOffset="group:N",
+            tooltip=["metric:N", "group:N", "value:Q"],
+        )
+        .properties(height=250, title="Player vs Team Average")
+    )
+
+    side_chart = (
+        alt.Chart(side_chart_data)
+        .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5, color="#f0be4f")
+        .encode(
+            x=alt.X("side:N", title="Side"),
+            y=alt.Y("rating:Q", title="Avg K/D", scale=alt.Scale(zero=False)),
+            tooltip=["side:N", "rating:Q"],
+        )
+        .properties(height=250, title="Side Split")
+    ) if not side_chart_data.empty else None
+
+    top_row_left, top_row_right = st.columns(2)
+    with top_row_left:
+        if trend_chart is None:
+            st.info("Not enough recent match data for trend graph.")
+        else:
+            st.altair_chart(trend_chart + trend_points, use_container_width=True)
+    with top_row_right:
+        if map_chart is None:
+            st.info("No map data available for selected filters.")
+        else:
+            st.altair_chart(map_chart, use_container_width=True)
+
+    bottom_row_left, bottom_row_right = st.columns(2)
+    with bottom_row_left:
+        st.altair_chart(comparison_chart, use_container_width=True)
+    with bottom_row_right:
+        if side_chart is None:
+            st.info("No side split data available for selected filters.")
+        else:
+            st.altair_chart(side_chart, use_container_width=True)
 
     st.caption(f"Total rounds played in filter: {rounds}")
-
-    left, right = st.columns(2)
-    with left:
-        st.subheader("Kills by Map")
-        kills_by_map = (
-            filtered_players.groupby("map", as_index=False)["kills"].sum().sort_values("kills", ascending=False)
-        )
-        st.bar_chart(kills_by_map.set_index("map"))
-
-    with right:
-        st.subheader("Trend: Kills by Date")
-        by_date = filtered_players.groupby("date", as_index=False)["kills"].sum().sort_values("date")
-        st.line_chart(by_date.set_index("date"))
 
     st.subheader("Tactical Context for Selected Matches")
     if filtered_tactics.empty:
