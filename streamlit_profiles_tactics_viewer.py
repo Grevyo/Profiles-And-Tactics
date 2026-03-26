@@ -1203,7 +1203,7 @@ def _home() -> None:
 def _build_match_level_results(tactics_df: pd.DataFrame) -> pd.DataFrame:
     if tactics_df.empty:
         return pd.DataFrame()
-    match_cols = ["match_id", "date", "map", "competition", "my_team", "opponent_team"]
+    match_cols = ["match_id", "date", "map", "competition", "tier", "my_team", "opponent_team"]
     meta_cols = [col for col in match_cols if col in tactics_df.columns]
     match_meta = tactics_df.groupby("match_id", as_index=False)[meta_cols].first()
     results = (
