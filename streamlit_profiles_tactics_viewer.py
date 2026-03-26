@@ -160,12 +160,14 @@ def _inject_styles() -> None:
             margin-top: 8px;
         }
         .achievement-inline-item {
-            border: 1px solid rgba(151, 166, 195, 0.28);
+            border: none;
             border-radius: 10px;
             padding: 8px;
             background: rgba(18, 25, 40, 0.72);
             display: grid;
             gap: 6px;
+            text-align: center;
+            justify-items: center;
         }
         .achievement-season {
             color: #b4c3e7;
@@ -173,28 +175,35 @@ def _inject_styles() -> None:
             letter-spacing: 0.05em;
             text-transform: uppercase;
             font-weight: 700;
+            text-align: center;
+            width: 100%;
         }
         .achievement-image-wrap {
             position: relative;
             width: 100%;
             border-radius: 8px;
             overflow: hidden;
-            border: 1px solid rgba(141, 169, 221, 0.38);
+            border: none;
             min-height: 88px;
             background: rgba(10, 15, 24, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .achievement-inline-item img {
             width: 100%;
             height: 98px;
-            object-fit: cover;
+            object-fit: contain;
+            object-position: center;
             display: block;
         }
         .achievement-tier-icon {
             position: absolute;
-            top: 6px;
-            right: 6px;
-            min-width: 22px;
-            height: 22px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 24px;
+            height: 24px;
             border-radius: 999px;
             display: flex;
             align-items: center;
@@ -202,7 +211,7 @@ def _inject_styles() -> None:
             font-size: 0.72rem;
             font-weight: 900;
             letter-spacing: 0.02em;
-            border: 1px solid currentColor;
+            border: none;
             background: rgba(10, 15, 24, 0.9);
         }
         .achievement-inline-name {
@@ -210,6 +219,8 @@ def _inject_styles() -> None:
             font-weight: 700;
             line-height: 1.2;
             font-size: 0.83rem;
+            text-align: center;
+            width: 100%;
         }
         .quick-row {
             display: grid;
