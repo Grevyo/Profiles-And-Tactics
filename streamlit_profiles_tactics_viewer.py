@@ -1662,40 +1662,33 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         st.warning("No tactics found in the selected data.")
         return
 
-    st.subheader("Tactics Filters")
-    filter_cols = st.columns(6)
-    map_opts = sorted(df["map"].dropna().unique().tolist())
-    with filter_cols[0]:
-        maps = _multiselect_filter("Map", map_opts, key="tactic_map")
-    side_opts = sorted(df["side"].dropna().unique().tolist())
-    with filter_cols[1]:
-        sides = _multiselect_filter("Side", side_opts, key="tactic_side")
-    tier_opts = sorted(df["tier"].dropna().unique().tolist())
-    with filter_cols[2]:
-        tiers = _multiselect_filter("Tier", tier_opts, key="tactic_tier")
-
-    comp_opts = sorted(df["competition"].dropna().unique().tolist())
-    with filter_cols[3]:
-        comps = _multiselect_filter("Event", comp_opts, key="tactic_event")
-
-    opp_opts = sorted(df["opponent_team"].dropna().unique().tolist())
-    with filter_cols[4]:
-        opps = _multiselect_filter("Opponent", opp_opts, key="tactic_opp")
-    round_type_opts = ["Pistol", "Eco", "Standard"]
-    with filter_cols[5]:
-        selected_round_types = st.multiselect(
-            "Round Type",
-            round_type_opts,
-            default=round_type_opts,
-            key="tactic_round_type_filter",
-            placeholder="Select round types",
-        )
-        st.markdown(
-            f'<div class="panel-muted">Round types: {len(selected_round_types)} selected</div>',
-            unsafe_allow_html=True,
-        )
-
-    with st.container():
+    st.subheader("Tactical Decision Console")
+    with st.expander("Filters", expanded=False):
+        filter_cols = st.columns(6)
+        map_opts = sorted(df["map"].dropna().unique().tolist())
+        with filter_cols[0]:
+            maps = st.multiselect("Map", map_opts, default=[], key="tactic_map", placeholder="All")
+        side_opts = sorted(df["side"].dropna().unique().tolist())
+        with filter_cols[1]:
+            sides = st.multiselect("Side", side_opts, default=[], key="tactic_side", placeholder="All")
+        tier_opts = sorted(df["tier"].dropna().unique().tolist())
+        with filter_cols[2]:
+            tiers = st.multiselect("Tier", tier_opts, default=[], key="tactic_tier", placeholder="All")
+        comp_opts = sorted(df["competition"].dropna().unique().tolist())
+        with filter_cols[3]:
+            comps = st.multiselect("Event", comp_opts, default=[], key="tactic_event", placeholder="All")
+        opp_opts = sorted(df["opponent_team"].dropna().unique().tolist())
+        with filter_cols[4]:
+            opps = st.multiselect("Opponent", opp_opts, default=[], key="tactic_opp", placeholder="All")
+        round_type_opts = ["Pistol", "Eco", "Standard"]
+        with filter_cols[5]:
+            selected_round_types = st.multiselect(
+                "Round Type",
+                round_type_opts,
+                default=round_type_opts,
+                key="tactic_round_type_filter",
+                placeholder="All",
+            )
         selected_tactics = st.multiselect(
             "Tactics",
             tactic_opts,
@@ -1704,11 +1697,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
             placeholder="All (no filter)",
         )
         active_tactics = selected_tactics if selected_tactics else tactic_opts
-        tactic_summary = "All" if not selected_tactics else f"{len(selected_tactics)} selected"
-        st.markdown(
-            f'<div class="panel-muted">Tactics: {tactic_summary}</div>',
-            unsafe_allow_html=True,
-        )
 
     if sides:
         df = df[df["side"].isin(sides)]
@@ -1755,15 +1743,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         st.warning("No tactics found for selected filters.")
         return
 
-    min_sample = int(
-        st.slider(
-            "Minimum sample (uses)",
-            min_value=1,
-            max_value=max(int(tactic_perf["times_used"].max()), 1),
-            value=1,
-            key="tactic_min_sample",
-        )
-    )
+    min_sample = int(st.slider("Minimum sample (uses)", 1, max(int(tactic_perf["times_used"].max()), 1), 1, key="tactic_min_sample"))
     tactic_perf = tactic_perf[tactic_perf["times_used"] >= min_sample].copy()
     if tactic_perf.empty:
         st.warning("No tactics meet the minimum sample threshold.")
@@ -1873,6 +1853,28 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
 
     overall_avg_win = float(tactic_perf["win_pct"].mean())
     tactic_perf["recommended_action"] = tactic_perf.apply(lambda r: _action_label(r, overall_avg_win), axis=1)
+
+    def _reason_label(row: pd.Series) -> str:
+        if row["times_used"] >= 12 and row["win_pct"] < 45:
+            return "Poor overall in strong sample"
+        if row["trend"] == "Falling" and row["last_10_usage_win_pct"] < row["win_pct"]:
+            return "Poor recent form"
+        if row["usage_pct"] >= 12 and row["win_pct"] < overall_avg_win:
+            return "Overused, low return"
+        if pd.notna(row.get("vs S tier win %")) and float(row.get("vs S tier win %", 0)) < 45:
+            return "Bad vs strong teams"
+        if row["round_share_pct"] >= 30 and row["win_pct"] < 50:
+            return "Map-side liability"
+        if row["times_used"] < 8:
+            return "Low sample volatility"
+        return "Monitor trend"
+
+    tactic_perf["reason"] = tactic_perf.apply(_reason_label, axis=1)
+    tactic_perf["urgency_score"] = (
+        (50 - tactic_perf["win_pct"]).clip(lower=0) * 1.3
+        + tactic_perf["usage_pct"] * 0.9
+        + tactic_perf["times_used"].clip(upper=30) * 0.5
+    ).round(1)
     tactic_perf["tags"] = tactic_perf.apply(
         lambda r: ", ".join(
             [
@@ -1904,13 +1906,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     if not summary_options:
         summary_options = summary_key_df["summary_key"].tolist()
 
-    selected_key = st.selectbox(
-        "Selected tactic summary",
-        summary_options,
-        key="selected_tactic_summary",
-    )
-    selected_row = summary_key_df[summary_key_df["summary_key"] == selected_key].iloc[0]
-
     overall_wr = float((tactic_perf["wins"].sum() / max((tactic_perf["wins"].sum() + tactic_perf["losses"].sum()), 1)) * 100)
     proven = tactic_perf[tactic_perf["times_used"] >= max(min_sample, 8)].copy()
     if proven.empty:
@@ -1933,34 +1928,97 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         else best_proven
     )
 
-    top_cards = st.columns(5)
-    top_cards[0].metric("Overall tactic round win %", f"{overall_wr:.1f}%")
-    top_cards[1].metric("Best proven tactic", f'{best_proven["map"]} - {best_proven["tactic_name"]}')
-    top_cards[2].metric("Worst proven tactic", f'{worst_proven["map"]} - {worst_proven["tactic_name"]}')
-    top_cards[3].metric("Overused weak tactic", f'{overused_weak["map"]} - {overused_weak["tactic_name"]}')
-    top_cards[4].metric("Underused strong tactic", f'{underused_strong["map"]} - {underused_strong["tactic_name"]}')
-
-    st.markdown(
-        f"""
-        <div class="panel-card">
-            <div class="panel-muted">Selected tactic summary</div>
-            <div class="panel-title">{selected_row["tactic_name"]}</div>
-            <div class="stats-grid">
-                <div class="stat-chip"><div class="stat-label">Map</div><div class="stat-value">{selected_row["map"]}</div></div>
-                <div class="stat-chip"><div class="stat-label">Side</div><div class="stat-value">{selected_row["side"]}</div></div>
-                <div class="stat-chip"><div class="stat-label">Times used</div><div class="stat-value">{int(selected_row["times_used"])}</div></div>
-                <div class="stat-chip"><div class="stat-label">Rounds won</div><div class="stat-value">{int(selected_row["wins"])}</div></div>
-                <div class="stat-chip"><div class="stat-label">Win rate</div><div class="stat-value">{selected_row["win_pct"]:.1f}%</div></div>
-                <div class="stat-chip"><div class="stat-label">Round share</div><div class="stat-value">{selected_row["round_share_pct"]:.1f}%</div></div>
-                <div class="stat-chip"><div class="stat-label">Recent form (last 5)</div><div class="stat-value">{selected_row.get("recent_form_5", "n/a")}</div></div>
-                <div class="stat-chip"><div class="stat-label">Recent form (last 10)</div><div class="stat-value">{selected_row.get("recent_form_10", "n/a")}</div></div>
-                <div class="stat-chip"><div class="stat-label">Net round impact</div><div class="stat-value">{int(selected_row["net_rounds"])}</div></div>
-                <div class="stat-chip"><div class="stat-label">Confidence</div><div class="stat-value">{selected_row["confidence_badge"]}</div></div>
+    def _kpi_card(title: str, row: pd.Series, accent: str, tag: str) -> None:
+        st.markdown(
+            f"""
+            <div class="panel-card" style="border-left:4px solid {accent}; padding:14px 16px;">
+                <div class="panel-muted">{title}</div>
+                <div style="font-weight:700;color:#f5f7fb;line-height:1.25;">{row["tactic_name"]}</div>
+                <div class="panel-muted">{row["map"]} • {row["side"]}</div>
+                <div style="color:#cfd6e5;font-size:0.84rem;">{row["win_pct"]:.1f}% WR across {int(row["times_used"])} uses</div>
+                <div style="margin-top:6px;color:{accent};font-size:0.75rem;font-weight:700;">{tag}</div>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
+
+    kpi_cols = st.columns(5)
+    with kpi_cols[0]:
+        st.markdown(
+            f"""
+            <div class="panel-card" style="padding:14px 16px;">
+                <div class="panel-muted">Overall tactic WR</div>
+                <div style="font-size:1.25rem;font-weight:800;color:#f5f7fb;">{overall_wr:.1f}%</div>
+                <div class="panel-muted">{int(tactic_perf["times_used"].sum())} tracked uses</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with kpi_cols[1]:
+        _kpi_card("Best proven", best_proven, "#31d17b", "Proven good")
+    with kpi_cols[2]:
+        _kpi_card("Worst proven", worst_proven, "#ff6c7a", "Needs rework")
+    with kpi_cols[3]:
+        _kpi_card("Overused weak", overused_weak, "#f0be4f", "Drop/Rework")
+    with kpi_cols[4]:
+        _kpi_card("Underused strong", underused_strong, "#60a5fa", "Use more")
+
+    st.subheader("Decision layer")
+    decision_left, decision_right = st.columns(2)
+    needs_attention = tactic_perf[tactic_perf["recommended_action"].isin(["Drop", "Rework", "Test More"])].copy()
+    needs_attention = needs_attention.sort_values(["urgency_score", "times_used"], ascending=[False, False])
+    use_more = tactic_perf[tactic_perf["recommended_action"].isin(["Use More", "Keep"])].copy()
+    use_more = use_more.sort_values(["win_pct", "times_used"], ascending=[False, False])
+
+    with decision_left:
+        st.markdown("#### Needs Attention")
+        if needs_attention.empty:
+            st.info("No urgent tactics flagged by the current rules.")
+        else:
+            st.dataframe(
+                needs_attention[
+                    ["tactic_name", "map", "side", "times_used", "win_pct", "last_10_usage_win_pct", "reason", "recommended_action", "urgency_score"]
+                ]
+                .rename(
+                    columns={
+                        "tactic_name": "Tactic",
+                        "map": "Map",
+                        "side": "Side",
+                        "times_used": "Uses",
+                        "win_pct": "Win %",
+                        "last_10_usage_win_pct": "Last 10",
+                        "reason": "Reason",
+                        "recommended_action": "Action",
+                        "urgency_score": "Severity",
+                    }
+                ),
+                use_container_width=True,
+                hide_index=True,
+            )
+    with decision_right:
+        st.markdown("#### Use More / Keep")
+        if use_more.empty:
+            st.info("No high-value tactics found in the current filter scope.")
+        else:
+            st.dataframe(
+                use_more[
+                    ["tactic_name", "map", "side", "times_used", "win_pct", "last_10_usage_win_pct", "reason", "recommended_action"]
+                ]
+                .rename(
+                    columns={
+                        "tactic_name": "Tactic",
+                        "map": "Map",
+                        "side": "Side",
+                        "times_used": "Uses",
+                        "win_pct": "Win %",
+                        "last_10_usage_win_pct": "Last 10",
+                        "reason": "Reason",
+                        "recommended_action": "Action",
+                    }
+                ),
+                use_container_width=True,
+                hide_index=True,
+            )
 
     st.subheader("Tactic performance table")
     perf_table = tactic_perf.rename(
@@ -1983,38 +2041,32 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
             "recommended_action": "Action",
         }
     )
-    perf_cols = ["Tactic", "Map", "Side", "Uses", "Wins", "Losses", "Win %", "Net rounds", "Usage %", "Last 10 Win %", "vs S", "vs A", "vs B", "vs C", "Confidence", "Action"]
+    perf_cols = ["Tactic", "Map", "Side", "Uses", "Win %", "Last 10 Win %", "Net rounds", "Usage %", "vs S", "vs A", "vs B", "vs C", "Confidence", "Action"]
     st.dataframe(perf_table[perf_cols].sort_values(["Win %", "Uses"], ascending=[False, False]), use_container_width=True, hide_index=True)
 
-    st.subheader("Needs Attention")
-    needs_attention = tactic_perf[
-        (tactic_perf["recommended_action"].isin(["Drop", "Rework", "Test More", "Use More"]))
-    ].copy()
-    if needs_attention.empty:
-        st.info("No urgent tactics flagged by the current rules.")
-    else:
-        st.dataframe(
-            needs_attention[
-                ["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "last_10_usage_win_pct", "trend", "recommended_action", "confidence_badge"]
-            ]
-            .rename(
-                columns={
-                    "tactic_name": "Tactic",
-                    "map": "Map",
-                    "side": "Side",
-                    "times_used": "Uses",
-                    "win_pct": "Win %",
-                    "usage_pct": "Usage %",
-                    "last_10_usage_win_pct": "Last 10 Win %",
-                    "trend": "Trend",
-                    "recommended_action": "Action",
-                    "confidence_badge": "Confidence",
-                }
-            )
-            .sort_values(["Action", "Uses", "Win %"], ascending=[True, False, True]),
-            use_container_width=True,
-            hide_index=True,
-        )
+    selected_key = st.selectbox("Selected tactic summary", summary_options, key="selected_tactic_summary")
+    selected_row = summary_key_df[summary_key_df["summary_key"] == selected_key].iloc[0]
+    st.markdown(
+        f"""
+        <div class="panel-card">
+            <div class="panel-muted">Selected tactic detail</div>
+            <div class="panel-title">{selected_row["tactic_name"]}</div>
+            <div class="panel-muted">{selected_row["map"]} • {selected_row["side"]} • {selected_row["recommended_action"]} • {selected_row["confidence_badge"]}</div>
+            <div style="margin-top:6px;color:#cfd6e5;font-size:0.88rem;"><strong>Why flagged:</strong> {selected_row.get("reason", "Monitor trend")}</div>
+            <div class="stats-grid">
+                <div class="stat-chip"><div class="stat-label">Uses</div><div class="stat-value">{int(selected_row["times_used"])}</div></div>
+                <div class="stat-chip"><div class="stat-label">WR</div><div class="stat-value">{selected_row["win_pct"]:.1f}%</div></div>
+                <div class="stat-chip"><div class="stat-label">Net rounds</div><div class="stat-value">{int(selected_row["net_rounds"])}</div></div>
+                <div class="stat-chip"><div class="stat-label">Usage share</div><div class="stat-value">{selected_row["usage_pct"]:.1f}%</div></div>
+                <div class="stat-chip"><div class="stat-label">Last 5</div><div class="stat-value">{selected_row.get("recent_form_5", "n/a")}</div></div>
+                <div class="stat-chip"><div class="stat-label">Last 10</div><div class="stat-value">{selected_row.get("recent_form_10", "n/a")}</div></div>
+                <div class="stat-chip"><div class="stat-label">vs S</div><div class="stat-value">{selected_row.get("vs S tier win %", "n/a")}</div></div>
+                <div class="stat-chip"><div class="stat-label">vs C</div><div class="stat-value">{selected_row.get("vs C tier win %", "n/a")}</div></div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.subheader("Trend over time")
     selected_rounds = rounds_long[
@@ -2056,38 +2108,47 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         st.altair_chart(outcome_scatter & trend_chart, use_container_width=True)
 
     st.subheader("Map + side split heatmap")
+    top_n_tactics = int(st.slider("Heatmap tactic limit", 6, 20, 15, key="heatmap_top_n"))
     heatmap_data = tactic_perf.copy()
-    tactic_order = (
+    top_tactics = (
         heatmap_data.groupby("tactic_name", as_index=False)["times_used"]
         .sum()
-        .sort_values("times_used", ascending=False)["tactic_name"]
+        .sort_values("times_used", ascending=False)
+        .head(top_n_tactics)["tactic_name"]
         .tolist()
     )
-    side_order = [side for side in ["T", "CT"] if side in heatmap_data["side"].astype(str).unique().tolist()]
-    if not side_order:
-        side_order = sorted(heatmap_data["side"].astype(str).unique().tolist())
-
-    base_heat = alt.Chart(heatmap_data).encode(
-        x=alt.X("map:N", title="Map", sort=alt.SortField("round_share_pct", order="descending"), axis=alt.Axis(labelAngle=-20)),
-        y=alt.Y("tactic_name:N", title="Tactic", sort=tactic_order),
-        tooltip=["tactic_name", "map", "side", "times_used", "win_pct", "round_share_pct"],
-    )
-    heat = base_heat.mark_rect().encode(
-        color=alt.Color("win_pct:Q", title="Win %", scale=alt.Scale(scheme="redyellowgreen", domain=[0, 100]))
-    )
-    labels = base_heat.mark_text(fontSize=11, fontWeight="bold").encode(
-        text=alt.Text("times_used:Q", format=".0f"),
-        color=alt.condition("datum.win_pct >= 55", alt.value("#111827"), alt.value("#f9fafb")),
-    )
-    win_rate_labels = base_heat.mark_text(dy=14, fontSize=9).encode(
-        text=alt.Text("win_pct:Q", format=".0f"),
-        color=alt.condition("datum.win_pct >= 55", alt.value("#111827"), alt.value("#f9fafb")),
-    )
-    heatmap_chart = (heat + labels + win_rate_labels).properties(width=430, height=620).facet(
-        column=alt.Column("side:N", title="Side", sort=side_order),
-        spacing=18,
-    )
-    st.altair_chart(heatmap_chart, use_container_width=True)
+    heatmap_data = heatmap_data[heatmap_data["tactic_name"].isin(top_tactics)].copy()
+    map_tabs = st.tabs(sorted(heatmap_data["map"].dropna().unique().tolist()))
+    for map_name, map_tab in zip(sorted(heatmap_data["map"].dropna().unique().tolist()), map_tabs):
+        with map_tab:
+            map_heat = heatmap_data[heatmap_data["map"] == map_name].copy()
+            side_order = [side for side in ["T", "CT"] if side in map_heat["side"].astype(str).unique().tolist()]
+            if not side_order:
+                side_order = sorted(map_heat["side"].astype(str).unique().tolist())
+            tactic_order = (
+                map_heat.groupby("tactic_name", as_index=False)["times_used"]
+                .sum()
+                .sort_values("times_used", ascending=False)["tactic_name"]
+                .tolist()
+            )
+            heat = (
+                alt.Chart(map_heat)
+                .mark_rect()
+                .encode(
+                    x=alt.X("side:N", title="Side", sort=side_order),
+                    y=alt.Y("tactic_name:N", title="Tactic", sort=tactic_order),
+                    color=alt.Color("win_pct:Q", title="Win %", scale=alt.Scale(scheme="redyellowgreen", domain=[0, 100])),
+                    tooltip=["tactic_name", "side", "times_used", "win_pct", "round_share_pct"],
+                )
+                .properties(height=420)
+            )
+            labels = alt.Chart(map_heat).mark_text(fontSize=10, fontWeight="bold").encode(
+                x=alt.X("side:N", sort=side_order),
+                y=alt.Y("tactic_name:N", sort=tactic_order),
+                text=alt.Text("times_used:Q", format=".0f"),
+                color=alt.condition("datum.win_pct >= 55", alt.value("#111827"), alt.value("#f9fafb")),
+            )
+            st.altair_chart(heat + labels, use_container_width=True)
 
     st.subheader("Round share vs success")
     scatter = (
