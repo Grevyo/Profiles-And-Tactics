@@ -17,10 +17,19 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-try:
-    import plotly.graph_objects as go
-except ModuleNotFoundError:
-    go = None
+
+def _load_plotly_graph_objects():
+    """Load Plotly graph objects when available, otherwise return None."""
+    if importlib.util.find_spec("plotly.graph_objects") is None:
+        return None
+    try:
+        import plotly.graph_objects as graph_objects
+    except Exception:
+        return None
+    return graph_objects
+
+
+go = _load_plotly_graph_objects()
 
 st.set_page_config(page_title="Grevs CPL Pages", layout="wide")
 
