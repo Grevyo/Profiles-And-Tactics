@@ -747,8 +747,13 @@ def _multiselect_filter(label: str, options: list[str], key: str) -> list[str]:
 
 
 def _expand_tactics_by_round_type(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty or "tactic_name" not in df.columns:
+    if "tactic_name" not in df.columns:
         return df.copy()
+
+    if df.empty:
+        expanded = df.copy()
+        expanded["round_type"] = pd.Series(dtype="object")
+        return expanded
 
     expanded = df.copy()
     tactic_names = expanded["tactic_name"].fillna("").astype(str)
@@ -1441,12 +1446,14 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         selected_tactics = st.multiselect(
             "Tactics",
             tactic_opts,
-            default=tactic_opts,
+            default=[],
             key="tactic_name_filter",
-            placeholder="Select tactics",
+            placeholder="All (no filter)",
         )
+        active_tactics = selected_tactics if selected_tactics else tactic_opts
+        tactic_summary = "All" if not selected_tactics else f"{len(selected_tactics)} selected"
         st.markdown(
-            f'<div class="panel-muted">Tactics: {len(selected_tactics)} selected</div>',
+            f'<div class="panel-muted">Tactics: {tactic_summary}</div>',
             unsafe_allow_html=True,
         )
 
@@ -1458,7 +1465,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         df = df[df["competition"].isin(comps)]
     if opps:
         df = df[df["opponent_team"].isin(opps)]
-    df = df[df["tactic_name"].isin(selected_tactics)].copy()
+    df = df[df["tactic_name"].isin(active_tactics)].copy()
 
     expanded_round_type_df = _expand_tactics_by_round_type(df)
     selected_round_types = selected_round_types or round_type_opts
