@@ -110,7 +110,7 @@ def _inject_styles() -> None:
         }
         .top-identity-grid {
             display: grid;
-            grid-template-columns: 1.8fr 0.95fr;
+            grid-template-columns: 1.45fr 0.95fr 1.15fr;
             gap: 12px;
             align-items: stretch;
         }
@@ -148,7 +148,7 @@ def _inject_styles() -> None:
         }
         .quick-row {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 8px;
             margin-top: 10px;
         }
@@ -192,6 +192,28 @@ def _inject_styles() -> None:
             box-shadow: 0 0 18px rgba(54, 116, 255, 0.22);
             text-align: center;
         }
+        .overview-side {
+            border: 1px solid rgba(151, 166, 195, 0.35);
+            border-radius: 12px;
+            padding: 12px;
+            background: rgba(14, 20, 32, 0.78);
+        }
+        .overview-side .section-label {
+            margin-top: 0;
+        }
+        .achievement-tier {
+            display: inline-block;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        .tier-s { color: #f5c451; }
+        .tier-a { color: #9c6df6; }
+        .tier-b { color: #5ea9ff; }
+        .tier-c { color: #4ed083; }
+        .tier-unknown { color: #9da7bd; }
         .hero-grevscore-label {
             color: #b8caf0;
             font-size: 0.82rem;
@@ -499,6 +521,13 @@ def _build_stat_chip(label: str, display: str, value: float, low: float, high: f
     )
 
 
+def _achievement_tier_class(tier: str | None) -> str:
+    tier_clean = str(tier or "").strip().upper()
+    if tier_clean in {"S", "A", "B", "C"}:
+        return f"tier-{tier_clean.lower()}"
+    return "tier-unknown"
+
+
 def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame) -> tuple[float, pd.DataFrame]:
     if player_rows.empty:
         return 0.0, pd.DataFrame()
@@ -719,8 +748,10 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     ]
 
     player_ach = achievements_df[
-        achievements_df["player"].astype(str).str.contains(selected_player, case=False, na=False)
+        achievements_df["player"].astype(str).str.strip().str.casefold() == str(selected_player).strip().casefold()
     ].copy()
+    if not player_ach.empty:
+        player_ach = player_ach.sort_values(["season_name", "position"], ascending=[False, True])
     featured_achievement = player_ach.iloc[0] if not player_ach.empty else None
     featured_achievement_image = None
     if featured_achievement is not None:
@@ -756,20 +787,12 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                     </div>
                     <div class="quick-row">
                         <div class="identity-kv">
-                            <div class="profile-label">Rating</div>
-                            <div class="identity-kv-value">{metrics["grevscore"]:.2f}</div>
-                        </div>
-                        <div class="identity-kv">
-                            <div class="profile-label">Matches</div>
-                            <div class="identity-kv-value">{int(metrics["matches"])}</div>
-                        </div>
-                        <div class="identity-kv">
                             <div class="profile-label">Best Map</div>
                             <div class="identity-kv-value">{best_map}</div>
                         </div>
                         <div class="identity-kv">
-                            <div class="profile-label">Achievement</div>
-                            <div class="identity-kv-value">{featured_achievement.get("achievement_tier", "-") if featured_achievement is not None else "-"}</div>
+                            <div class="profile-label">Team Rank</div>
+                            <div class="identity-kv-value">#{team_rank}/{rank_total}</div>
                         </div>
                     </div>
                     <div class="team-line" style="margin-top:8px;">
@@ -779,7 +802,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                     </div>
                 </div>
                 <div class="hero-grevscore">
-                    <div class="hero-grevscore-label">Rating</div>
+                    <div class="hero-grevscore-label">Grevscore</div>
                     <div class="hero-grevscore-tier">{score_tier} · {percentile:.0f}th percentile</div>
                     <div class="gauge-wrap">
                         <div class="gauge-score">{metrics["grevscore"]:.2f}</div>
@@ -800,10 +823,12 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                         Team rank #{team_rank}/{rank_total}
                     </div>
                 </div>
-            </div>
-            <div class="section-label">Overview</div>
-            <div class="stats-grid">
-                {"".join(stat_chips_overview)}
+                <div class="overview-side">
+                    <div class="section-label">Overview</div>
+                    <div class="stats-grid">
+                        {"".join(stat_chips_overview)}
+                    </div>
+                </div>
             </div>
             <div class="section-label">Damage / Output</div>
             <div class="stats-grid">
@@ -930,11 +955,16 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
             with ach_cols[i % 3]:
                 st.markdown('<div class="panel-card">', unsafe_allow_html=True)
                 ach_image = ach_row.get("achievement_image")
+                ach_tier = str(ach_row.get("achievement_tier", "-"))
+                tier_class = _achievement_tier_class(ach_tier)
+                st.markdown(
+                    f'<div class="achievement-tier {tier_class}">Tier {ach_tier}</div>',
+                    unsafe_allow_html=True,
+                )
                 if ach_image:
                     st.image(str(ach_image), use_container_width=True)
                 st.markdown(
-                    f"**{ach_row.get('achievement_name', 'Achievement')}**  \n"
-                    f"Tier: `{ach_row.get('achievement_tier', '-')}`  \n"
+                    f"**{ach_row.get('achievement_name', '-') }**  \n"
                     f"Season: `{ach_row.get('season_name', '-')}`  \n"
                     f"Position: `{ach_row.get('position', '-')}`"
                 )
