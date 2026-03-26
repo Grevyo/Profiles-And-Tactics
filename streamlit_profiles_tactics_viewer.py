@@ -796,6 +796,21 @@ def _normalize_match_id_column(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def normalize_competition_name(competition: str | None) -> str | None:
+    if competition is None or (isinstance(competition, float) and pd.isna(competition)):
+        return competition
+    return re.sub(r"\b(S\d+)\.\d+\b", r"\1", str(competition))
+
+
+def add_grouped_competition_column(df: pd.DataFrame, source_col: str = "competition") -> pd.DataFrame:
+    grouped_df = df.copy()
+    if source_col not in grouped_df.columns:
+        grouped_df["grouped_competition"] = pd.NA
+        return grouped_df
+    grouped_df["grouped_competition"] = grouped_df[source_col].apply(normalize_competition_name)
+    return grouped_df
+
+
 @st.cache_data(show_spinner=False)
 def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     players = pd.read_csv(PLAYER_CSV)
@@ -830,6 +845,8 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         ["kills", "deaths", "mvps", "kpd", "accuracy_pct", "hs_pct", "damage", "rounds_played"],
     )
     tactics = _coerce_numeric(tactics, ["wins", "losses", "total_rounds", "win_rate_pct"])
+    players = add_grouped_competition_column(players, source_col="competition")
+    tactics = add_grouped_competition_column(tactics, source_col="competition")
 
     return players, tactics, achievements
 
@@ -1201,10 +1218,10 @@ def _home() -> None:
     )
 
 
-def _build_match_level_results(tactics_df: pd.DataFrame) -> pd.DataFrame:
+def _build_match_level_results(tactics_df: pd.DataFrame, competition_source_col: str) -> pd.DataFrame:
     if tactics_df.empty:
         return pd.DataFrame()
-    match_cols = ["match_id", "date", "map", "competition", "tier", "my_team", "opponent_team"]
+    match_cols = ["match_id", "date", "map", competition_source_col, "tier", "my_team", "opponent_team"]
     meta_cols = [col for col in match_cols if col in tactics_df.columns]
     match_meta = tactics_df.groupby("match_id", as_index=False)[meta_cols].first()
     results = (
@@ -1218,6 +1235,7 @@ def _build_match_level_results(tactics_df: pd.DataFrame) -> pd.DataFrame:
     for col in match_cols:
         if col not in merged.columns:
             merged[col] = pd.NA
+    merged = merged.rename(columns={competition_source_col: "competition"})
     return merged
 
 
@@ -1225,6 +1243,7 @@ def _apply_shared_filters(
     player_df: pd.DataFrame,
     tactics_df: pd.DataFrame,
     selected_player: str,
+    competition_source_col: str,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     filtered_players = player_df[player_df["player"] == selected_player].copy()
 
@@ -1237,7 +1256,7 @@ def _apply_shared_filters(
     with filter_cols[0]:
         selected_tiers = _multiselect_filter("Tier of Team", tier_options, key="profile_tier")
 
-    event_options = sorted(filtered_players["competition"].dropna().unique().tolist())
+    event_options = sorted(filtered_players[competition_source_col].dropna().unique().tolist())
     with filter_cols[1]:
         selected_events = _multiselect_filter("Event", event_options, key="profile_event")
 
@@ -1264,7 +1283,7 @@ def _apply_shared_filters(
     if selected_tiers:
         filtered_players = filtered_players[filtered_players["tier"].isin(selected_tiers)]
     if selected_events:
-        filtered_players = filtered_players[filtered_players["competition"].isin(selected_events)]
+        filtered_players = filtered_players[filtered_players[competition_source_col].isin(selected_events)]
     if selected_opp:
         filtered_players = filtered_players[filtered_players["opponent_team"].isin(selected_opp)]
 
@@ -1283,7 +1302,12 @@ def _apply_shared_filters(
     return filtered_players, filtered_tactics
 
 
-def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achievements_df: pd.DataFrame) -> None:
+def _hltv_profile_view(
+    player_df: pd.DataFrame,
+    tactics_df: pd.DataFrame,
+    achievements_df: pd.DataFrame,
+    competition_source_col: str,
+) -> None:
     _inject_styles()
     _render_top_hero(
         active_page="profiles",
@@ -1305,7 +1329,12 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     selected_player = st.selectbox('Pick a player (names containing "ⓜ")', players)
 
     with st.expander("Profile Filters", expanded=False):
-        filtered_players, filtered_tactics = _apply_shared_filters(player_df, tactics_df, selected_player)
+        filtered_players, filtered_tactics = _apply_shared_filters(
+            player_df,
+            tactics_df,
+            selected_player,
+            competition_source_col,
+        )
     image_index = _build_image_index()
     player_metadata = _load_player_metadata()
 
@@ -1629,7 +1658,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     st.subheader("Full Player Match Stats")
     show_cols = [
         "date",
-        "competition",
+        competition_source_col,
         "map",
         "opponent_team",
         "tier",
@@ -1643,10 +1672,11 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
         "rounds_played",
     ]
     show_cols = [c for c in show_cols if c in filtered_players.columns]
-    st.dataframe(filtered_players[show_cols].sort_values("date", ascending=False), use_container_width=True, hide_index=True)
+    display_df = filtered_players[show_cols].rename(columns={competition_source_col: "competition"})
+    st.dataframe(display_df.sort_values("date", ascending=False), use_container_width=True, hide_index=True)
 
 
-def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame) -> None:
+def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame, competition_source_col: str) -> None:
     _inject_styles()
     _render_top_hero(
         active_page="tactics",
@@ -1689,7 +1719,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         tier_opts = sorted(df["tier"].dropna().unique().tolist())
         with filter_cols[2]:
             tiers = st.multiselect("Tier", tier_opts, default=[], key="tactic_tier", placeholder="All")
-        comp_opts = sorted(df["competition"].dropna().unique().tolist())
+        comp_opts = sorted(df[competition_source_col].dropna().unique().tolist())
         with filter_cols[3]:
             comps = st.multiselect("Event", comp_opts, default=[], key="tactic_event", placeholder="All")
         opp_opts = sorted(df["opponent_team"].dropna().unique().tolist())
@@ -1720,7 +1750,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     if tiers:
         df = df[df["tier"].isin(tiers)]
     if comps:
-        df = df[df["competition"].isin(comps)]
+        df = df[df[competition_source_col].isin(comps)]
     if opps:
         df = df[df["opponent_team"].isin(opps)]
     df = df[df["tactic_name"].isin(active_tactics)].copy()
@@ -2307,11 +2337,16 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         & (df["map"] == selected_row["map"])
         & (df["side"] == selected_row["side"])
     ].copy()
-    drill_cols = ["match_id", "opponent_team", "tier", "map", "side", "wins", "losses", "competition", "date"]
-    st.dataframe(drilldown[drill_cols].sort_values("date", ascending=False), use_container_width=True, hide_index=True)
+    drill_cols = ["match_id", "opponent_team", "tier", "map", "side", "wins", "losses", competition_source_col, "date"]
+    drill_df = drilldown[drill_cols].rename(columns={competition_source_col: "competition"})
+    st.dataframe(drill_df.sort_values("date", ascending=False), use_container_width=True, hide_index=True)
 
 
-def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
+def _medisports_vs_breakdown(
+    tactics_df: pd.DataFrame,
+    player_df: pd.DataFrame,
+    competition_source_col: str,
+) -> None:
     _inject_styles()
     _render_top_hero(
         active_page="medisports_vs",
@@ -2324,7 +2359,15 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
     if team_df.empty:
         st.warning("No Medisports tactics data found.")
         return
-    match_results = _build_match_level_results(team_df)
+
+    if "tier" not in team_df.columns or team_df["tier"].isna().all():
+        tier_lookup = (
+            player_df.groupby("match_id", as_index=False)["tier"]
+            .agg(lambda s: s.dropna().iloc[0] if not s.dropna().empty else pd.NA)
+        )
+        team_df = team_df.merge(tier_lookup, on="match_id", how="left")
+
+    match_results = _build_match_level_results(team_df, competition_source_col)
     if match_results.empty:
         st.warning("No match-level results available.")
         return
@@ -2736,17 +2779,23 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
 
 def main() -> None:
     player_df, tactics_df, achievements_df = _load_data()
+    competition_view = st.sidebar.radio(
+        "Competition View",
+        ["Raw competition names", "Grouped competition names"],
+        index=0,
+    )
+    competition_source_col = "competition" if competition_view == "Raw competition names" else "grouped_competition"
 
     if "page" not in st.session_state:
         st.session_state["page"] = "home"
 
     page = st.session_state["page"]
     if page == "profiles":
-        _hltv_profile_view(player_df, tactics_df, achievements_df)
+        _hltv_profile_view(player_df, tactics_df, achievements_df, competition_source_col)
     elif page == "tactics":
-        _teams_tactical_breakdown(tactics_df, player_df)
+        _teams_tactical_breakdown(tactics_df, player_df, competition_source_col)
     elif page == "medisports_vs":
-        _medisports_vs_breakdown(tactics_df)
+        _medisports_vs_breakdown(tactics_df, player_df, competition_source_col)
     else:
         _home()
 
