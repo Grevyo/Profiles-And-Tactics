@@ -70,12 +70,12 @@ def _inject_styles() -> None:
         .stat-chip {
             border: 1px solid rgba(151, 166, 195, 0.35);
             border-radius: 10px;
-            padding: 12px 14px;
+            padding: 9px 11px;
             background: rgba(18, 25, 40, 0.8);
-            min-height: 108px;
+            min-height: 84px;
         }
         .stat-label { color: #9da7bd; font-size: 0.78rem; }
-        .stat-value { color: #f5f7fb; font-size: 1.55rem; font-weight: 800; line-height: 1.15; }
+        .stat-value { color: #f5f7fb; font-size: 1.25rem; font-weight: 800; line-height: 1.15; }
         .stat-trend { font-size: 0.78rem; margin-top: 4px; font-weight: 600; }
         .trend-good { color: #31d17b; }
         .trend-mid { color: #f0be4f; }
@@ -517,7 +517,8 @@ def _inject_styles() -> None:
             border: 1px solid rgba(137, 160, 210, 0.48);
             background: linear-gradient(180deg, rgba(22, 32, 52, 0.92), rgba(10, 16, 29, 0.92));
             color: #e6eeff;
-            min-height: 52px;
+            min-height: 42px;
+            font-size: 0.88rem;
             font-weight: 700;
             box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
             transition: all 0.2s ease;
@@ -1464,6 +1465,9 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     expanded_round_type_df = expanded_round_type_df[
         expanded_round_type_df["round_type"].isin(selected_round_types)
     ].copy()
+    allowed_keys = expanded_round_type_df[["tactic_name", "map", "side"]].drop_duplicates()
+    if not allowed_keys.empty:
+        df = df.merge(allowed_keys, on=["tactic_name", "map", "side"], how="inner")
 
     if df.empty or expanded_round_type_df.empty:
         st.warning("No tactics found for selected filters.")
@@ -1757,6 +1761,54 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         .assign(total_win_pct=lambda d: (d["total_wins"] / (d["total_wins"] + d["total_losses"]).clip(lower=1) * 100).round(1))
     )
     st.dataframe(family_summary, use_container_width=True, hide_index=True)
+
+    st.subheader("Pistol breakdown")
+    pistol_df = tactic_perf[tactic_perf["family"] == "Pistol"].copy()
+    if pistol_df.empty:
+        st.info("No pistol tactics for the selected filters.")
+    else:
+        p1, p2, p3 = st.columns(3)
+        p1.metric("Pistol rounds", int(pistol_df["times_used"].sum()))
+        p2.metric("Pistol win rate", f'{(pistol_df["wins"].sum() / max((pistol_df["wins"].sum() + pistol_df["losses"].sum()), 1) * 100):.1f}%')
+        p3.metric("Best pistol tactic", pistol_df.sort_values(["win_pct", "times_used"], ascending=[False, False]).iloc[0]["tactic_name"])
+        st.dataframe(
+            pistol_df[["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "trend", "recommended_action"]]
+            .sort_values(["win_pct", "times_used"], ascending=[False, False]),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.subheader("Eco breakdown")
+    eco_df = tactic_perf[tactic_perf["family"] == "Eco"].copy()
+    if eco_df.empty:
+        st.info("No eco tactics for the selected filters.")
+    else:
+        e1, e2, e3 = st.columns(3)
+        e1.metric("Eco rounds", int(eco_df["times_used"].sum()))
+        e2.metric("Eco win rate", f'{(eco_df["wins"].sum() / max((eco_df["wins"].sum() + eco_df["losses"].sum()), 1) * 100):.1f}%')
+        e3.metric("Best eco tactic", eco_df.sort_values(["win_pct", "times_used"], ascending=[False, False]).iloc[0]["tactic_name"])
+        st.dataframe(
+            eco_df[["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "trend", "recommended_action"]]
+            .sort_values(["win_pct", "times_used"], ascending=[False, False]),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.subheader("Standard rounds section")
+    standard_df = tactic_perf[tactic_perf["family"] == "Standard"].copy()
+    if standard_df.empty:
+        st.info("No standard tactics for the selected filters.")
+    else:
+        s1, s2, s3 = st.columns(3)
+        s1.metric("Standard rounds", int(standard_df["times_used"].sum()))
+        s2.metric("Standard win rate", f'{(standard_df["wins"].sum() / max((standard_df["wins"].sum() + standard_df["losses"].sum()), 1) * 100):.1f}%')
+        s3.metric("Best standard tactic", standard_df.sort_values(["win_pct", "times_used"], ascending=[False, False]).iloc[0]["tactic_name"])
+        st.dataframe(
+            standard_df[["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "trend", "recommended_action"]]
+            .sort_values(["win_pct", "times_used"], ascending=[False, False]),
+            use_container_width=True,
+            hide_index=True,
+        )
 
     st.subheader("Recommended actions")
     recs = tactic_perf[["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "trend", "confidence", "recommended_action"]].sort_values(
