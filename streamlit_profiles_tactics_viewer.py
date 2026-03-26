@@ -28,6 +28,49 @@ IMAGE_FOLDERS = {
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 
+def _inject_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        .panel-card {
+            background: linear-gradient(145deg, #131722 0%, #0e1118 100%);
+            border: 1px solid rgba(151, 166, 195, 0.35);
+            border-radius: 14px;
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+        .panel-muted {
+            color: #9da7bd;
+            font-size: 0.85rem;
+            margin-bottom: 0.2rem;
+        }
+        .panel-title {
+            color: #f0f3f9;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .stat-chip {
+            border: 1px solid rgba(151, 166, 195, 0.35);
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: rgba(18, 25, 40, 0.8);
+        }
+        .stat-label { color: #9da7bd; font-size: 0.78rem; }
+        .stat-value { color: #f5f7fb; font-size: 1rem; font-weight: 650; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _coerce_numeric(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     for col in columns:
         if col in df.columns:
@@ -105,6 +148,22 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return players, tactics, achievements
 
 
+def _multiselect_with_all(label: str, options: list[str], key: str) -> list[str]:
+    choices = ["All"] + options
+    selected = st.multiselect(label, choices, default=["All"], key=key)
+
+    if not selected:
+        st.caption(f"Selected {label}: None")
+        return []
+
+    if "All" in selected or set(selected) == set(options):
+        st.caption(f"Selected {label}: All")
+        return options
+
+    st.caption(f"Selected {label}: {', '.join(selected)}")
+    return [value for value in selected if value != "All"]
+
+
 def _home() -> None:
     st.title("Grevs CPL Pages")
     st.write("Welcome! Choose a page below.")
@@ -133,16 +192,20 @@ def _apply_shared_filters(
     st.subheader("Player Filters")
     filter_cols = st.columns(5)
     tier_options = sorted(filtered_players["tier"].dropna().unique().tolist())
-    selected_tiers = filter_cols[0].multiselect("Tier of Team", tier_options, default=tier_options)
+    with filter_cols[0]:
+        selected_tiers = _multiselect_with_all("Tier of Team", tier_options, key="profile_tier")
 
     event_options = sorted(filtered_players["competition"].dropna().unique().tolist())
-    selected_events = filter_cols[1].multiselect("Event", event_options, default=event_options)
+    with filter_cols[1]:
+        selected_events = _multiselect_with_all("Event", event_options, key="profile_event")
 
     opp_options = sorted(filtered_players["opponent_team"].dropna().unique().tolist())
-    selected_opp = filter_cols[2].multiselect("Opponent", opp_options, default=opp_options)
+    with filter_cols[2]:
+        selected_opp = _multiselect_with_all("Opponent", opp_options, key="profile_opp")
 
     side_options = sorted(tactics_df["side"].dropna().unique().tolist()) if "side" in tactics_df else []
-    selected_sides = filter_cols[3].multiselect("Side (Red/Blue)", side_options, default=side_options)
+    with filter_cols[3]:
+        selected_sides = _multiselect_with_all("Side (Red/Blue)", side_options, key="profile_side")
 
     date_range = filter_cols[4].date_input(
         "Date Range",
@@ -179,6 +242,7 @@ def _apply_shared_filters(
 
 
 def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achievements_df: pd.DataFrame) -> None:
+    _inject_styles()
     st.title("HLTV CPL Profile Viewer")
     if st.button("← Back to Home"):
         st.session_state["page"] = "home"
@@ -235,13 +299,23 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     avg_hs = float(filtered_players["hs_pct"].mean()) if not filtered_players.empty else 0.0
     avg_kpd = float(filtered_players["kpd"].mean()) if not filtered_players.empty else 0.0
 
-    stat_cols = st.columns(6)
-    stat_cols[0].metric("Matches", filtered_players["match_id"].nunique())
-    stat_cols[1].metric("Kills", kills)
-    stat_cols[2].metric("Deaths", deaths)
-    stat_cols[3].metric("K/D", f"{kd_ratio:.2f}")
-    stat_cols[4].metric("MVPs", mvps)
-    stat_cols[5].metric("Damage", f"{damage:,}")
+    st.markdown(
+        f"""
+        <div class="panel-card">
+            <div class="panel-muted">Player overview</div>
+            <div class="panel-title">{selected_player}</div>
+            <div class="stats-grid">
+                <div class="stat-chip"><div class="stat-label">Matches</div><div class="stat-value">{filtered_players["match_id"].nunique()}</div></div>
+                <div class="stat-chip"><div class="stat-label">Kills</div><div class="stat-value">{kills}</div></div>
+                <div class="stat-chip"><div class="stat-label">Deaths</div><div class="stat-value">{deaths}</div></div>
+                <div class="stat-chip"><div class="stat-label">K/D Ratio</div><div class="stat-value">{kd_ratio:.2f}</div></div>
+                <div class="stat-chip"><div class="stat-label">MVPs</div><div class="stat-value">{mvps}</div></div>
+                <div class="stat-chip"><div class="stat-label">Damage</div><div class="stat-value">{damage:,}</div></div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.subheader("Performance Indicators")
     ind1, ind2, ind3 = st.columns(3)
@@ -299,14 +373,20 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
             ),
             axis=1,
         )
-        st.dataframe(
-            player_ach,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "achievement_image": st.column_config.ImageColumn("Achievement"),
-            },
-        )
+        ach_cols = st.columns(3)
+        for i, (_, ach_row) in enumerate(player_ach.iterrows()):
+            with ach_cols[i % 3]:
+                st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+                ach_image = ach_row.get("achievement_image")
+                if ach_image:
+                    st.image(str(ach_image), use_container_width=True)
+                st.markdown(
+                    f"**{ach_row.get('achievement_name', 'Achievement')}**  \n"
+                    f"Tier: `{ach_row.get('achievement_tier', '-')}`  \n"
+                    f"Season: `{ach_row.get('season_name', '-')}`  \n"
+                    f"Position: `{ach_row.get('position', '-')}`"
+                )
+                st.markdown("</div>", unsafe_allow_html=True)
 
     st.subheader("Full Player Match Stats")
     show_cols = [
@@ -329,6 +409,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 
 
 def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame) -> None:
+    _inject_styles()
     st.title("Teams Tactical Breakdown")
     if st.button("← Back to Home"):
         st.session_state["page"] = "home"
@@ -343,15 +424,19 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     st.subheader("Tactics Filters")
     filter_cols = st.columns(4)
     side_opts = sorted(df["side"].dropna().unique().tolist())
-    sides = filter_cols[0].multiselect("Side", side_opts, default=side_opts)
+    with filter_cols[0]:
+        sides = _multiselect_with_all("Side", side_opts, key="tactic_side")
     tier_opts = sorted(df["tier"].dropna().unique().tolist())
-    tiers = filter_cols[1].multiselect("Tier", tier_opts, default=tier_opts)
+    with filter_cols[1]:
+        tiers = _multiselect_with_all("Tier", tier_opts, key="tactic_tier")
 
     comp_opts = sorted(df["competition"].dropna().unique().tolist())
-    comps = filter_cols[2].multiselect("Event", comp_opts, default=comp_opts)
+    with filter_cols[2]:
+        comps = _multiselect_with_all("Event", comp_opts, key="tactic_event")
 
     opp_opts = sorted(df["opponent_team"].dropna().unique().tolist())
-    opps = filter_cols[3].multiselect("Opponent", opp_opts, default=opp_opts)
+    with filter_cols[3]:
+        opps = _multiselect_with_all("Opponent", opp_opts, key="tactic_opp")
 
     if sides:
         df = df[df["side"].isin(sides)]
@@ -388,6 +473,26 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         .reindex(summary["tactic_name"])
         .values
     )
+
+    top_row = summary.head(1)
+    if not top_row.empty:
+        best = top_row.iloc[0]
+        st.markdown(
+            f"""
+            <div class="panel-card">
+                <div class="panel-muted">Best current tactic</div>
+                <div class="panel-title">{best["tactic_name"]}</div>
+                <div class="stats-grid">
+                    <div class="stat-chip"><div class="stat-label">Side</div><div class="stat-value">{best["side"]}</div></div>
+                    <div class="stat-chip"><div class="stat-label">Wins</div><div class="stat-value">{int(best["wins"])}</div></div>
+                    <div class="stat-chip"><div class="stat-label">Losses</div><div class="stat-value">{int(best["losses"])}</div></div>
+                    <div class="stat-chip"><div class="stat-label">Rounds</div><div class="stat-value">{int(best["total_rounds"])}</div></div>
+                    <div class="stat-chip"><div class="stat-label">Win Rate</div><div class="stat-value">{best["win_rate_pct"]:.1f}%</div></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.subheader("Top Tactical Outcomes")
     st.dataframe(
