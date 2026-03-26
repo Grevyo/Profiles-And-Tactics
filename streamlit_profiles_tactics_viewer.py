@@ -2311,7 +2311,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     st.dataframe(drilldown[drill_cols].sort_values("date", ascending=False), use_container_width=True, hide_index=True)
 
 
-def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
+def _medisports_vs_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame) -> None:
     _inject_styles()
     _render_top_hero(
         active_page="medisports_vs",
@@ -2328,6 +2328,16 @@ def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
     if match_results.empty:
         st.warning("No match-level results available.")
         return
+
+    tier_lookup = (
+        player_df.groupby("match_id", as_index=False)["tier"]
+        .agg(lambda s: s.dropna().iloc[0] if not s.dropna().empty else pd.NA)
+        .rename(columns={"tier": "player_tier"})
+    )
+    match_results = match_results.merge(tier_lookup, on="match_id", how="left")
+    missing_or_blank_tier = match_results["tier"].isna() | (match_results["tier"].astype(str).str.strip() == "")
+    match_results.loc[missing_or_blank_tier, "tier"] = match_results.loc[missing_or_blank_tier, "player_tier"]
+    match_results = match_results.drop(columns=["player_tier"])
 
     st.markdown("### A) Overall team health")
     c1, c2, c3 = st.columns([1.1, 1.2, 1.7])
@@ -2746,7 +2756,7 @@ def main() -> None:
     elif page == "tactics":
         _teams_tactical_breakdown(tactics_df, player_df)
     elif page == "medisports_vs":
-        _medisports_vs_breakdown(tactics_df)
+        _medisports_vs_breakdown(tactics_df, player_df)
     else:
         _home()
 
