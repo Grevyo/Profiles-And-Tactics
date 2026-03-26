@@ -2923,13 +2923,13 @@ def _medisports_vs_breakdown(
                     f"""
                     <div class="panel-card">
                         <div class="panel-muted">{label}</div>
-                        <div class="panel-title">{row["opponent_team"]}</div>
+                        <div class="panel-title">{html.escape(str(row["opponent_team"]))}</div>
                         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
                             <span class="vs-pill">{int(row["wins"])}W-{int(row["losses"])}L-{int(row["draws"])}D</span>
                             <span class="vs-pill {'vs-pill-good' if float(row["win_rate_pct"]) >= 55 else 'vs-pill-bad'}">WR {float(row["win_rate_pct"]):.1f}%</span>
                             <span class="vs-pill {'vs-pill-good' if int(row["round_diff"]) >= 0 else 'vs-pill-bad'}">RD {int(row["round_diff"]):+d}</span>
-                            <span class="vs-pill">Map {row["most_played_map"]}</span>
-                            <span class="vs-pill">Tier {row["tier"]}</span>
+                            <span class="vs-pill">Map {html.escape(str(row["most_played_map"]))}</span>
+                            <span class="vs-pill">Tier {html.escape(str(row["tier"]))}</span>
                         </div>
                     </div>
                     """,
