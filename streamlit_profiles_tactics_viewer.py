@@ -1762,53 +1762,59 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     )
     st.dataframe(family_summary, use_container_width=True, hide_index=True)
 
-    st.subheader("Pistol breakdown")
-    pistol_df = tactic_perf[tactic_perf["family"] == "Pistol"].copy()
-    if pistol_df.empty:
-        st.info("No pistol tactics for the selected filters.")
-    else:
-        p1, p2, p3 = st.columns(3)
-        p1.metric("Pistol rounds", int(pistol_df["times_used"].sum()))
-        p2.metric("Pistol win rate", f'{(pistol_df["wins"].sum() / max((pistol_df["wins"].sum() + pistol_df["losses"].sum()), 1) * 100):.1f}%')
-        p3.metric("Best pistol tactic", pistol_df.sort_values(["win_pct", "times_used"], ascending=[False, False]).iloc[0]["tactic_name"])
+    def _render_family_breakdown(section_title: str, family_name: str, rounds_label: str) -> None:
+        st.subheader(section_title)
+        family_df = tactic_perf[tactic_perf["family"] == family_name].copy()
+        if family_df.empty:
+            st.info(f"No {family_name.lower()} tactics for the selected filters.")
+            return
+
+        c1, c2, c3 = st.columns(3)
+        total_rounds = int(family_df["times_used"].sum())
+        total_wins = float(family_df["wins"].sum())
+        total_losses = float(family_df["losses"].sum())
+        family_win_rate = (total_wins / max((total_wins + total_losses), 1) * 100)
+        best_tactic = family_df.sort_values(["win_pct", "times_used"], ascending=[False, False]).iloc[0]["tactic_name"]
+        c1.metric(rounds_label, total_rounds)
+        c2.metric(f"{family_name} win rate", f"{family_win_rate:.1f}%")
+        c3.metric(f"Best {family_name.lower()} tactic", best_tactic)
+
+        map_breakdown = (
+            family_df.groupby("map", as_index=False)
+            .agg(rounds=("times_used", "sum"), wins=("wins", "sum"), losses=("losses", "sum"))
+            .assign(win_rate=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+            .sort_values(["rounds", "win_rate"], ascending=[False, False])
+        )
+        st.caption("Split by map")
         st.dataframe(
-            pistol_df[["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "trend", "recommended_action"]]
-            .sort_values(["win_pct", "times_used"], ascending=[False, False]),
+            map_breakdown[["map", "rounds", "wins", "losses", "win_rate"]],
             use_container_width=True,
             hide_index=True,
         )
 
-    st.subheader("Eco breakdown")
-    eco_df = tactic_perf[tactic_perf["family"] == "Eco"].copy()
-    if eco_df.empty:
-        st.info("No eco tactics for the selected filters.")
-    else:
-        e1, e2, e3 = st.columns(3)
-        e1.metric("Eco rounds", int(eco_df["times_used"].sum()))
-        e2.metric("Eco win rate", f'{(eco_df["wins"].sum() / max((eco_df["wins"].sum() + eco_df["losses"].sum()), 1) * 100):.1f}%')
-        e3.metric("Best eco tactic", eco_df.sort_values(["win_pct", "times_used"], ascending=[False, False]).iloc[0]["tactic_name"])
-        st.dataframe(
-            eco_df[["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "trend", "recommended_action"]]
-            .sort_values(["win_pct", "times_used"], ascending=[False, False]),
-            use_container_width=True,
-            hide_index=True,
-        )
+        for _, map_row in map_breakdown.iterrows():
+            map_name = map_row["map"]
+            map_df = family_df[family_df["map"] == map_name].copy()
+            with st.expander(
+                f'{map_name} — {int(map_row["rounds"])} rounds ({float(map_row["win_rate"]):.1f}% win rate)',
+                expanded=False,
+            ):
+                side_summary = (
+                    map_df.groupby("side", as_index=False)
+                    .agg(rounds=("times_used", "sum"), wins=("wins", "sum"), losses=("losses", "sum"))
+                    .assign(win_rate=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+                )
+                st.dataframe(side_summary, use_container_width=True, hide_index=True)
+                st.dataframe(
+                    map_df[["tactic_name", "side", "times_used", "win_pct", "usage_pct", "trend", "recommended_action"]]
+                    .sort_values(["win_pct", "times_used"], ascending=[False, False]),
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
-    st.subheader("Standard rounds section")
-    standard_df = tactic_perf[tactic_perf["family"] == "Standard"].copy()
-    if standard_df.empty:
-        st.info("No standard tactics for the selected filters.")
-    else:
-        s1, s2, s3 = st.columns(3)
-        s1.metric("Standard rounds", int(standard_df["times_used"].sum()))
-        s2.metric("Standard win rate", f'{(standard_df["wins"].sum() / max((standard_df["wins"].sum() + standard_df["losses"].sum()), 1) * 100):.1f}%')
-        s3.metric("Best standard tactic", standard_df.sort_values(["win_pct", "times_used"], ascending=[False, False]).iloc[0]["tactic_name"])
-        st.dataframe(
-            standard_df[["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "trend", "recommended_action"]]
-            .sort_values(["win_pct", "times_used"], ascending=[False, False]),
-            use_container_width=True,
-            hide_index=True,
-        )
+    _render_family_breakdown("Pistol breakdown", "Pistol", "Pistol rounds")
+    _render_family_breakdown("Eco breakdown", "Eco", "Eco rounds")
+    _render_family_breakdown("Standard rounds section", "Standard", "Standard rounds")
 
     st.subheader("Recommended actions")
     recs = tactic_perf[["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "trend", "confidence", "recommended_action"]].sort_values(
