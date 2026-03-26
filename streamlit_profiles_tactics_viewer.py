@@ -647,6 +647,31 @@ def _multiselect_filter(label: str, options: list[str], key: str) -> list[str]:
     return active
 
 
+def _expand_tactics_by_round_type(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "tactic_name" not in df.columns:
+        return df.copy()
+
+    expanded = df.copy()
+    tactic_names = expanded["tactic_name"].fillna("").astype(str)
+    round_types: list[list[str]] = []
+    for tactic_name in tactic_names:
+        tags: list[str] = []
+        if "(P)" in tactic_name:
+            # Pistol tactics are also available as eco + standard callups.
+            tags.extend(["Pistol", "Eco", "Standard"])
+        elif "(E)" in tactic_name:
+            tags.append("Eco")
+        elif "(S)" in tactic_name:
+            tags.append("Standard")
+        else:
+            tags.append("Unspecified")
+        round_types.append(tags)
+
+    expanded["round_type"] = round_types
+    expanded = expanded.explode("round_type").reset_index(drop=True)
+    return expanded
+
+
 def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: pd.DataFrame) -> dict[str, float]:
     matches = max(int(filtered_players["match_id"].nunique()), 1)
     kills = float(filtered_players["kills"].sum())
@@ -1301,9 +1326,22 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     opp_opts = sorted(df["opponent_team"].dropna().unique().tolist())
     with filter_cols[3]:
         opps = _multiselect_filter("Opponent", opp_opts, key="tactic_opp")
+    round_type_opts = ["Pistol", "Eco", "Standard"]
+    with filter_cols[4]:
+        selected_round_types = st.multiselect(
+            "Round Type",
+            round_type_opts,
+            default=round_type_opts,
+            key="tactic_round_type_filter",
+            placeholder="Select round types",
+        )
+        st.markdown(
+            f'<div class="panel-muted">Round types: {len(selected_round_types)} selected</div>',
+            unsafe_allow_html=True,
+        )
 
     tactic_opts = recent_tactic_opts
-    with filter_cols[4]:
+    with st.container():
         selected_tactics = st.multiselect(
             "Tactics",
             tactic_opts,
@@ -1324,14 +1362,32 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         df = df[df["competition"].isin(comps)]
     if opps:
         df = df[df["opponent_team"].isin(opps)]
-    df = df[df["tactic_name"].isin(selected_tactics)]
+    df = df[df["tactic_name"].isin(selected_tactics)].copy()
 
-    if df.empty:
+    expanded_round_type_df = _expand_tactics_by_round_type(df)
+    selected_round_types = selected_round_types or round_type_opts
+    expanded_round_type_df = expanded_round_type_df[
+        expanded_round_type_df["round_type"].isin(selected_round_types)
+    ].copy()
+
+    if df.empty or expanded_round_type_df.empty:
         st.warning("No tactics found for selected filters.")
         return
 
+    st.subheader("Round-Type Tactical Breakdown")
+    round_type_summary = (
+        expanded_round_type_df.groupby("round_type", as_index=False)[["wins", "losses", "total_rounds"]]
+        .sum()
+        .assign(
+            rounds_played=lambda d: d["wins"] + d["losses"],
+            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+        )
+        .sort_values("round_type")
+    )
+    st.dataframe(round_type_summary, use_container_width=True, hide_index=True)
+
     uniqueness = (
-        df.groupby("tactic_name", as_index=False)
+        expanded_round_type_df.groupby("tactic_name", as_index=False)
         .agg(unique_sides=("side", "nunique"), unique_maps=("map", "nunique"))
         .sort_values(["unique_sides", "unique_maps", "tactic_name"], ascending=[False, False, True])
     )
@@ -1343,13 +1399,15 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     )
 
     summary = (
-        df.groupby(["tactic_name", "side", "map"], as_index=False)[["wins", "losses", "total_rounds"]]
+        expanded_round_type_df.groupby(["tactic_name", "round_type", "side", "map"], as_index=False)[
+            ["wins", "losses", "total_rounds"]
+        ]
         .sum()
         .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
         .sort_values(["win_rate_pct", "wins"], ascending=False)
     )
     side_tactic_summary = (
-        df.groupby(["tactic_name", "side"], as_index=False)[["wins", "losses"]]
+        expanded_round_type_df.groupby(["tactic_name", "round_type", "side"], as_index=False)[["wins", "losses"]]
         .sum()
         .assign(
             rounds_played=lambda d: d["wins"] + d["losses"],
@@ -1360,10 +1418,10 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     image_index = _build_image_index()
 
     summary["competition_logo"] = (
-        df.groupby(["tactic_name", "side", "map"])["competition"]
+        expanded_round_type_df.groupby(["tactic_name", "round_type", "side", "map"])["competition"]
         .first()
         .map(lambda comp: _find_image(image_index, "competition", comp))
-        .reindex(summary.set_index(["tactic_name", "side", "map"]).index)
+        .reindex(summary.set_index(["tactic_name", "round_type", "side", "map"]).index)
         .values
     )
     summary["map_image"] = summary["map"].map(lambda map_name: _find_image(image_index, "map", map_name))
@@ -1377,6 +1435,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
                 <div class="panel-muted">Best current tactic</div>
                 <div class="panel-title">{best["tactic_name"]}</div>
                 <div class="stats-grid">
+                    <div class="stat-chip"><div class="stat-label">Round Type</div><div class="stat-value">{best["round_type"]}</div></div>
                     <div class="stat-chip"><div class="stat-label">Side</div><div class="stat-value">{best["side"]}</div></div>
                     <div class="stat-chip"><div class="stat-label">Wins</div><div class="stat-value">{int(best["wins"])}</div></div>
                     <div class="stat-chip"><div class="stat-label">Losses</div><div class="stat-value">{int(best["losses"])}</div></div>
@@ -1439,7 +1498,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
             st.info("Not enough data to render the Altair chart.")
         else:
             altair_long = altair_data.melt(
-                id_vars=["tactic_name", "side"],
+                id_vars=["tactic_name", "round_type", "side"],
                 value_vars=["wins", "losses"],
                 var_name="result",
                 value_name="round_outcomes",
@@ -1451,7 +1510,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
                     x=alt.X("tactic_name:N", sort="-y", title="Tactic"),
                     y=alt.Y("round_outcomes:Q", title="Rounds"),
                     color=alt.Color("result:N", title="Outcome"),
-                    tooltip=["tactic_name", "side", "result", "round_outcomes"],
+                    tooltip=["tactic_name", "round_type", "side", "result", "round_outcomes"],
                 )
                 .properties(height=430)
             )
@@ -1459,7 +1518,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
 
     st.subheader("Opponent Impact")
     opponent_summary = (
-        df.groupby(["opponent_team", "tactic_name"], as_index=False)[["wins", "losses"]]
+        expanded_round_type_df.groupby(["opponent_team", "tactic_name", "round_type"], as_index=False)[["wins", "losses"]]
         .sum()
         .assign(
             rounds_played=lambda d: d["wins"] + d["losses"],
@@ -1481,21 +1540,21 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
                     x=alt.X("opponent_team:N", title="Opponent"),
                     y=alt.Y("tactic_name:N", title="Tactic", sort="-x"),
                     color=alt.Color("win_rate_pct:Q", title="Win Rate %", scale=alt.Scale(scheme="redyellowgreen")),
-                    tooltip=["opponent_team", "tactic_name", "wins", "losses", "win_rate_pct"],
+                    tooltip=["opponent_team", "tactic_name", "round_type", "wins", "losses", "win_rate_pct"],
                 )
                 .properties(height=460)
             )
             st.altair_chart(heat, use_container_width=True)
     with opp_col_2:
         st.markdown("#### Tactical Results vs Selected Opponent")
-        opponent_opts = sorted(df["opponent_team"].dropna().unique().tolist())
+        opponent_opts = sorted(expanded_round_type_df["opponent_team"].dropna().unique().tolist())
         selected_opp = st.selectbox("Opponent team", opponent_opts, key="tactic_vs_opponent_select")
         opp_view = opponent_summary[opponent_summary["opponent_team"] == selected_opp].copy()
         if opp_view.empty:
             st.info("No tactic rows for this opponent.")
         else:
             st.dataframe(
-                opp_view[["tactic_name", "wins", "losses", "rounds_played", "win_rate_pct"]].head(25),
+                opp_view[["tactic_name", "round_type", "wins", "losses", "rounds_played", "win_rate_pct"]].head(25),
                 use_container_width=True,
                 hide_index=True,
             )
@@ -1506,7 +1565,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
                     x=alt.X("tactic_name:N", sort="-y", title="Tactic"),
                     y=alt.Y("win_rate_pct:Q", title="Win Rate %"),
                     color=alt.Color("win_rate_pct:Q", scale=alt.Scale(scheme="teals"), legend=None),
-                    tooltip=["tactic_name", "wins", "losses", "rounds_played", "win_rate_pct"],
+                    tooltip=["tactic_name", "round_type", "wins", "losses", "rounds_played", "win_rate_pct"],
                 )
                 .properties(height=350)
             )
@@ -1514,10 +1573,10 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
 
     st.subheader("Side Breakdown")
     side_summary = (
-        df.groupby("side", as_index=False)[["wins", "losses", "total_rounds"]]
+        expanded_round_type_df.groupby(["side", "round_type"], as_index=False)[["wins", "losses", "total_rounds"]]
         .sum()
         .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
-        .sort_values("win_rate_pct", ascending=False)
+        .sort_values(["side", "round_type", "win_rate_pct"], ascending=[True, True, False])
     )
     st.dataframe(side_summary, use_container_width=True, hide_index=True)
 
@@ -1537,10 +1596,10 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
 
     st.subheader("Map Breakdown")
     map_summary = (
-        df.groupby(["map", "side"], as_index=False)[["wins", "losses", "total_rounds"]]
+        expanded_round_type_df.groupby(["map", "side", "round_type"], as_index=False)[["wins", "losses", "total_rounds"]]
         .sum()
         .assign(win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
-        .sort_values(["map", "side"])
+        .sort_values(["map", "side", "round_type"])
     )
     st.dataframe(map_summary, use_container_width=True, hide_index=True)
 
