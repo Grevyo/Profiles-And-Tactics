@@ -624,7 +624,7 @@ def _home() -> None:
     st.title("Grevs CPL Pages")
     st.write("Welcome! Choose a page below.")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("HLTV CPL Profile Viewer", use_container_width=True, type="primary"):
             st.session_state["page"] = "profiles"
@@ -633,6 +633,26 @@ def _home() -> None:
         if st.button("Teams Tactical Breakdown", use_container_width=True):
             st.session_state["page"] = "tactics"
             st.rerun()
+    with col3:
+        if st.button("Medisports Vs Breakdown", use_container_width=True):
+            st.session_state["page"] = "medisports_vs"
+            st.rerun()
+
+
+def _build_match_level_results(tactics_df: pd.DataFrame) -> pd.DataFrame:
+    if tactics_df.empty:
+        return pd.DataFrame()
+    match_cols = ["match_id", "date", "map", "competition", "my_team", "opponent_team"]
+    meta_cols = [col for col in match_cols if col in tactics_df.columns]
+    match_meta = tactics_df.groupby("match_id", as_index=False)[meta_cols].first()
+    results = (
+        tactics_df.groupby("match_id", as_index=False)[["wins", "losses"]]
+        .sum()
+        .rename(columns={"wins": "round_wins", "losses": "round_losses"})
+    )
+    results["round_diff"] = results["round_wins"] - results["round_losses"]
+    results["match_result"] = results["round_diff"].apply(lambda x: "Win" if x > 0 else ("Loss" if x < 0 else "Draw"))
+    return match_meta.merge(results, on="match_id", how="inner")
 
 
 def _apply_shared_filters(
@@ -1126,6 +1146,18 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         st.warning("No tactics found for selected filters.")
         return
 
+    uniqueness = (
+        df.groupby("tactic_name", as_index=False)
+        .agg(unique_sides=("side", "nunique"), unique_maps=("map", "nunique"))
+        .sort_values(["unique_sides", "unique_maps", "tactic_name"], ascending=[False, False, True])
+    )
+    cross_side_count = int((uniqueness["unique_sides"] > 1).sum())
+    cross_map_count = int((uniqueness["unique_maps"] > 1).sum())
+    st.caption(
+        f"Tactic uniqueness check: {cross_side_count} tactic(s) appear on multiple sides, "
+        f"{cross_map_count} tactic(s) appear on multiple maps."
+    )
+
     summary = (
         df.groupby(["tactic_name", "side", "map"], as_index=False)[["wins", "losses", "total_rounds"]]
         .sum()
@@ -1238,6 +1270,61 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
             )
             st.altair_chart(altair_chart, use_container_width=True)
 
+    st.subheader("Opponent Impact")
+    opponent_summary = (
+        df.groupby(["opponent_team", "tactic_name"], as_index=False)[["wins", "losses"]]
+        .sum()
+        .assign(
+            rounds_played=lambda d: d["wins"] + d["losses"],
+            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+        )
+        .sort_values(["rounds_played", "win_rate_pct"], ascending=[False, False])
+    )
+    opp_col_1, opp_col_2 = st.columns(2)
+    with opp_col_1:
+        st.markdown("#### Win Rate by Opponent + Tactic")
+        heat_source = opponent_summary[opponent_summary["rounds_played"] >= 2].copy()
+        if heat_source.empty:
+            st.info("Need more rounds against opponents to build this heatmap.")
+        else:
+            heat = (
+                alt.Chart(heat_source)
+                .mark_rect()
+                .encode(
+                    x=alt.X("opponent_team:N", title="Opponent"),
+                    y=alt.Y("tactic_name:N", title="Tactic", sort="-x"),
+                    color=alt.Color("win_rate_pct:Q", title="Win Rate %", scale=alt.Scale(scheme="redyellowgreen")),
+                    tooltip=["opponent_team", "tactic_name", "wins", "losses", "win_rate_pct"],
+                )
+                .properties(height=460)
+            )
+            st.altair_chart(heat, use_container_width=True)
+    with opp_col_2:
+        st.markdown("#### Tactical Results vs Selected Opponent")
+        opponent_opts = sorted(df["opponent_team"].dropna().unique().tolist())
+        selected_opp = st.selectbox("Opponent team", opponent_opts, key="tactic_vs_opponent_select")
+        opp_view = opponent_summary[opponent_summary["opponent_team"] == selected_opp].copy()
+        if opp_view.empty:
+            st.info("No tactic rows for this opponent.")
+        else:
+            st.dataframe(
+                opp_view[["tactic_name", "wins", "losses", "rounds_played", "win_rate_pct"]].head(25),
+                use_container_width=True,
+                hide_index=True,
+            )
+            opp_bar = (
+                alt.Chart(opp_view.head(15))
+                .mark_bar()
+                .encode(
+                    x=alt.X("tactic_name:N", sort="-y", title="Tactic"),
+                    y=alt.Y("win_rate_pct:Q", title="Win Rate %"),
+                    color=alt.Color("win_rate_pct:Q", scale=alt.Scale(scheme="teals"), legend=None),
+                    tooltip=["tactic_name", "wins", "losses", "rounds_played", "win_rate_pct"],
+                )
+                .properties(height=350)
+            )
+            st.altair_chart(opp_bar, use_container_width=True)
+
     st.subheader("Side Breakdown")
     side_summary = (
         df.groupby("side", as_index=False)[["wins", "losses", "total_rounds"]]
@@ -1271,6 +1358,92 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
     st.dataframe(map_summary, use_container_width=True, hide_index=True)
 
 
+def _medisports_vs_breakdown(tactics_df: pd.DataFrame) -> None:
+    _inject_styles()
+    st.title("Medisports Vs Breakdown")
+    if st.button("← Back to Home"):
+        st.session_state["page"] = "home"
+        st.rerun()
+
+    team_df = tactics_df[
+        tactics_df["my_team"].astype(str).str.contains("ⓜ", regex=False, na=False)
+    ].copy()
+    if team_df.empty:
+        st.warning("No Medisports tactics data found.")
+        return
+    match_results = _build_match_level_results(team_df)
+    if match_results.empty:
+        st.warning("No match-level results available.")
+        return
+
+    overall_matches = int(match_results["match_id"].nunique())
+    overall_wins = int((match_results["match_result"] == "Win").sum())
+    overall_losses = int((match_results["match_result"] == "Loss").sum())
+    overall_draws = int((match_results["match_result"] == "Draw").sum())
+    overall_rate = (overall_wins / max(overall_wins + overall_losses, 1)) * 100
+
+    stats = st.columns(4)
+    stats[0].metric("Matches", overall_matches)
+    stats[1].metric("Wins", overall_wins)
+    stats[2].metric("Losses", overall_losses)
+    stats[3].metric("Win Rate", f"{overall_rate:.1f}%")
+    st.caption(f"Draws: {overall_draws}")
+
+    vs_summary = (
+        match_results.groupby("opponent_team", as_index=False)
+        .agg(
+            matches=("match_id", "nunique"),
+            wins=("match_result", lambda s: int((s == "Win").sum())),
+            losses=("match_result", lambda s: int((s == "Loss").sum())),
+            draws=("match_result", lambda s: int((s == "Draw").sum())),
+            round_wins=("round_wins", "sum"),
+            round_losses=("round_losses", "sum"),
+        )
+        .assign(
+            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+            round_diff=lambda d: d["round_wins"] - d["round_losses"],
+        )
+        .sort_values(["win_rate_pct", "wins", "matches"], ascending=[False, False, False])
+    )
+    st.subheader("How Medisports Performs vs Each Team")
+    st.dataframe(vs_summary, use_container_width=True, hide_index=True)
+
+    chart_col_1, chart_col_2 = st.columns(2)
+    with chart_col_1:
+        st.markdown("#### Teams We Beat Most")
+        st.bar_chart(vs_summary.set_index("opponent_team")["wins"])
+    with chart_col_2:
+        st.markdown("#### Win Rate by Team (min 1 match)")
+        rate_chart = (
+            alt.Chart(vs_summary)
+            .mark_bar()
+            .encode(
+                x=alt.X("opponent_team:N", sort="-y", title="Opponent"),
+                y=alt.Y("win_rate_pct:Q", title="Win Rate %"),
+                color=alt.Color("matches:Q", title="Matches", scale=alt.Scale(scheme="blues")),
+                tooltip=["opponent_team", "matches", "wins", "losses", "draws", "win_rate_pct", "round_diff"],
+            )
+            .properties(height=380)
+        )
+        st.altair_chart(rate_chart, use_container_width=True)
+
+    st.subheader("Match-by-Match Results")
+    result_filter = st.multiselect(
+        "Result filter",
+        ["Win", "Loss", "Draw"],
+        default=["Win", "Loss", "Draw"],
+        key="medisports_result_filter",
+    )
+    filtered_matches = match_results[match_results["match_result"].isin(result_filter)].sort_values("date", ascending=False)
+    st.dataframe(
+        filtered_matches[
+            ["date", "opponent_team", "map", "competition", "round_wins", "round_losses", "round_diff", "match_result"]
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 def main() -> None:
     player_df, tactics_df, achievements_df = _load_data()
 
@@ -1282,6 +1455,8 @@ def main() -> None:
         _hltv_profile_view(player_df, tactics_df, achievements_df)
     elif page == "tactics":
         _teams_tactical_breakdown(tactics_df, player_df)
+    elif page == "medisports_vs":
+        _medisports_vs_breakdown(tactics_df)
     else:
         _home()
 
