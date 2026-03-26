@@ -3139,17 +3139,19 @@ def _medisports_vs_breakdown(
                 else '<span class="rank-logo"></span>'
             )
             t_rows.append(
-                f"""
-                <div class="ranked-row" style="grid-template-columns: minmax(0, 1.8fr) repeat(6, minmax(0, 1fr));">
-                    <div class="rank-cell-main">{logo_html}<span class="rank-name">{html.escape(str(clean_competition))}</span></div>
-                    <div class="stat-label">Matches <b>{int(row["matches"])}</b></div>
-                    <div class="stat-label">Record <b>{int(row["wins"])}-{int(row["losses"])}-{int(row["draws"])}</b></div>
-                    <div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div>
-                    <div><span class="vs-pill {rd_class}">RD {int(row["round_diff"]):+d}</span></div>
-                    <div><span class="vs-pill">Best map {html.escape(str(clean_best_map))}</span></div>
-                    <div></div>
-                </div>
-                """
+                textwrap.dedent(
+                    f"""
+                    <div class="ranked-row" style="grid-template-columns: minmax(0, 1.8fr) repeat(6, minmax(0, 1fr));">
+                        <div class="rank-cell-main">{logo_html}<span class="rank-name">{html.escape(str(clean_competition))}</span></div>
+                        <div class="stat-label">Matches <b>{int(row["matches"])}</b></div>
+                        <div class="stat-label">Record <b>{int(row["wins"])}-{int(row["losses"])}-{int(row["draws"])}</b></div>
+                        <div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div>
+                        <div><span class="vs-pill {rd_class}">RD {int(row["round_diff"]):+d}</span></div>
+                        <div><span class="vs-pill">Best map {html.escape(str(clean_best_map))}</span></div>
+                        <div></div>
+                    </div>
+                    """
+                ).strip()
             )
         st.markdown("<div class='panel-card'><div class='ranked-list'>" + "".join(t_rows) + "</div></div>", unsafe_allow_html=True)
     with tcol2:
@@ -3165,20 +3167,22 @@ def _medisports_vs_breakdown(
             read_class = "vs-pill-good" if row["Read"] == "Strong" else ("vs-pill-mid" if row["Read"] in {"Even", "Shaky"} else "vs-pill-bad")
             rd_class = "vs-pill-good" if int(row["round_diff"]) >= 0 else "vs-pill-bad"
             tier_rows.append(
-                f"""
-                <div class="tier-strip">
-                    <div class="tier-strip-top">
-                        <div class="panel-title">Tier {html.escape(str(row["tier"]))}</div>
-                        <span class="vs-pill {read_class}">{row["Read"]}</span>
+                textwrap.dedent(
+                    f"""
+                    <div class="tier-strip">
+                        <div class="tier-strip-top">
+                            <div class="panel-title">Tier {html.escape(str(row["tier"]))}</div>
+                            <span class="vs-pill {read_class}">{row["Read"]}</span>
+                        </div>
+                        <div class="tier-strip-metrics">
+                            <div>Matches <b>{int(row["matches"])}</b></div>
+                            <div>Record <b>{int(row["wins"])}-{int(row["losses"])}</b></div>
+                            <div><span class="vs-pill {'vs-pill-good' if float(row["win_rate_pct"]) >= 55 else 'vs-pill-bad'}">WR {float(row["win_rate_pct"]):.1f}%</span></div>
+                            <div><span class="vs-pill {rd_class}">RD {int(row["round_diff"]):+d}</span></div>
+                        </div>
                     </div>
-                    <div class="tier-strip-metrics">
-                        <div>Matches <b>{int(row["matches"])}</b></div>
-                        <div>Record <b>{int(row["wins"])}-{int(row["losses"])}</b></div>
-                        <div><span class="vs-pill {'vs-pill-good' if float(row["win_rate_pct"]) >= 55 else 'vs-pill-bad'}">WR {float(row["win_rate_pct"]):.1f}%</span></div>
-                        <div><span class="vs-pill {rd_class}">RD {int(row["round_diff"]):+d}</span></div>
-                    </div>
-                </div>
-                """
+                    """
+                ).strip()
             )
         st.markdown("<div class='panel-card'><div class='tier-strip-grid'>" + "".join(tier_rows) + "</div></div>", unsafe_allow_html=True)
 
