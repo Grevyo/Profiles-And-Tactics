@@ -338,6 +338,113 @@ def _inject_styles() -> None:
             padding: 0 4px;
             font-size: 0.74rem;
         }
+        .hero-shell {
+            position: relative;
+            overflow: hidden;
+            border-radius: 24px;
+            border: 1px solid rgba(137, 160, 210, 0.38);
+            padding: 30px 32px 26px;
+            margin-bottom: 14px;
+            background:
+                radial-gradient(circle at 17% 22%, rgba(44, 201, 119, 0.18), transparent 46%),
+                radial-gradient(circle at 84% 18%, rgba(255, 96, 72, 0.13), transparent 42%),
+                linear-gradient(135deg, #101722 0%, #090d14 44%, #0b111c 100%);
+            box-shadow: 0 22px 44px rgba(0, 0, 0, 0.4);
+        }
+        .hero-shell::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background-image: linear-gradient(rgba(136, 158, 197, 0.07) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(136, 158, 197, 0.06) 1px, transparent 1px);
+            background-size: 32px 32px;
+            opacity: 0.18;
+        }
+        .hero-row {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(130px, 170px) 1fr minmax(120px, 150px);
+            gap: 20px;
+            align-items: center;
+        }
+        .hero-logo-badge {
+            border: 1px solid rgba(137, 160, 210, 0.4);
+            border-radius: 14px;
+            background: rgba(10, 16, 29, 0.74);
+            min-height: 108px;
+            display: grid;
+            place-items: center;
+            padding: 12px;
+            backdrop-filter: blur(4px);
+        }
+        .hero-logo-badge img {
+            width: 100%;
+            object-fit: contain;
+        }
+        .hero-title-block h1 {
+            margin: 0;
+            color: #f6f9ff;
+            font-size: clamp(1.9rem, 2.8vw, 2.6rem);
+            line-height: 1.05;
+            letter-spacing: 0.01em;
+        }
+        .hero-subtitle {
+            color: #c7d5f1;
+            margin-top: 9px;
+            font-size: 1.02rem;
+        }
+        .hero-pill-row {
+            margin-top: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .hero-pill {
+            border-radius: 999px;
+            border: 1px solid rgba(146, 170, 220, 0.45);
+            background: rgba(19, 28, 44, 0.82);
+            color: #e5edff;
+            font-weight: 700;
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 6px 10px;
+        }
+        .hero-shell-divider {
+            position: relative;
+            z-index: 1;
+            margin-top: 19px;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(41, 211, 130, 0.18), rgba(161, 183, 232, 0.52), rgba(255, 117, 79, 0.18));
+        }
+        .home-tab-row {
+            margin-top: 8px;
+        }
+        .home-tab-row [data-testid="stHorizontalBlock"] {
+            gap: 12px;
+        }
+        .home-tab-row .stButton > button {
+            border-radius: 999px;
+            border: 1px solid rgba(137, 160, 210, 0.48);
+            background: linear-gradient(180deg, rgba(22, 32, 52, 0.92), rgba(10, 16, 29, 0.92));
+            color: #e6eeff;
+            min-height: 52px;
+            font-weight: 700;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+        .home-tab-row .stButton > button:hover {
+            border-color: rgba(95, 243, 165, 0.72);
+            box-shadow: 0 10px 24px rgba(49, 209, 123, 0.22);
+            transform: translateY(-1px);
+        }
+        .home-tab-row .stButton > button[kind="primary"] {
+            background: linear-gradient(180deg, rgba(34, 82, 62, 0.95), rgba(15, 39, 30, 0.95));
+            border-color: rgba(95, 243, 165, 0.74);
+            box-shadow: 0 12px 24px rgba(49, 209, 123, 0.26);
+        }
         [data-testid="stDateInput"] input,
         [data-testid="stMultiSelect"] input {
             font-size: 0.8rem;
@@ -666,24 +773,53 @@ def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame)
 
 
 def _home() -> None:
-    st.title("Grevs CPL Pages")
-    _render_global_branding()
-    _render_integrated_branding("League + Team identity")
-    st.write("Welcome! Choose a page below.")
+    medicart_logo_html = (
+        f'<img src="{_image_to_data_uri(MEDISPORTS_LOGO)}" alt="Medicart logo" style="max-width:132px;">'
+        if MEDISPORTS_LOGO.exists()
+        else '<span style="color:#c7d5f1;font-size:0.8rem;">Medicart logo missing</span>'
+    )
+    cpl_logo_html = (
+        f'<img src="{_image_to_data_uri(CPL_LOGO)}" alt="CPL logo" style="max-width:104px;">'
+        if CPL_LOGO.exists()
+        else '<span style="color:#c7d5f1;font-size:0.8rem;">CPL logo missing</span>'
+    )
+    st.markdown(
+        f"""
+        <section class="hero-shell">
+            <div class="hero-row">
+                <div class="hero-logo-badge">{medicart_logo_html}</div>
+                <div class="hero-title-block">
+                    <h1>Grev's CPL Dashboard</h1>
+                    <div class="hero-subtitle">Player analytics, tactical breakdowns, match insights.</div>
+                    <div class="hero-pill-row">
+                        <span class="hero-pill">S10 Active</span>
+                        <span class="hero-pill">HLTV Style</span>
+                        <span class="hero-pill">Medicart Data</span>
+                    </div>
+                </div>
+                <div class="hero-logo-badge">{cpl_logo_html}</div>
+            </div>
+            <div class="hero-shell-divider"></div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="home-tab-row">', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("HLTV CPL Profile Viewer", use_container_width=True, type="primary"):
+        if st.button("👤 HLTV CPL Profile Viewer", use_container_width=True, type="primary"):
             st.session_state["page"] = "profiles"
             st.rerun()
     with col2:
-        if st.button("Teams Tactical Breakdown", use_container_width=True):
+        if st.button("📊 Teams Tactical Breakdown", use_container_width=True):
             st.session_state["page"] = "tactics"
             st.rerun()
     with col3:
-        if st.button("Medisports Vs Breakdown", use_container_width=True):
+        if st.button("⚔️ Medisports Vs Breakdown", use_container_width=True):
             st.session_state["page"] = "medisports_vs"
             st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _build_match_level_results(tactics_df: pd.DataFrame) -> pd.DataFrame:
