@@ -59,6 +59,9 @@ def _inject_styles() -> None:
             gap: 10px;
             margin-top: 12px;
         }
+        .overview-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
         .stat-chip {
             border: 1px solid rgba(151, 166, 195, 0.35);
             border-radius: 10px;
@@ -145,6 +148,31 @@ def _inject_styles() -> None:
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+        .achievement-inline-list {
+            display: grid;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .achievement-inline-item {
+            border: 1px solid rgba(151, 166, 195, 0.28);
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: rgba(18, 25, 40, 0.72);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .achievement-inline-item img {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+        .achievement-inline-name {
+            color: #f5f7fb;
+            font-weight: 700;
         }
         .quick-row {
             display: grid;
@@ -692,7 +720,10 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
 
     metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
     rank_scope = []
-    for player_name, rows in player_df.groupby("player"):
+    team_scope = player_df[
+        player_df["player"].astype(str).str.contains("ⓜ", regex=False, na=False)
+    ]
+    for player_name, rows in team_scope.groupby("player"):
         p_metrics = _calc_player_card_metrics(rows, tactics_df[tactics_df["match_id"].isin(rows["match_id"].unique())])
         rank_scope.append({"player": player_name, "score": p_metrics["grevscore"]})
     rank_df = pd.DataFrame(rank_scope).sort_values("score", ascending=False).reset_index(drop=True)
@@ -752,19 +783,42 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     ].copy()
     if not player_ach.empty:
         player_ach = player_ach.sort_values(["season_name", "position"], ascending=[False, True])
-    featured_achievement = player_ach.iloc[0] if not player_ach.empty else None
-    featured_achievement_image = None
-    if featured_achievement is not None:
-        featured_achievement_image = _find_achievement_image(
-            image_index,
-            featured_achievement.get("achievement_link"),
-            featured_achievement.get("achievement_name"),
+    if not player_ach.empty:
+        player_ach["achievement_image"] = player_ach.apply(
+            lambda row: _find_achievement_image(
+                image_index,
+                row.get("achievement_link"),
+                row.get("achievement_name"),
+            ),
+            axis=1,
         )
     team_logo_html = ""
     if team_logo:
         team_logo_html = (
             f'<img style="width:42px;border-radius:8px;vertical-align:middle;margin-right:8px;" src="data:image/png;base64,{base64.b64encode(team_logo.read_bytes()).decode("utf-8")}">'
         )
+    achievement_inline_html = "<div class='panel-muted'>No achievements found.</div>"
+    if not player_ach.empty:
+        achievement_rows = []
+        for _, ach_row in player_ach.iterrows():
+            ach_tier = str(ach_row.get("achievement_tier", "-"))
+            ach_tier_class = _achievement_tier_class(ach_tier)
+            ach_image = ach_row.get("achievement_image")
+            ach_image_html = (
+                f"<img src='data:image/png;base64,{base64.b64encode(ach_image.read_bytes()).decode('utf-8')}'>"
+                if ach_image
+                else ""
+            )
+            achievement_rows.append(
+                "<div class='achievement-inline-item'>"
+                f"{ach_image_html}"
+                f"<span class='achievement-inline-name'>{ach_row.get('achievement_name', '-')}</span>"
+                f"<span class='achievement-tier {ach_tier_class}'>Tier {ach_tier}</span>"
+                f"<span class='panel-muted'>({ach_row.get('season_name', '-')})</span>"
+                "</div>"
+            )
+        achievement_inline_html = f"<div class='achievement-inline-list'>{''.join(achievement_rows)}</div>"
+
     st.markdown(
         f"""
         <div class="panel-card">
@@ -795,11 +849,8 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                             <div class="identity-kv-value">#{team_rank}/{rank_total}</div>
                         </div>
                     </div>
-                    <div class="team-line" style="margin-top:8px;">
-                        {("<img style='width:36px;border-radius:6px;' src='data:image/png;base64," + base64.b64encode(featured_achievement_image.read_bytes()).decode("utf-8") + "'>") if featured_achievement_image else ""}
-                        <span>{featured_achievement.get("achievement_name", "No highlighted achievement") if featured_achievement is not None else "No highlighted achievement"}</span>
-                        <span class="panel-muted">Season: {featured_achievement.get("season_name", "-") if featured_achievement is not None else "-"}</span>
-                    </div>
+                    <div class="section-label">Achievements</div>
+                    {achievement_inline_html}
                 </div>
                 <div class="hero-grevscore">
                     <div class="hero-grevscore-label">Grevscore</div>
@@ -825,7 +876,7 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
                 </div>
                 <div class="overview-side">
                     <div class="section-label">Overview</div>
-                    <div class="stats-grid">
+                    <div class="stats-grid overview-grid">
                         {"".join(stat_chips_overview)}
                     </div>
                 </div>
@@ -942,14 +993,6 @@ def _hltv_profile_view(player_df: pd.DataFrame, tactics_df: pd.DataFrame, achiev
     if player_ach.empty:
         st.info("No achievements found for this player.")
     else:
-        player_ach["achievement_image"] = player_ach.apply(
-            lambda row: _find_achievement_image(
-                image_index,
-                row.get("achievement_link"),
-                row.get("achievement_name"),
-            ),
-            axis=1,
-        )
         ach_cols = st.columns(3)
         for i, (_, ach_row) in enumerate(player_ach.iterrows()):
             with ach_cols[i % 3]:
