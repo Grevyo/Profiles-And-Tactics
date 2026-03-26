@@ -1631,14 +1631,25 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame)
         axis=1,
     )
 
+    summary_keys = tactic_perf.apply(lambda r: f'{r["map"]} | {r["side"]} | {r["tactic_name"]}', axis=1)
+    summary_key_df = tactic_perf.assign(summary_key=summary_keys)
+
+    ten_day_cutoff = pd.Timestamp.utcnow().tz_localize(None) - pd.Timedelta(days=10)
+    recent_usage_keys = (
+        df.loc[df["date"] >= ten_day_cutoff, ["tactic_name", "map", "side"]]
+        .drop_duplicates()
+        .merge(summary_key_df[["tactic_name", "map", "side", "summary_key"]], on=["tactic_name", "map", "side"], how="inner")
+    )
+    summary_options = recent_usage_keys["summary_key"].drop_duplicates().tolist()
+    if not summary_options:
+        summary_options = summary_key_df["summary_key"].tolist()
+
     selected_key = st.selectbox(
         "Selected tactic summary",
-        tactic_perf.apply(lambda r: f'{r["map"]} | {r["side"]} | {r["tactic_name"]}', axis=1).tolist(),
+        summary_options,
         key="selected_tactic_summary",
     )
-    selected_row = tactic_perf[
-        tactic_perf.apply(lambda r: f'{r["map"]} | {r["side"]} | {r["tactic_name"]}', axis=1) == selected_key
-    ].iloc[0]
+    selected_row = summary_key_df[summary_key_df["summary_key"] == selected_key].iloc[0]
     st.markdown(
         f"""
         <div class="panel-card">
