@@ -2731,7 +2731,7 @@ def _medisports_vs_breakdown(
             round_diff_per_match=lambda d: (d["round_diff"] / d["matches"].clip(lower=1)).round(2),
             record=lambda d: d["wins"].astype(str) + "-" + d["losses"].astype(str) + "-" + d["draws"].astype(str),
         )
-        .sort_values(["round_diff", "win_rate_pct"], ascending=[False, False])
+        .sort_values(["win_rate_pct", "round_diff", "matches", "opponent_team"], ascending=[False, False, False, True])
     )
 
     vs_summary["confidence"] = pd.cut(
