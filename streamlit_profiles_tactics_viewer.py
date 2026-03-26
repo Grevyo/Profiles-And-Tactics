@@ -760,6 +760,15 @@ def _expand_tactics_by_round_type(df: pd.DataFrame) -> pd.DataFrame:
     round_types: list[list[str]] = []
 
     bracket_pattern = re.compile(r"[\(\[\{<]([^)\]}>]+)[\)\]\}>]")
+    leading_tag_pattern = re.compile(r"^\s*[\(\[\{<][^)\]}>]+[\)\]\}>]\s*")
+
+    def _strip_leading_tags(value: str) -> str:
+        stripped = value.lstrip()
+        while True:
+            updated = leading_tag_pattern.sub("", stripped, count=1)
+            if updated == stripped:
+                return stripped
+            stripped = updated
 
     for tactic_name in tactic_names:
         tags: list[str] = []
@@ -767,6 +776,7 @@ def _expand_tactics_by_round_type(df: pd.DataFrame) -> pd.DataFrame:
 
         bracket_matches = bracket_pattern.findall(upper_name)
         bracket_tokens = "".join(bracket_matches)
+        prefix_name = _strip_leading_tags(upper_name)
 
         if "P" in bracket_tokens:
             # Pistol tactics are also available as eco + standard callups.
@@ -776,12 +786,11 @@ def _expand_tactics_by_round_type(df: pd.DataFrame) -> pd.DataFrame:
         elif "S" in bracket_tokens:
             tags.append("Standard")
         else:
-            stripped_name = upper_name.lstrip()
-            if stripped_name.startswith("P"):
+            if prefix_name.startswith("P"):
                 tags.extend(["Pistol", "Eco", "Standard"])
-            elif stripped_name.startswith("E"):
+            elif prefix_name.startswith("E"):
                 tags.append("Eco")
-            elif stripped_name.startswith("S"):
+            elif prefix_name.startswith("S"):
                 tags.append("Standard")
             else:
                 tags.append("Unspecified")
