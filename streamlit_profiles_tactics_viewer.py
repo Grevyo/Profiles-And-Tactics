@@ -2039,14 +2039,25 @@ def _competition_logo_uri(image_index: dict[str, dict[str, Path]], competition: 
     return _image_to_data_uri(chosen_logo)
 
 
-def _parse_placement_to_int(value: object) -> int | None:
+def normalize_position_label(value: object) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    return str(value).strip().casefold()
+
+
+def extract_position_number(value: object) -> int | None:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return None
-    text = str(value).strip().lower()
+    text = str(value).strip().casefold()
     if not text:
         return None
-    match = re.search(r"(\d+)", text)
+    match = re.search(r"\b(\d+)(?:st|nd|rd|th)?\b", text)
     return int(match.group(1)) if match else None
+
+
+def _parse_placement_to_int(value: object) -> int | None:
+    # Backward-compatible alias for older call sites.
+    return extract_position_number(value)
 
 
 ACHIEVEMENT_REQUIRED_COLUMNS = ["player", "achievement_name", "achievement_link", "achievement_tier", "season_name", "position"]
@@ -2106,8 +2117,25 @@ def load_achievements_data(achievements_csv: Path) -> pd.DataFrame:
     achievements["season_label_norm"] = achievements["season_name"].apply(normalize_season_label)
     achievements["season_num"] = achievements["season_name"].apply(extract_season_number)
     achievements["season_num"] = achievements["season_num"].astype("Int64")
-    achievements["position_num"] = achievements["position"].apply(_parse_placement_to_int)
-    return achievements
+    achievements["position_label_norm"] = achievements["position"].apply(normalize_position_label)
+    achievements["position_num"] = achievements["position"].apply(extract_position_number).astype("Int64")
+    required_output_columns = [
+        "player",
+        "achievement_name",
+        "achievement_link",
+        "achievement_tier",
+        "season_name",
+        "position",
+        "player_core",
+        "season_label_norm",
+        "season_num",
+        "position_label_norm",
+        "position_num",
+    ]
+    for col in required_output_columns:
+        if col not in achievements.columns:
+            achievements[col] = pd.NA
+    return achievements[required_output_columns].copy()
 
 
 def extract_core_player_name(name: str) -> str:
@@ -2811,12 +2839,18 @@ def build_player_achievements(
         "player_core": "",
         "season_label_norm": "",
         "season_num": pd.NA,
+        "position_label_norm": "",
+        "position_num": pd.NA,
     }
     for col, default in required_defaults.items():
         if col not in achievements_df.columns:
             achievements_df[col] = default
     if "season_num" in achievements_df.columns:
         achievements_df["season_num"] = pd.to_numeric(achievements_df["season_num"], errors="coerce").astype("Int64")
+    if "position_num" in achievements_df.columns:
+        achievements_df["position_num"] = pd.to_numeric(achievements_df["position_num"], errors="coerce").astype("Int64")
+    if "position_label_norm" in achievements_df.columns:
+        achievements_df["position_label_norm"] = achievements_df["position_label_norm"].apply(normalize_position_label)
 
     selected_player_core = extract_core_player_name(selected_player)
     matched = achievements_df[achievements_df["player_core"] == selected_player_core].copy()
