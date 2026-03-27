@@ -2667,6 +2667,14 @@ def _hltv_profile_view(
         active_page="profiles",
         subtitle="Medicart analytics, player profiles, tactics, and event breakdowns.",
     )
+    st.markdown("### Current Profile Viewer (Legacy)")
+    st.caption("Use this stable legacy view for now, or open the rebuilt page below.")
+    st.page_link(
+        "pages/99_Profile_Viewer_V2.py",
+        label="Open Profile Viewer V2 (Rebuilt)",
+        icon="🆕",
+    )
+    st.divider()
 
     players = sorted(
         player_df[
