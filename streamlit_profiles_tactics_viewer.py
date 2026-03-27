@@ -1910,6 +1910,87 @@ def _inject_styles() -> None:
             grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
             gap: 14px;
         }
+        .analysis-module {
+            border: 1px solid rgba(147, 173, 220, 0.3);
+            border-radius: 17px;
+            padding: 12px;
+            background:
+                radial-gradient(circle at 16% 0%, rgba(78, 146, 255, 0.12), transparent 42%),
+                linear-gradient(170deg, rgba(15, 23, 38, 0.94), rgba(8, 13, 23, 0.97));
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.32);
+            max-width: var(--dashboard-max-width);
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .analysis-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .analysis-head h4 {
+            margin: 0;
+            color: #ecf3ff;
+            font-size: 0.98rem;
+            letter-spacing: 0.02em;
+        }
+        .analysis-head p {
+            margin: 2px 0 0;
+            color: #a5b7d8;
+            font-size: 0.72rem;
+            line-height: 1.3;
+        }
+        .analysis-chip {
+            border-radius: 999px;
+            border: 1px solid rgba(146, 170, 220, 0.46);
+            background: rgba(17, 27, 44, 0.8);
+            color: #d8e8ff;
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 760;
+            padding: 5px 10px;
+            white-space: nowrap;
+        }
+        .premium-card-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .premium-stat-card {
+            border: 1px solid rgba(147, 173, 220, 0.28);
+            border-radius: 13px;
+            min-height: 114px;
+            background: linear-gradient(180deg, rgba(19, 28, 46, 0.84), rgba(10, 16, 28, 0.9));
+            padding: 10px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            gap: 4px;
+        }
+        .premium-stat-card .k {
+            color: #9db2d8;
+            font-size: 0.63rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 760;
+        }
+        .premium-stat-card .v {
+            color: #f5f9ff;
+            font-size: 1.24rem;
+            font-weight: 880;
+            line-height: 1.04;
+        }
+        .premium-stat-card .s {
+            color: #c9d7f2;
+            font-size: 0.7rem;
+            font-weight: 650;
+        }
+        .premium-stat-card.form { border-color: rgba(90, 231, 174, 0.42); }
+        .premium-stat-card.impact { border-color: rgba(246, 195, 109, 0.42); }
+        .premium-stat-card.delta-positive .v { color: #90f1c0; }
+        .premium-stat-card.delta-negative .v { color: #ffb1ad; }
         .pv-form-summary {
             display: grid;
             gap: 8px;
@@ -1918,10 +1999,32 @@ def _inject_styles() -> None:
             padding: 10px;
             background: linear-gradient(180deg, rgba(12, 18, 29, 0.84), rgba(9, 14, 24, 0.9));
         }
-        .pv-form-track { display:grid; gap:4px; }
+        .pv-form-track { display:grid; gap:5px; }
         .pv-form-track .label { color:#9eb2d8; font-size:0.63rem; letter-spacing:0.08em; text-transform:uppercase; }
-        .pv-form-track .bar { height:7px; border-radius:999px; background:rgba(141,162,200,0.2); overflow:hidden; }
+        .pv-form-track .bar { height:8px; border-radius:999px; background:rgba(141,162,200,0.2); overflow:hidden; }
         .pv-form-track .bar > span { height:100%; display:block; background: linear-gradient(90deg, #ff7f8e 0%, #f2c25f 52%, #52ddab 100%); }
+        .analysis-note {
+            margin-top: 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(141, 163, 201, 0.28);
+            background: rgba(12, 18, 30, 0.7);
+            padding: 8px 10px;
+            color: #d7e5ff;
+            font-size: 0.76rem;
+            text-align: center;
+        }
+        .sparkline-strip {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(14, minmax(0, 1fr));
+            gap: 5px;
+        }
+        .sparkline-strip span {
+            display: block;
+            border-radius: 999px;
+            height: 8px;
+            background: rgba(152, 173, 210, 0.25);
+        }
         .section-block-title {
             margin: 10px auto 6px;
             color:#e9f1ff;
@@ -3052,25 +3155,168 @@ def _match_record_from_tactics(filtered_tactics: pd.DataFrame) -> dict[str, floa
     return {"matches": float(len(per_match)), "wins": wins, "losses": losses, "draws": draws}
 
 
-def _impact_score_from_totals(
+def _clamp(value: float, lower: float, upper: float) -> float:
+    return float(max(lower, min(value, upper)))
+
+
+def _safe_ratio(value: float, baseline: float, *, min_baseline: float = 1e-6) -> float:
+    if baseline is None or pd.isna(baseline):
+        baseline = min_baseline
+    return float(value / max(float(baseline), min_baseline))
+
+
+def _ratio_to_index(ratio: float, *, center: float = 50.0, swing: float = 40.0, cap_low: float = 0.7, cap_high: float = 1.3) -> float:
+    bounded = _clamp(ratio, cap_low, cap_high)
+    normalized = (bounded - 1.0) / (cap_high - 1.0)
+    return _clamp(center + normalized * swing, 0.0, 100.0)
+
+
+def _build_metric_baseline(pool_rows: pd.DataFrame) -> dict[str, float]:
+    if pool_rows.empty:
+        return {
+            "kd": 1.0,
+            "kpr": 0.65,
+            "dpr": 135.0,
+            "acc": 55.0,
+            "hs": 32.0,
+            "mvp_per_match": 0.7,
+            "death_rate": 0.65,
+            "consistency": 0.65,
+            "kpd": 1.0,
+            "kills_per_match": 18.0,
+            "impact": 50.0,
+            "form": 58.0,
+            "grevscore": 1.0,
+        }
+
+    rounds = pool_rows["rounds_played"].replace(0, pd.NA)
+    death_rate = float((pool_rows["deaths"] / rounds).dropna().mean()) if "deaths" in pool_rows.columns else 0.65
+    mvp_by_match = (
+        pool_rows.groupby("match_id", as_index=False)["mvps"].sum()["mvps"].mean()
+        if {"match_id", "mvps"}.issubset(pool_rows.columns)
+        else 0.7
+    )
+    consistency = 0.65
+    if "kpd" in pool_rows.columns and len(pool_rows) > 1:
+        consistency = _clamp(1.0 - (float(pool_rows["kpd"].std(ddof=0)) / 1.2), 0.15, 1.0)
+    match_count = max(pool_rows["match_id"].nunique(), 1) if "match_id" in pool_rows.columns else 1
+    return {
+        "kd": float((pool_rows["kills"].sum() / max(pool_rows["deaths"].sum(), 1.0))) if {"kills", "deaths"}.issubset(pool_rows.columns) else 1.0,
+        "kpr": float((pool_rows["kills"].sum() / max(pool_rows["rounds_played"].sum(), 1.0))) if {"kills", "rounds_played"}.issubset(pool_rows.columns) else 0.65,
+        "dpr": float((pool_rows["damage"].sum() / max(pool_rows["rounds_played"].sum(), 1.0))) if {"damage", "rounds_played"}.issubset(pool_rows.columns) else 135.0,
+        "acc": float(pool_rows["accuracy_pct"].mean()) if "accuracy_pct" in pool_rows.columns else 55.0,
+        "hs": float(pool_rows["hs_pct"].mean()) if "hs_pct" in pool_rows.columns else 32.0,
+        "mvp_per_match": float(mvp_by_match),
+        "death_rate": float(death_rate) if death_rate == death_rate else 0.65,
+        "consistency": float(consistency),
+        "kpd": float(pool_rows["kpd"].mean()) if "kpd" in pool_rows.columns else 1.0,
+        "kills_per_match": float(pool_rows["kills"].sum() / max(match_count, 1)) if "kills" in pool_rows.columns else 18.0,
+        "impact": 50.0,
+        "form": 58.0,
+        "grevscore": 1.0,
+    }
+
+
+def compute_impact_components(player_stats: dict[str, float], baseline: dict[str, float]) -> dict[str, float]:
+    kill_pressure_ratio = _safe_ratio(player_stats["kpr"], baseline["kpr"])
+    damage_pressure_ratio = _safe_ratio(player_stats["dpr"], baseline["dpr"])
+    efficiency_ratio = _safe_ratio(player_stats["kd"], baseline["kd"])
+    mvp_ratio = _safe_ratio(player_stats["mvp_per_match"], baseline["mvp_per_match"])
+    survival_ratio = _safe_ratio(baseline["death_rate"], player_stats["death_rate"])
+
+    return {
+        "kill_pressure": _ratio_to_index(kill_pressure_ratio, swing=38.0, cap_low=0.68, cap_high=1.32),
+        "damage_pressure": _ratio_to_index(damage_pressure_ratio, swing=36.0, cap_low=0.7, cap_high=1.3),
+        "efficiency": _ratio_to_index(efficiency_ratio, swing=35.0, cap_low=0.7, cap_high=1.3),
+        "mvp_conversion": _ratio_to_index(mvp_ratio, swing=28.0, cap_low=0.65, cap_high=1.35),
+        "survival": _ratio_to_index(survival_ratio, swing=24.0, cap_low=0.72, cap_high=1.28),
+    }
+
+
+def compute_impact_value(components: dict[str, float], *, matches: int) -> float:
+    base = (
+        (components["kill_pressure"] * 0.31)
+        + (components["damage_pressure"] * 0.28)
+        + (components["efficiency"] * 0.2)
+        + (components["mvp_conversion"] * 0.12)
+        + (components["survival"] * 0.09)
+    )
+    reliability = _clamp(matches / 12.0, 0.35, 1.0)
+    stabilized = (base * reliability) + (50.0 * (1.0 - reliability))
+    return _clamp(stabilized, 10.0, 95.0)
+
+
+def classify_impact_tier(impact: float) -> str:
+    if impact >= 85:
+        return "Elite"
+    if impact >= 70:
+        return "Strong"
+    if impact >= 50:
+        return "Average"
+    if impact >= 40:
+        return "Weak"
+    return "Low Influence"
+
+
+def compute_grevscore_components(
+    player_stats: dict[str, float],
+    baseline: dict[str, float],
     *,
-    kd: float,
-    kpr: float,
-    dpr: float,
-    mvp_per_match: float,
-    win_rate: float,
-) -> tuple[float, str]:
-    kd_score = min(max(((kd - 0.7) / 0.9) * 100.0, 0.0), 100.0)
-    kpr_score = min(max(((kpr - 0.45) / 0.5) * 100.0, 0.0), 100.0)
-    dpr_score = min(max(((dpr - 90.0) / 90.0) * 100.0, 0.0), 100.0)
-    mvp_score = min(max(((mvp_per_match - 0.2) / 1.0) * 100.0, 0.0), 100.0)
-    win_score = min(max(win_rate, 0.0), 100.0)
-    impact = (kd_score * 0.3) + (kpr_score * 0.25) + (dpr_score * 0.2) + (win_score * 0.15) + (mvp_score * 0.1)
-    explain = "Impact = 30% K/D, 25% KPR, 20% damage/round, 15% match win rate, 10% MVPs per match."
-    return float(min(max(impact, 0.0), 100.0)), explain
+    impact_value: float,
+    form_ratio: float = 1.0,
+) -> dict[str, float]:
+    fragging_ratio = _clamp((_safe_ratio(player_stats["kd"], baseline["kd"]) * 0.55) + (_safe_ratio(player_stats["kpr"], baseline["kpr"]) * 0.45), 0.7, 1.35)
+    damage_ratio = _clamp(_safe_ratio(player_stats["dpr"], baseline["dpr"]), 0.72, 1.33)
+    efficiency_ratio = _clamp((_safe_ratio(player_stats["acc"], baseline["acc"]) * 0.55) + (_safe_ratio(player_stats["hs"], baseline["hs"]) * 0.45), 0.78, 1.24)
+    influence_ratio = _clamp(impact_value / 50.0, 0.72, 1.35)
+    consistency_ratio = _clamp(_safe_ratio(player_stats["consistency"], baseline["consistency"]), 0.7, 1.25)
+    output_ratio = _clamp(_safe_ratio(player_stats["kills_per_match"], baseline["kills_per_match"]), 0.75, 1.25)
+    momentum_ratio = _clamp(form_ratio, 0.72, 1.26)
+    return {
+        "fragging": fragging_ratio,
+        "damage": damage_ratio,
+        "efficiency": efficiency_ratio,
+        "influence": influence_ratio,
+        "consistency": consistency_ratio,
+        "output": output_ratio,
+        "momentum": momentum_ratio,
+    }
 
 
-def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: pd.DataFrame) -> dict[str, float]:
+def compute_grevscore_value(components: dict[str, float], *, matches: int) -> float:
+    core_score = (
+        (components["fragging"] * 0.26)
+        + (components["damage"] * 0.18)
+        + (components["efficiency"] * 0.14)
+        + (components["influence"] * 0.2)
+        + (components["consistency"] * 0.12)
+        + (components["output"] * 0.1)
+    )
+    blended = (core_score * 0.76) + (components["momentum"] * 0.24)
+    reliability = _clamp(matches / 12.0, 0.35, 1.0)
+    stabilized = (blended * reliability) + (1.0 * (1.0 - reliability))
+    return _clamp(stabilized, 0.62, 1.62)
+
+
+def classify_grevscore_tier(score: float) -> str:
+    if score >= 1.34:
+        return "Elite"
+    if score >= 1.15:
+        return "Strong"
+    if score >= 0.95:
+        return "Average"
+    if score >= 0.82:
+        return "Poor"
+    return "Very Poor"
+
+
+def _calc_player_card_metrics(
+    filtered_players: pd.DataFrame,
+    filtered_tactics: pd.DataFrame,
+    *,
+    baseline_profile: dict[str, float] | None = None,
+    recent_form_score: float | None = None,
+) -> dict[str, float]:
     match_record = _match_record_from_tactics(filtered_tactics)
     matches = max(int(match_record["matches"]), 1)
     kills = float(filtered_players["kills"].sum())
@@ -3097,39 +3343,37 @@ def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: 
         kpd_std = float(filtered_players["kpd"].std(ddof=0))
         kpd_consistency = max(0.0, min(1.0, 1.0 - (kpd_std / 1.25)))
 
-    impact, impact_formula = _impact_score_from_totals(
-        kd=kd,
-        kpr=kpr,
-        dpr=dpr,
-        mvp_per_match=mvp_per_match,
-        win_rate=win_rate,
-    )
-
-    score_components = {
-        "kd": min(max((kd / 1.25) * 100.0, 0.0), 100.0),
-        "kda": min(max((kda / 2.0) * 100.0, 0.0), 100.0),
-        "kpr": min(max((kpr / 0.9) * 100.0, 0.0), 100.0),
-        "dpm": min(max((dpm / 3600.0) * 100.0, 0.0), 100.0),
-        "acc": min(max(acc, 0.0), 100.0),
-        "hs": min(max((hs / 55.0) * 100.0, 0.0), 100.0),
-        "win_rate": min(max(win_rate, 0.0), 100.0),
-        "impact": impact,
-        "consistency": min(max(kpd_consistency * 100.0, 0.0), 100.0),
-        "avg_kpd": min(max((avg_kpd / 1.5) * 100.0, 0.0), 100.0),
+    baseline = baseline_profile or _build_metric_baseline(filtered_players)
+    player_stats = {
+        "kd": kd,
+        "kpr": kpr,
+        "dpr": dpr,
+        "acc": acc,
+        "hs": hs,
+        "mvp_per_match": mvp_per_match,
+        "death_rate": (deaths / rounds) if rounds else 0.65,
+        "consistency": kpd_consistency,
+        "kills_per_match": (kills / matches) if matches else 0.0,
     }
-    grevscore = (
-        (score_components["kd"] * 0.14)
-        + (score_components["kda"] * 0.11)
-        + (score_components["kpr"] * 0.11)
-        + (score_components["dpm"] * 0.1)
-        + (score_components["acc"] * 0.08)
-        + (score_components["hs"] * 0.06)
-        + (score_components["win_rate"] * 0.15)
-        + (score_components["impact"] * 0.14)
-        + (score_components["consistency"] * 0.06)
-        + (score_components["avg_kpd"] * 0.05)
+    impact_components = compute_impact_components(player_stats, baseline)
+    impact = compute_impact_value(impact_components, matches=matches)
+    impact_tier = classify_impact_tier(impact)
+
+    form_reference = baseline.get("form", 58.0)
+    recent_form = recent_form_score if recent_form_score is not None else form_reference
+    form_ratio = _safe_ratio(recent_form, form_reference)
+    grev_components = compute_grevscore_components(player_stats, baseline, impact_value=impact, form_ratio=form_ratio)
+    grevscore = compute_grevscore_value(grev_components, matches=matches)
+    grevscore_raw = _clamp(grevscore * 100.0, 0.0, 100.0)
+
+    impact_formula = (
+        "Impact Index uses normalized kill pressure, damage pressure, efficiency, MVP conversion, "
+        "and death suppression with sample-size stabilization."
     )
-    grevscore_raw = min(max(grevscore, 0.0), 100.0)
+    grev_formula = (
+        "GrevScore blends fragging, damage, efficiency, influence, consistency, and output (76%) "
+        "with recent form momentum (24%), centered around 1.00."
+    )
     return {
         "matches": float(match_record["matches"]),
         "wins": float(match_record["wins"]),
@@ -3146,22 +3390,20 @@ def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: 
         "acc": acc,
         "kpr": kpr,
         "impact": impact,
+        "impact_tier": impact_tier,
+        "impact_components": impact_components,
         "impact_formula": impact_formula,
         "grevscore_raw": grevscore_raw,
-        "grevscore": grevscore_raw / 100.0,
+        "grevscore": grevscore,
+        "grevscore_tier": classify_grevscore_tier(grevscore),
+        "grevscore_components": grev_components,
+        "grevscore_formula": grev_formula,
+        "form_baseline": form_reference,
     }
 
 
 def _score_tier_label(score: float) -> str:
-    if score >= 1.45:
-        return "Elite"
-    if score >= 1.2:
-        return "Strong"
-    if score >= 1.0:
-        return "Average"
-    if score >= 0.85:
-        return "Poor"
-    return "Very Poor"
+    return classify_grevscore_tier(score)
 
 
 def _stat_visual(value: float, low: float, high: float, invert: bool = False) -> tuple[str, float]:
@@ -3274,55 +3516,120 @@ def build_player_achievements(
     return matched.drop(columns=["_tier_score", "_position_score"])
 
 
-def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame) -> tuple[float, pd.DataFrame]:
+def _form_scores_from_rows(player_rows: pd.DataFrame, tactics_df: pd.DataFrame) -> pd.DataFrame:
     if player_rows.empty:
-        return 0.0, pd.DataFrame()
+        return pd.DataFrame()
 
-    recent = player_rows.sort_values("date", ascending=False).head(10).copy()
-    match_ids = recent["match_id"].dropna().unique().tolist()
+    scoped = player_rows.copy()
+    match_ids = scoped["match_id"].dropna().unique().tolist()
     tactics_matches = tactics_df[tactics_df["match_id"].isin(match_ids)].copy()
     tactics_summary = (
         tactics_matches.groupby("match_id", as_index=False)[["wins", "losses"]].sum()
         if not tactics_matches.empty
         else pd.DataFrame(columns=["match_id", "wins", "losses"])
     )
-    recent = recent.merge(tactics_summary, on="match_id", how="left")
-    recent[["wins", "losses"]] = recent[["wins", "losses"]].fillna(0)
-    recent["kda"] = (recent["kills"] + recent["mvps"]) / recent["deaths"].replace(0, 1)
-    recent["round_diff"] = recent["wins"] - recent["losses"]
-    recent["close_game_bonus"] = (1.0 - (recent["round_diff"].abs() / 16.0)).clip(lower=0.0, upper=1.0)
-    recent["dominance_bonus"] = (recent["round_diff"].abs() / 16.0).clip(lower=0.0, upper=1.0)
-    recent["result_points"] = (recent["wins"] > recent["losses"]).astype(float) * 1.0
+    scoped = scoped.merge(tactics_summary, on="match_id", how="left")
+    scoped[["wins", "losses"]] = scoped[["wins", "losses"]].fillna(0)
+    scoped["kda"] = (scoped["kills"] + scoped["mvps"]) / scoped["deaths"].replace(0, 1)
+    scoped["result_points"] = (scoped["wins"] > scoped["losses"]).astype(float)
+    scoped["kpr"] = scoped["kills"] / scoped["rounds_played"].replace(0, 1)
+    scoped["dpr"] = scoped["damage"] / scoped["rounds_played"].replace(0, 1)
 
-    teammate_scope = player_rows[player_rows["match_id"].isin(match_ids)].copy()
-    teammate_top = (
-        teammate_scope.groupby("match_id")
-        .apply(
-            lambda g: (
-                (g["kills"] * 0.25)
-                + (g["kpd"] * 0.25)
-                + (((g["kills"] + g["mvps"]) / g["deaths"].replace(0, 1)) * 0.2)
-                + ((g["damage"] / g["rounds_played"].replace(0, 1)) * 0.2)
-                + (g["mvps"] * 0.1)
-            )
-            .idxmax()
+    scoped["match_form_score"] = (
+        (scoped["kpd"] / 1.2).clip(0.45, 1.35) * 32
+        + (scoped["kpr"] / 0.72).clip(0.45, 1.35) * 22
+        + (scoped["dpr"] / 145.0).clip(0.45, 1.35) * 20
+        + (scoped["accuracy_pct"] / 58.0).clip(0.45, 1.28) * 10
+        + (scoped["hs_pct"] / 35.0).clip(0.45, 1.28) * 6
+        + scoped["result_points"] * 10
+    ).clip(lower=15, upper=100)
+    return scoped
+
+
+def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame) -> tuple[float, pd.DataFrame]:
+    scored = _form_scores_from_rows(player_rows.sort_values("date", ascending=False).head(10), tactics_df)
+    form_score = float(scored["match_form_score"].mean()) if not scored.empty else 0.0
+    return form_score, scored
+
+
+def compute_recent_window_metrics(
+    player_rows: pd.DataFrame,
+    tactics_df: pd.DataFrame,
+    *,
+    long_term_grevscore: float,
+    long_term_form: float,
+    baseline_profile: dict[str, float],
+    min_matches: int = 4,
+) -> dict[str, object]:
+    if player_rows.empty:
+        return {
+            "window_rows": pd.DataFrame(),
+            "window_start": None,
+            "window_end": None,
+            "matches": 0,
+            "low_sample": True,
+            "grevscore_14d": None,
+            "form_14d": None,
+            "grev_delta": 0.0,
+            "form_delta": 0.0,
+            "trend": "Stable",
+            "sparkline": [],
+        }
+
+    window_end = pd.to_datetime(player_rows["date"].max())
+    window_start = window_end - pd.Timedelta(days=13)
+    window_rows = player_rows[player_rows["date"].between(window_start, window_end, inclusive="both")].copy()
+    matches = int(window_rows["match_id"].nunique()) if "match_id" in window_rows.columns else len(window_rows)
+    low_sample = matches < min_matches
+
+    scored_rows = _form_scores_from_rows(window_rows, tactics_df)
+    form_14d = float(scored_rows["match_form_score"].mean()) if not scored_rows.empty else None
+
+    if not low_sample and not window_rows.empty:
+        recent_metrics = _calc_player_card_metrics(
+            window_rows,
+            tactics_df[tactics_df["match_id"].isin(window_rows["match_id"].unique())],
+            baseline_profile=baseline_profile,
+            recent_form_score=form_14d,
         )
-        .to_dict()
-    )
-    recent["carried"] = recent.index.map(lambda idx: 1.0 if idx == teammate_top.get(recent.loc[idx, "match_id"]) else 0.0)
+        grev_14d = float(recent_metrics["grevscore"])
+    else:
+        grev_14d = None
 
-    recent["match_form_score"] = (
-        (recent["kpd"] / 1.5).clip(0, 1.2) * 30
-        + (recent["kda"] / 2.2).clip(0, 1.2) * 20
-        + (recent["accuracy_pct"] / 100).clip(0, 1.0) * 10
-        + (recent["hs_pct"] / 60).clip(0, 1.0) * 6
-        + recent["result_points"] * 14
-        + recent["close_game_bonus"] * 6
-        + recent["dominance_bonus"] * 4
-        + recent["carried"] * 10
-    ).clip(lower=0, upper=100)
-    form_score = float(recent["match_form_score"].mean()) if not recent.empty else 0.0
-    return form_score, recent
+    trend = "Stable"
+    if len(scored_rows) >= 6:
+        ordered = scored_rows.sort_values("date")
+        half = len(ordered) // 2
+        early = float(ordered["match_form_score"].head(half).mean())
+        late = float(ordered["match_form_score"].tail(half).mean())
+        delta = late - early
+        if delta > 2.5:
+            trend = "Rising"
+        elif delta < -2.5:
+            trend = "Dropping"
+
+    sparkline = scored_rows.sort_values("date")["match_form_score"].tail(14).round(1).tolist() if not scored_rows.empty else []
+    return {
+        "window_rows": scored_rows,
+        "window_start": window_start,
+        "window_end": window_end,
+        "matches": matches,
+        "low_sample": low_sample,
+        "grevscore_14d": grev_14d,
+        "form_14d": form_14d,
+        "grev_delta": (grev_14d - long_term_grevscore) if grev_14d is not None else 0.0,
+        "form_delta": (form_14d - long_term_form) if form_14d is not None else 0.0,
+        "trend": trend,
+        "sparkline": sparkline,
+    }
+
+
+def compute_14d_grevscore(recent_metrics: dict[str, object]) -> float | None:
+    return recent_metrics.get("grevscore_14d")  # type: ignore[return-value]
+
+
+def compute_14d_form(recent_metrics: dict[str, object]) -> float | None:
+    return recent_metrics.get("form_14d")  # type: ignore[return-value]
 
 
 def _metric_state(value: float, low: float, high: float) -> tuple[str, str]:
@@ -3588,7 +3895,15 @@ def _hltv_profile_view(
     team_logo = _find_image(image_index, "team", profile_data.get("team"))
     team_logo_html = f'<img style="width:30px;height:30px;border-radius:7px;object-fit:contain;border:1px solid rgba(151,166,195,0.25);" src="{_image_to_data_uri(team_logo)}">' if team_logo else ""
 
-    metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
+    context_pool = player_df[player_df["match_id"].isin(filtered_players["match_id"].unique())].copy()
+    baseline_profile = _build_metric_baseline(context_pool)
+    form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
+    metrics = _calc_player_card_metrics(
+        filtered_players,
+        filtered_tactics,
+        baseline_profile=baseline_profile,
+        recent_form_score=form_score,
+    )
     team_scope = player_df[player_df["player"].astype(str).str.contains("ⓜ", regex=False, na=False)]
     rank_scope = []
     for player_name, rows in team_scope.groupby("player"):
@@ -3628,7 +3943,6 @@ def _hltv_profile_view(
     )
     achievements_inline_html = render_player_achievements_inline(player_ach)
 
-    form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
     recent10 = recent_form.sort_values("date").tail(10).copy() if not recent_form.empty else pd.DataFrame()
     recent20 = filtered_players.sort_values("date", ascending=False).head(20).sort_values("date").copy()
     trend_direction = "Rising"
@@ -3648,6 +3962,15 @@ def _hltv_profile_view(
         first5 = float(recent10["kpd"].head(5).mean())
         last5 = float(recent10["kpd"].tail(5).mean())
         recent10_delta = last5 - first5
+    recent_window = compute_recent_window_metrics(
+        filtered_players,
+        filtered_tactics,
+        long_term_grevscore=metrics["grevscore"],
+        long_term_form=form_score,
+        baseline_profile=baseline_profile,
+    )
+    grev_14d = compute_14d_grevscore(recent_window)
+    form_14d = compute_14d_form(recent_window)
 
     profile_name = html.escape(profile_data.get("player", selected_player))
     fallback_initial = html.escape(profile_data.get("player", selected_player).strip()[:1].upper() or "P")
@@ -3772,6 +4095,32 @@ def _hltv_profile_view(
         f"<div class='core-grid'><div class='performance-grid'>{''.join(core_cards)}</div></div>",
         unsafe_allow_html=True,
     )
+    grev_component_rows = "".join(
+        f"<div class='premium-stat-card'><div class='k'>{html.escape(k.title())}</div><div class='v'>{v:.2f}</div><div class='s'>ratio vs pool</div></div>"
+        for k, v in metrics["grevscore_components"].items()
+    )
+    impact_component_rows = "".join(
+        f"<div class='premium-stat-card'><div class='k'>{html.escape(k.replace('_', ' ').title())}</div><div class='v'>{v:.1f}</div><div class='s'>index component</div></div>"
+        for k, v in metrics["impact_components"].items()
+    )
+    st.markdown(
+        f"""
+        <div class='analysis-module'>
+            <div class='analysis-head'>
+                <div>
+                    <h4>Metric Decomposition</h4>
+                    <p>Transparent breakdown for trust: GrevScore components and Impact pressure drivers.</p>
+                </div>
+                <div class='analysis-chip'>Custom Metric Model</div>
+            </div>
+            <div class='analysis-note'>{html.escape(metrics['grevscore_formula'])}</div>
+            <div class='premium-card-grid' style='margin-top:8px;'>{grev_component_rows}</div>
+            <div class='analysis-note' style='margin-top:10px;'>{html.escape(metrics['impact_formula'])}</div>
+            <div class='premium-card-grid' style='margin-top:8px;'>{impact_component_rows}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     trend_chart = None
     if not recent20.empty and go is not None:
@@ -3846,47 +4195,143 @@ def _hltv_profile_view(
         side_chart.update_yaxes(title_text="Avg K/D")
         _apply_plotly_dark_style(side_chart, height=290)
 
-    st.markdown("<div class='section-block-title'>Form</div>", unsafe_allow_html=True)
-    bar_5 = max(0.0, min((form_avg_5 - 0.75) / 0.55, 1.0)) * 100
-    bar_10 = max(0.0, min((form_avg_10 - 0.75) / 0.55, 1.0)) * 100
-    dir_pct = 100.0 if trend_direction == "Rising" else 28.0
-    form_stats_html = (
-        _build_stat_chip("Streak", f"{streak:+d}", float(streak), -1, 2)
-        + _build_stat_chip("Last 5 avg", f"{form_avg_5:.2f}", form_avg_5, 0.9, 1.15)
-        + _build_stat_chip("Last 10 avg", f"{form_avg_10:.2f}", form_avg_10, 0.9, 1.15)
-        + _build_stat_chip("Direction", f"{trend_icon} {trend_direction}", 1 if trend_direction == "Rising" else 0, 0.5, 1.0)
-    )
+    st.markdown("<div class='section-block-title'>Form Analysis</div>", unsafe_allow_html=True)
+    bar_5 = _clamp((form_avg_5 - 0.75) / 0.55, 0.0, 1.0) * 100
+    bar_10 = _clamp((form_avg_10 - 0.75) / 0.55, 0.0, 1.0) * 100
+    recent_trend = str(recent_window["trend"])
+    dir_pct = 100.0 if recent_trend == "Rising" else (52.0 if recent_trend == "Stable" else 24.0)
+    form_delta_text = "—" if form_14d is None else f"{(form_14d - form_score):+,.1f}"
+    grev_delta_text = "—" if grev_14d is None else f"{(grev_14d - metrics['grevscore']):+,.2f}"
+    sample_text = f"{recent_window['matches']} matches in 14D window"
+    if recent_window["low_sample"]:
+        insight_text = f"Low sample in recent window ({sample_text}). Trend is shown, but confidence is intentionally reduced."
+    elif recent_trend == "Rising":
+        insight_text = "Form unstable but improving — recent outputs are climbing after a softer start to the window."
+    elif recent_trend == "Dropping":
+        insight_text = "Recent dip after stronger early-window form — monitor efficiency and opening impact."
+    else:
+        insight_text = "Recent form is stable with no strong directional swing in the last 14 days."
+
+    spark_values = recent_window.get("sparkline", [])
+    spark_html = ""
+    if spark_values:
+        spark_bars = []
+        for val in spark_values:
+            width = _clamp((float(val) - 35.0) / 45.0, 0.0, 1.0) * 100
+            spark_bars.append(f"<span style='background:linear-gradient(90deg, rgba(255,127,142,0.26) 0%, rgba(82,221,171,0.86) {width:.1f}%, rgba(152,173,210,0.2) {width:.1f}%);'></span>")
+        spark_html = f"<div class='sparkline-strip'>{''.join(spark_bars)}</div>"
+
     st.markdown(
-        (
-            f"<div class='form-card'>"
-            f"<div class='stats-grid overview-grid'>{form_stats_html}</div>"
-            f"<div class='pv-form-summary'>"
-            f"<div class='pv-form-track'><div class='label'>Last 5 Momentum</div><div class='bar'><span style='width:{bar_5:.1f}%;'></span></div></div>"
-            f"<div class='pv-form-track'><div class='label'>Last 10 Momentum</div><div class='bar'><span style='width:{bar_10:.1f}%;'></span></div></div>"
-            f"<div class='pv-form-track'><div class='label'>Direction Bias</div><div class='bar'><span style='width:{dir_pct:.1f}%;'></span></div></div>"
-            f"</div>"
-            f"</div>"
-        ),
+        f"""
+        <div class='analysis-module form-card'>
+            <div class='analysis-head'>
+                <div>
+                    <h4>Recent Form Module</h4>
+                    <p>14-day window anchored to the latest available filtered match date.</p>
+                </div>
+                <div class='analysis-chip'>{sample_text}</div>
+            </div>
+            <div class='premium-card-grid'>
+                <div class='premium-stat-card form'>
+                    <div class='k'>Form (14D)</div>
+                    <div class='v'>{("—" if form_14d is None else f"{form_14d:.1f}")}</div>
+                    <div class='s'>Δ vs context {form_delta_text}</div>
+                </div>
+                <div class='premium-stat-card form'>
+                    <div class='k'>GrevScore (14D)</div>
+                    <div class='v'>{("—" if grev_14d is None else f"{grev_14d:.2f}")}</div>
+                    <div class='s'>Δ vs context {grev_delta_text}</div>
+                </div>
+                <div class='premium-stat-card form'>
+                    <div class='k'>Streak</div>
+                    <div class='v'>{streak:+d}</div>
+                    <div class='s'>{trend_icon} {recent_trend}</div>
+                </div>
+                <div class='premium-stat-card form'>
+                    <div class='k'>Last 5 / Last 10</div>
+                    <div class='v'>{form_avg_5:.2f} / {form_avg_10:.2f}</div>
+                    <div class='s'>Momentum profile</div>
+                </div>
+            </div>
+            <div class='pv-form-summary'>
+                <div class='pv-form-track'><div class='label'>Last 5 Momentum</div><div class='bar'><span style='width:{bar_5:.1f}%;'></span></div></div>
+                <div class='pv-form-track'><div class='label'>Last 10 Momentum</div><div class='bar'><span style='width:{bar_10:.1f}%;'></span></div></div>
+                <div class='pv-form-track'><div class='label'>Direction Bias</div><div class='bar'><span style='width:{dir_pct:.1f}%;'></span></div></div>
+            </div>
+            {spark_html}
+            <div class='analysis-note'>{html.escape(insight_text)}</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
     if trend_chart is not None:
         st.plotly_chart(trend_chart, use_container_width=True)
 
-    st.markdown("<div class='section-block-title'>Impact</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-block-title'>Impact Analysis</div>", unsafe_allow_html=True)
     team_impact = team_scope_metrics["impact"]
     impact_delta = metrics["impact"] - team_impact
-    impact_stats_html = (
-        _build_stat_chip("Impact", f"{metrics['impact']:.1f}", metrics["impact"], 62, 78)
-        + _build_stat_chip("Percentile", f"{percentile:.0f}th", percentile, 45, 75)
-        + _build_stat_chip("vs Team Avg", f"{impact_delta:+.1f}", impact_delta, -2.0, 3.0)
-        + _build_stat_chip("Recent trend", trend_direction, 1 if trend_direction == "Rising" else 0, 0.5, 1.0)
-    )
+    impact_14d = None
+    if not recent_window["low_sample"] and not recent_window["window_rows"].empty:
+        impact_14d_metrics = _calc_player_card_metrics(
+            recent_window["window_rows"],
+            filtered_tactics[filtered_tactics["match_id"].isin(recent_window["window_rows"]["match_id"].unique())],
+            baseline_profile=baseline_profile,
+            recent_form_score=form_14d,
+        )
+        impact_14d = float(impact_14d_metrics["impact"])
+    impact_14d_delta = 0.0 if impact_14d is None else impact_14d - metrics["impact"]
+    if metrics["impact_components"]["damage_pressure"] >= metrics["impact_components"]["mvp_conversion"] + 8:
+        impact_profile_note = "High damage pressure with lower conversion — strong chip pressure but fewer closing rounds."
+    elif metrics["impact_components"]["survival"] >= 56 and metrics["impact_components"]["kill_pressure"] < 52:
+        impact_profile_note = "Efficient low-death support impact — stable survivability with moderate frag load."
+    elif metrics["impact_components"]["kill_pressure"] >= 60:
+        impact_profile_note = "Frag-driven impact profile with above-average direct pressure."
+    else:
+        impact_profile_note = "Low influence period — pressure indicators are currently below the context average."
     st.markdown(
-        f"<div class='impact-card'><div class='stats-grid overview-grid'>{impact_stats_html}</div><div class='panel-muted' style='margin-top:8px;'>{html.escape(metrics['impact_formula'])}</div></div>",
+        f"""
+        <div class='analysis-module impact-card'>
+            <div class='analysis-head'>
+                <div>
+                    <h4>Impact Pressure Model</h4>
+                    <p>Scaled 0–100 where ~50 is average, 70+ strong, 85+ elite.</p>
+                </div>
+                <div class='analysis-chip'>{html.escape(metrics['impact_tier'])}</div>
+            </div>
+            <div class='premium-card-grid'>
+                <div class='premium-stat-card impact'>
+                    <div class='k'>Impact</div>
+                    <div class='v'>{metrics['impact']:.1f}</div>
+                    <div class='s'>{percentile:.0f}th percentile</div>
+                </div>
+                <div class='premium-stat-card impact {("delta-positive" if impact_delta >= 0 else "delta-negative")}'>
+                    <div class='k'>vs Team Avg</div>
+                    <div class='v'>{impact_delta:+.1f}</div>
+                    <div class='s'>Relative influence</div>
+                </div>
+                <div class='premium-stat-card impact {("delta-positive" if impact_14d_delta >= 0 else "delta-negative")}'>
+                    <div class='k'>Impact (14D)</div>
+                    <div class='v'>{("—" if impact_14d is None else f"{impact_14d:.1f}")}</div>
+                    <div class='s'>Δ vs context {("—" if impact_14d is None else f"{impact_14d_delta:+.1f}")}</div>
+                </div>
+                <div class='premium-stat-card impact'>
+                    <div class='k'>Recent Trend</div>
+                    <div class='v'>{trend_icon} {recent_trend}</div>
+                    <div class='s'>14-day movement</div>
+                </div>
+            </div>
+            <div class='analysis-note'>{html.escape(impact_profile_note)}</div>
+            <div class='analysis-note' style='margin-top:6px;'>{html.escape(metrics['impact_formula'])}</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
     st.markdown("<div class='section-block-title'>Visual Analytics</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='analysis-module chart-panel'><div class='analysis-head'><div><h4>Visual Analytics Panels</h4><p>Map performance, team comparison, side split and impact decomposition.</p></div><div class='analysis-chip'>Premium View</div></div></div>",
+        unsafe_allow_html=True,
+    )
     chart_entries = [(map_chart, "No map data available."), (comparison_chart, "Comparison chart unavailable."), (side_chart, "No side split data available."), (impact_chart, "No impact-by-map data available.")]
     cols = st.columns(2)
     for idx, (chart_obj, empty_msg) in enumerate(chart_entries):
