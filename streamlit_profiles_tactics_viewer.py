@@ -900,16 +900,16 @@ def _inject_styles() -> None:
         }
 
         .stApp [data-testid="stMainBlockContainer"] {
-            max-width: 1460px;
-            padding-top: 1.15rem;
-            padding-bottom: 1.6rem;
+            max-width: 1320px;
+            padding-top: 0.95rem;
+            padding-bottom: 1.35rem;
         }
         .profile-hero-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 0.9fr);
-            gap: 10px;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.8fr);
+            gap: 8px;
             align-items: stretch;
-            max-width: 1360px;
+            max-width: 1320px;
             margin: 0 auto;
         }
         .hero-identity-card,
@@ -922,26 +922,26 @@ def _inject_styles() -> None:
             border: 1px solid rgba(151, 166, 195, 0.24);
             border-radius: 16px;
             background: linear-gradient(180deg, rgba(13, 20, 32, 0.92), rgba(8, 12, 20, 0.94));
-            padding: 11px;
+            padding: 10px;
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
         }
         .panel-card {
-            max-width: 1360px;
+            max-width: 1320px;
             margin-left: auto;
             margin-right: auto;
-            padding: 14px;
-            margin-bottom: 12px;
+            padding: 11px;
+            margin-bottom: 10px;
         }
         .identity-header {
             display: grid;
-            grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
-            gap: 12px;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 0.96fr);
+            gap: 10px;
             height: 100%;
         }
         .identity-left {
             display: grid;
-            grid-template-columns: 164px minmax(0, 1fr);
-            gap: 12px;
+            grid-template-columns: 146px minmax(0, 1fr);
+            gap: 10px;
         }
         .portrait-shell {
             border: 1px solid rgba(122, 164, 240, 0.62);
@@ -949,7 +949,7 @@ def _inject_styles() -> None:
             background:
                 radial-gradient(circle at 50% 0%, rgba(95, 173, 255, 0.35), transparent 58%),
                 linear-gradient(180deg, rgba(30, 47, 78, 0.72), rgba(11, 17, 28, 0.92));
-            min-height: 218px;
+            min-height: 204px;
             overflow: hidden;
             display: grid;
             place-items: center;
@@ -958,7 +958,7 @@ def _inject_styles() -> None:
         .portrait-shell img.player-headshot {
             width: 100%;
             height: 100%;
-            min-height: 220px;
+            min-height: 206px;
             object-fit: cover;
             object-position: center top;
         }
@@ -989,10 +989,10 @@ def _inject_styles() -> None:
             border: 1px solid rgba(151, 166, 195, 0.2);
             border-radius: 12px;
             background: rgba(11, 17, 28, 0.66);
-            padding: 10px;
+            padding: 9px;
             display: grid;
             grid-template-rows: auto 1fr auto;
-            gap: 8px;
+            gap: 7px;
         }
         .identity-right .section-label {
             margin: 0;
@@ -1001,15 +1001,15 @@ def _inject_styles() -> None:
         .quick-profile-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 8px;
-            margin-top: 10px;
+            gap: 7px;
+            margin-top: 8px;
         }
         .quick-profile-tile {
             border: 1px solid rgba(151, 166, 195, 0.24);
             border-radius: 10px;
             background: rgba(9, 14, 24, 0.78);
-            padding: 7px 8px;
-            min-height: 54px;
+            padding: 6px 8px;
+            min-height: 50px;
         }
         .quick-profile-tile .label {
             color: #8fa0c2;
@@ -1024,24 +1024,24 @@ def _inject_styles() -> None:
             margin-top: 3px;
             line-height: 1.18;
         }
-        .headline-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+        .headline-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
         .headline-card {
             border: 1px solid rgba(151, 166, 195, 0.22);
             border-radius: 12px;
-            padding: 10px 11px;
+            padding: 8px 9px;
             background: rgba(11, 17, 28, 0.78);
-            min-height: 90px;
+            min-height: 82px;
             display: grid;
             align-content: center;
         }
         .headline-label { color: #97a7c7; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
-        .headline-value { color: #f5f8ff; font-size: 1.52rem; font-weight: 900; margin-top: 4px; line-height: 1.05; }
+        .headline-value { color: #f5f8ff; font-size: 1.68rem; font-weight: 900; margin-top: 2px; line-height: 1.03; }
         .headline-sub { color: #c8d5f0; font-size: 0.7rem; margin-top: 2px; }
         .achievement-row {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             flex-wrap: wrap;
-            margin-top: 6px;
+            margin-top: 4px;
             align-items: flex-start;
         }
         .achievement-premium {
@@ -1092,8 +1092,8 @@ def _inject_styles() -> None:
         .glow-b { box-shadow: 0 0 14px rgba(94, 169, 255, 0.24); }
         .glow-c { box-shadow: 0 0 13px rgba(78, 208, 131, 0.2); }
         .core-grid {
-            margin-top: 7px;
-            max-width: 1360px;
+            margin-top: 6px;
+            max-width: 1320px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -1110,87 +1110,99 @@ def _inject_styles() -> None:
         .hero-score-card {
             display: grid;
             align-content: start;
-            gap: 8px;
+            gap: 7px;
         }
         .hero-score-heading {
             color: #b8caf0;
-            font-size: 0.76rem;
-            letter-spacing: 0.14em;
+            font-size: 0.72rem;
+            letter-spacing: 0.16em;
             text-transform: uppercase;
             font-weight: 700;
+            text-align: center;
         }
         .hero-score-main {
-            text-align: center;
-            border: 1px solid rgba(120, 160, 238, 0.28);
+            border: 1px solid rgba(120, 160, 238, 0.34);
             border-radius: 14px;
-            padding: 10px 10px 6px;
-            background: radial-gradient(circle at 50% 10%, rgba(66, 111, 203, 0.36), rgba(16, 25, 40, 0.9) 70%);
+            padding: 11px 10px 8px;
+            background: radial-gradient(circle at 50% 0%, rgba(78, 128, 229, 0.42), rgba(14, 22, 36, 0.95) 72%);
             box-shadow: inset 0 0 0 1px rgba(167, 198, 255, 0.08), 0 10px 24px rgba(6, 12, 24, 0.44);
+            text-align: center;
         }
         .hero-score-main .gauge-wrap {
-            height: 190px;
-            margin-top: 6px;
+            height: 230px;
+            margin-top: 8px;
             position: relative;
         }
         .hero-score-main .gauge-score {
-            font-size: clamp(2.25rem, 2.5vw, 2.85rem);
-            margin-bottom: 2px;
+            font-size: clamp(2.7rem, 3.2vw, 3.6rem);
+            margin-bottom: 3px;
             font-weight: 900;
+            line-height: 0.95;
         }
         .hero-score-main .gauge-arc {
-            top: 84px;
-            width: 226px;
-            height: 112px;
-            border-radius: 226px 226px 0 0;
+            top: 94px;
+            width: 272px;
+            height: 136px;
+            border-radius: 272px 272px 0 0;
             left: 50%;
             transform: translateX(-50%);
-            background: conic-gradient(from 180deg, #ff6f7d 0deg, #f0be4f 78deg, #56e29b 148deg, #45d6a2 180deg);
+            background: conic-gradient(from 180deg, #ff6677 0deg, #f0be4f 88deg, #58e2a0 156deg, #3dd595 180deg);
             clip-path: inset(0 0 50% 0);
-            opacity: 0.95;
+            opacity: 0.98;
         }
         .hero-score-main .gauge-arc::after {
             content: "";
             position: absolute;
-            inset: 14px 14px 0 14px;
+            inset: 20px 20px 0 20px;
             border-radius: inherit;
             background: rgba(8, 13, 22, 0.95);
             clip-path: inset(0 0 52% 0);
         }
         .hero-score-main .gauge-needle {
-            top: 96px;
-            height: 82px;
+            top: 110px;
+            height: 94px;
             width: 4px;
         }
         .hero-score-main .gauge-hub {
-            top: 178px;
-            width: 16px;
-            height: 16px;
+            top: 202px;
+            width: 18px;
+            height: 18px;
+        }
+        .hero-score-status {
+            margin-top: 2px;
+            display: grid;
+            justify-items: center;
+            gap: 2px;
         }
         .hero-status-pill {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            margin-top: 4px;
             border-radius: 999px;
-            border: 1px solid rgba(151, 166, 195, 0.4);
-            padding: 5px 10px;
-            background: rgba(13, 20, 33, 0.76);
+            border: 1px solid rgba(151, 166, 195, 0.46);
+            padding: 5px 11px;
+            background: rgba(13, 20, 33, 0.82);
             color: #eef3ff;
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+        .hero-score-percentile {
+            color: #a9bddf;
             font-size: 0.74rem;
-            font-weight: 700;
+            letter-spacing: 0.02em;
+            font-weight: 650;
         }
         .hero-score-micro {
-            margin-top: 2px;
+            margin-top: 0;
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 7px;
+            gap: 6px;
         }
         .hero-score-micro-item {
             border: 1px solid rgba(151, 166, 195, 0.22);
             border-radius: 10px;
             background: rgba(10, 16, 27, 0.7);
-            padding: 7px 8px;
+            padding: 6px 7px;
             text-align: center;
         }
         .hero-score-micro-item .label {
@@ -1207,55 +1219,55 @@ def _inject_styles() -> None:
         }
         .chart-section-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
         .section-block-title {
-            margin: 12px auto 6px;
+            margin: 10px auto 6px;
             color:#e9f1ff;
             font-size:1rem;
             font-weight:800;
             letter-spacing:0.02em;
-            max-width: 1360px;
+            max-width: 1320px;
         }
         .form-card, .impact-card, .support-table, .chart-panel {
-            max-width: 1360px;
+            max-width: 1320px;
             margin-left: auto;
             margin-right: auto;
         }
         .hero-shell {
-            max-width: 1360px;
+            max-width: 1320px;
             margin-left: auto;
             margin-right: auto;
-            padding: 24px 26px 20px;
-            border-radius: 20px;
+            padding: 18px 20px 14px;
+            border-radius: 16px;
         }
         .hero-row {
-            grid-template-columns: minmax(104px, 138px) minmax(0, 1fr) minmax(82px, 104px);
-            gap: 14px;
+            grid-template-columns: minmax(88px, 112px) minmax(0, 1fr) minmax(62px, 78px);
+            gap: 10px;
         }
         .hero-logo-badge {
-            min-height: 90px;
-            padding: 10px;
+            min-height: 76px;
+            padding: 8px;
         }
         .hero-title-block {
             min-width: 0;
         }
         .hero-title-block h1 {
-            font-size: clamp(1.85rem, 2.55vw, 2.5rem);
+            font-size: clamp(1.58rem, 2.2vw, 2.18rem);
             line-height: 1.05;
-            max-width: 18ch;
+            max-width: 16ch;
             text-wrap: balance;
             margin-right: 0;
         }
         .hero-subtitle {
-            font-size: clamp(0.88rem, 1.1vw, 1rem);
-            line-height: 1.35;
-            max-width: 62ch;
-            margin-top: 7px;
+            font-size: clamp(0.82rem, 0.98vw, 0.92rem);
+            line-height: 1.3;
+            max-width: 52ch;
+            margin-top: 5px;
         }
         .hero-pill-row {
-            margin-top: 10px;
-            gap: 6px;
+            margin-top: 7px;
+            gap: 5px;
         }
         .hero-shell-divider {
-            margin-top: 14px;
+            margin-top: 10px;
         }
         @media (min-width: 1600px) {
             .profile-hero-grid,
@@ -1264,7 +1276,7 @@ def _inject_styles() -> None:
             .section-block-title,
             .form-card, .impact-card, .support-table, .chart-panel,
             .panel-card {
-                max-width: 1420px;
+                max-width: 1360px;
             }
         }
         @media (max-width: 1280px) {
@@ -1277,10 +1289,10 @@ def _inject_styles() -> None:
         }
         @media (max-width: 1024px) {
             .profile-hero-grid { grid-template-columns: 1fr; }
-            .hero-score-main .gauge-wrap { height: 168px; }
-            .hero-score-main .gauge-arc { width: 206px; height: 102px; top: 74px; }
-            .hero-score-main .gauge-needle { top: 86px; height: 78px; }
-            .hero-score-main .gauge-hub { top: 160px; }
+            .hero-score-main .gauge-wrap { height: 188px; }
+            .hero-score-main .gauge-arc { width: 234px; height: 116px; top: 84px; }
+            .hero-score-main .gauge-needle { top: 94px; height: 84px; }
+            .hero-score-main .gauge-hub { top: 176px; }
             .hero-row {
                 grid-template-columns: 112px minmax(0, 1fr) 84px;
                 gap: 12px;
@@ -2149,15 +2161,13 @@ def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: 
 
 
 def _score_tier_label(score: float) -> str:
-    if score >= 1.5:
-        return "Amazing"
+    if score >= 1.45:
+        return "Elite"
     if score >= 1.2:
-        return "Good"
+        return "Strong"
     if score >= 1.0:
-        return "Okay"
-    if score >= 0.9:
         return "Average"
-    if score >= 0.75:
+    if score >= 0.85:
         return "Poor"
     return "Very Poor"
 
@@ -2604,7 +2614,10 @@ def _hltv_profile_view(
                     <div class="hero-score-heading">Grevscore</div>
                     <div class="hero-score-main">
                         <div class="gauge-score">{metrics['grevscore']:.2f}</div>
-                        <div class="hero-status-pill">{score_tier} · {percentile:.0f}th percentile</div>
+                        <div class="hero-score-status">
+                            <div class="hero-status-pill">{score_tier}</div>
+                            <div class="hero-score-percentile">{percentile:.0f}th percentile</div>
+                        </div>
                         <div class="gauge-wrap">
                             <div class="gauge-arc"></div>
                             <div class="gauge-needle" style="transform: translateX(-50%) rotate({gauge_angle:.1f}deg);"></div>
