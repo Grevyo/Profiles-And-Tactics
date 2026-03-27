@@ -2491,7 +2491,7 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         if col not in achievements.columns:
             achievements[col] = ""
     achievements = achievements[ACHIEVEMENT_REQUIRED_COLUMNS].copy()
-    achievements["player_core"] = achievements["player"].apply(extract_core_player_name)
+    achievements["player_core"] = achievements["player"].astype(str).apply(extract_core_player_name)
 
     players["date"] = pd.to_datetime(players["date"], errors="coerce")
     tactics["date"] = pd.to_datetime(tactics["date"], errors="coerce")
@@ -2957,12 +2957,11 @@ def build_player_achievements(
         return pd.DataFrame()
 
     selected_player_core = extract_core_player_name(selected_player)
-    if "player_core" in achievements_df.columns:
-        player_core_series = achievements_df["player_core"].astype(str).apply(extract_core_player_name)
-    else:
-        player_core_series = achievements_df["player"].astype(str).apply(extract_core_player_name)
+    if "player_core" not in achievements_df.columns:
+        achievements_df = achievements_df.copy()
+        achievements_df["player_core"] = achievements_df["player"].astype(str).apply(extract_core_player_name)
 
-    scoped = achievements_df[player_core_series == selected_player_core].copy()
+    scoped = achievements_df[achievements_df["player_core"] == selected_player_core].copy()
     scoped["selected_player_raw"] = str(selected_player)
     scoped["selected_player_core"] = selected_player_core
     scoped["achievement_player_core"] = scoped["player"].apply(extract_core_player_name)
