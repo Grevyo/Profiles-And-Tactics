@@ -900,21 +900,112 @@ def _inject_styles() -> None:
         }
 
         .stApp [data-testid="stMainBlockContainer"] {
-            max-width: 1320px;
-            padding-top: 0.95rem;
+            width: 100%;
+            max-width: 1300px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-top: 0.9rem;
             padding-bottom: 1.35rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
-        .profile-hero-grid {
+        .dashboard-hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 18px;
+            border: 1px solid rgba(137, 160, 210, 0.38);
+            padding: 14px 18px 12px;
+            margin-bottom: 10px;
+            background:
+                radial-gradient(circle at 14% 18%, rgba(44, 201, 119, 0.18), transparent 42%),
+                radial-gradient(circle at 84% 10%, rgba(255, 96, 72, 0.14), transparent 40%),
+                linear-gradient(135deg, #101722 0%, #0a1019 45%, #0b111c 100%);
+            box-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+        }
+        .dashboard-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background-image: linear-gradient(rgba(136, 158, 197, 0.06) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(136, 158, 197, 0.05) 1px, transparent 1px);
+            background-size: 28px 28px;
+            opacity: 0.16;
+        }
+        .dashboard-hero-row {
+            position: relative;
+            z-index: 1;
             display: grid;
-            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.8fr);
-            gap: 8px;
-            align-items: stretch;
-            max-width: 1320px;
-            margin: 0 auto;
+            grid-template-columns: minmax(164px, 220px) minmax(0, 1fr) minmax(86px, 120px);
+            align-items: center;
+            gap: 12px;
         }
-        .hero-identity-card,
-        .hero-score-card,
-        .hero-headline-card,
+        .dashboard-main-logo,
+        .dashboard-side-logo {
+            border: 1px solid rgba(137, 160, 210, 0.4);
+            border-radius: 12px;
+            background: rgba(10, 16, 29, 0.74);
+            display: grid;
+            place-items: center;
+            padding: 8px 10px;
+            backdrop-filter: blur(4px);
+        }
+        .dashboard-main-logo { min-height: 78px; }
+        .dashboard-side-logo { min-height: 68px; }
+        .dashboard-main-logo img,
+        .dashboard-side-logo img {
+            width: 100%;
+            object-fit: contain;
+        }
+        .dashboard-title-stack {
+            display: grid;
+            gap: 5px;
+            min-width: 0;
+        }
+        .dashboard-title-stack h1 {
+            margin: 0;
+            color: #f6f9ff;
+            font-size: clamp(1.44rem, 1.9vw, 2rem);
+            line-height: 1.03;
+            letter-spacing: 0.01em;
+        }
+        .dashboard-title-sub {
+            color: #cad8f1;
+            font-size: clamp(0.8rem, 0.95vw, 0.92rem);
+            line-height: 1.25;
+        }
+        .dashboard-pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .dashboard-pill {
+            border-radius: 999px;
+            border: 1px solid rgba(146, 170, 220, 0.45);
+            background: rgba(19, 28, 44, 0.82);
+            color: #e5edff;
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 5px 9px;
+        }
+        .dashboard-hero-divider {
+            position: relative;
+            z-index: 1;
+            margin-top: 10px;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(41, 211, 130, 0.16), rgba(161, 183, 232, 0.5), rgba(255, 117, 79, 0.16));
+        }
+        .dashboard-top-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.95fr) minmax(0, 0.8fr);
+            gap: 10px;
+            align-items: stretch;
+        }
+        .player-overview-card,
+        .grev-feature-card,
+        .headline-compact-card,
         .chart-panel,
         .impact-card,
         .form-card,
@@ -932,15 +1023,18 @@ def _inject_styles() -> None:
             padding: 11px;
             margin-bottom: 10px;
         }
-        .identity-header {
+        .player-overview-card {
+            padding: 11px;
+        }
+        .player-overview-layout {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 0.96fr);
+            grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
             gap: 10px;
             height: 100%;
         }
-        .identity-left {
+        .player-identity-left {
             display: grid;
-            grid-template-columns: 146px minmax(0, 1fr);
+            grid-template-columns: 132px minmax(0, 1fr);
             gap: 10px;
         }
         .portrait-shell {
@@ -985,7 +1079,7 @@ def _inject_styles() -> None:
             border: 1px solid rgba(165, 197, 255, 0.55);
             background: linear-gradient(180deg, rgba(94, 151, 245, 0.42), rgba(28, 40, 64, 0.9));
         }
-        .identity-right {
+        .player-context-right {
             border: 1px solid rgba(151, 166, 195, 0.2);
             border-radius: 12px;
             background: rgba(11, 17, 28, 0.66);
@@ -994,7 +1088,7 @@ def _inject_styles() -> None:
             grid-template-rows: auto 1fr auto;
             gap: 7px;
         }
-        .identity-right .section-label {
+        .player-context-right .section-label {
             margin: 0;
             font-size: 0.72rem;
         }
@@ -1024,18 +1118,28 @@ def _inject_styles() -> None:
             margin-top: 3px;
             line-height: 1.18;
         }
-        .headline-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+        .headline-compact-card {
+            display: grid;
+            align-content: start;
+            gap: 8px;
+            padding: 10px;
+        }
+        .headline-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 7px;
+        }
         .headline-card {
             border: 1px solid rgba(151, 166, 195, 0.22);
             border-radius: 12px;
-            padding: 8px 9px;
+            padding: 8px;
             background: rgba(11, 17, 28, 0.78);
-            min-height: 82px;
+            min-height: 72px;
             display: grid;
             align-content: center;
         }
         .headline-label { color: #97a7c7; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
-        .headline-value { color: #f5f8ff; font-size: 1.68rem; font-weight: 900; margin-top: 2px; line-height: 1.03; }
+        .headline-value { color: #f5f8ff; font-size: 1.9rem; font-weight: 900; margin-top: 2px; line-height: 1.02; }
         .headline-sub { color: #c8d5f0; font-size: 0.7rem; margin-top: 2px; }
         .achievement-row {
             display: flex;
@@ -1107,74 +1211,37 @@ def _inject_styles() -> None:
         .metric-title { color:#97a7c7; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.08em; }
         .metric-value { color:#f5f8ff; font-size:1.2rem; font-weight:850; }
         .metric-state { font-size:0.68rem; font-weight:700; margin-top:2px; }
-        .hero-score-card {
+        .grev-feature-card {
             display: grid;
-            align-content: start;
-            gap: 7px;
+            grid-template-rows: auto auto 1fr auto;
+            align-items: center;
+            text-align: center;
+            padding: 12px 12px 10px;
+            gap: 4px;
+            background:
+                radial-gradient(circle at 50% 0%, rgba(80, 138, 255, 0.35), rgba(13, 21, 34, 0.95) 72%),
+                linear-gradient(180deg, rgba(10, 15, 25, 0.95), rgba(8, 13, 22, 0.96));
         }
-        .hero-score-heading {
+        .grev-feature-label {
             color: #b8caf0;
             font-size: 0.72rem;
-            letter-spacing: 0.16em;
+            letter-spacing: 0.18em;
             text-transform: uppercase;
-            font-weight: 700;
-            text-align: center;
+            font-weight: 760;
         }
-        .hero-score-main {
-            border: 1px solid rgba(120, 160, 238, 0.34);
-            border-radius: 14px;
-            padding: 11px 10px 8px;
-            background: radial-gradient(circle at 50% 0%, rgba(78, 128, 229, 0.42), rgba(14, 22, 36, 0.95) 72%);
-            box-shadow: inset 0 0 0 1px rgba(167, 198, 255, 0.08), 0 10px 24px rgba(6, 12, 24, 0.44);
-            text-align: center;
-        }
-        .hero-score-main .gauge-wrap {
-            height: 230px;
-            margin-top: 8px;
-            position: relative;
-        }
-        .hero-score-main .gauge-score {
-            font-size: clamp(2.7rem, 3.2vw, 3.6rem);
-            margin-bottom: 3px;
-            font-weight: 900;
+        .grev-feature-score {
+            font-size: clamp(3rem, 3.8vw, 4.2rem);
+            font-weight: 920;
             line-height: 0.95;
+            color: #f7fbff;
         }
-        .hero-score-main .gauge-arc {
-            top: 94px;
-            width: 272px;
-            height: 136px;
-            border-radius: 272px 272px 0 0;
-            left: 50%;
-            transform: translateX(-50%);
-            background: conic-gradient(from 180deg, #ff6677 0deg, #f0be4f 88deg, #58e2a0 156deg, #3dd595 180deg);
-            clip-path: inset(0 0 50% 0);
-            opacity: 0.98;
-        }
-        .hero-score-main .gauge-arc::after {
-            content: "";
-            position: absolute;
-            inset: 20px 20px 0 20px;
-            border-radius: inherit;
-            background: rgba(8, 13, 22, 0.95);
-            clip-path: inset(0 0 52% 0);
-        }
-        .hero-score-main .gauge-needle {
-            top: 110px;
-            height: 94px;
-            width: 4px;
-        }
-        .hero-score-main .gauge-hub {
-            top: 202px;
-            width: 18px;
-            height: 18px;
-        }
-        .hero-score-status {
-            margin-top: 2px;
+        .grev-feature-status {
             display: grid;
             justify-items: center;
             gap: 2px;
+            margin-bottom: 2px;
         }
-        .hero-status-pill {
+        .grev-status-pill {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -1186,32 +1253,54 @@ def _inject_styles() -> None:
             font-size: 0.76rem;
             font-weight: 800;
         }
-        .hero-score-percentile {
+        .grev-percentile {
             color: #a9bddf;
-            font-size: 0.74rem;
+            font-size: 0.78rem;
             letter-spacing: 0.02em;
             font-weight: 650;
         }
-        .hero-score-micro {
-            margin-top: 0;
+        .grev-dial-wrap {
+            display: grid;
+            justify-items: center;
+            align-items: center;
+            margin: 2px 0;
+        }
+        .grev-dial {
+            width: min(100%, 270px);
+            height: 158px;
+        }
+        .grev-dial .track {
+            fill: none;
+            stroke: rgba(129, 154, 196, 0.34);
+            stroke-width: 16;
+            stroke-linecap: round;
+        }
+        .grev-dial .fill {
+            fill: none;
+            stroke: url(#grevGrad);
+            stroke-width: 16;
+            stroke-linecap: round;
+            transition: stroke-dasharray 0.35s ease;
+        }
+        .grev-micro-row {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 6px;
         }
-        .hero-score-micro-item {
+        .grev-micro-item {
             border: 1px solid rgba(151, 166, 195, 0.22);
             border-radius: 10px;
             background: rgba(10, 16, 27, 0.7);
             padding: 6px 7px;
             text-align: center;
         }
-        .hero-score-micro-item .label {
+        .grev-micro-item .label {
             color: #96a8ca;
             font-size: 0.62rem;
             text-transform: uppercase;
             letter-spacing: 0.07em;
         }
-        .hero-score-micro-item .value {
+        .grev-micro-item .value {
             color: #f2f6ff;
             font-size: 0.82rem;
             font-weight: 820;
@@ -1231,47 +1320,9 @@ def _inject_styles() -> None:
             margin-left: auto;
             margin-right: auto;
         }
-        .hero-shell {
-            max-width: 1320px;
-            margin-left: auto;
-            margin-right: auto;
-            padding: 18px 20px 14px;
-            border-radius: 16px;
-        }
-        .hero-row {
-            grid-template-columns: minmax(88px, 112px) minmax(0, 1fr) minmax(62px, 78px);
-            gap: 10px;
-        }
-        .hero-logo-badge {
-            min-height: 76px;
-            padding: 8px;
-        }
-        .hero-title-block {
-            min-width: 0;
-        }
-        .hero-title-block h1 {
-            font-size: clamp(1.58rem, 2.2vw, 2.18rem);
-            line-height: 1.05;
-            max-width: 16ch;
-            text-wrap: balance;
-            margin-right: 0;
-        }
-        .hero-subtitle {
-            font-size: clamp(0.82rem, 0.98vw, 0.92rem);
-            line-height: 1.3;
-            max-width: 52ch;
-            margin-top: 5px;
-        }
-        .hero-pill-row {
-            margin-top: 7px;
-            gap: 5px;
-        }
-        .hero-shell-divider {
-            margin-top: 10px;
-        }
         @media (min-width: 1600px) {
-            .profile-hero-grid,
-            .hero-shell,
+            .dashboard-top-grid,
+            .dashboard-hero,
             .core-grid,
             .section-block-title,
             .form-card, .impact-card, .support-table, .chart-panel,
@@ -1280,22 +1331,18 @@ def _inject_styles() -> None:
             }
         }
         @media (max-width: 1280px) {
-            .profile-hero-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
-            .hero-headline-card { grid-column: 1 / -1; }
-            .identity-header { grid-template-columns: 1fr; }
-            .identity-left { grid-template-columns: 144px minmax(0, 1fr); }
+            .dashboard-top-grid { grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.92fr); }
+            .headline-compact-card { grid-column: 1 / -1; }
+            .player-overview-layout { grid-template-columns: 1fr; }
+            .player-identity-left { grid-template-columns: 128px minmax(0, 1fr); }
             .chart-section-grid { grid-template-columns: 1fr; }
             .performance-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
         }
         @media (max-width: 1024px) {
-            .profile-hero-grid { grid-template-columns: 1fr; }
-            .hero-score-main .gauge-wrap { height: 188px; }
-            .hero-score-main .gauge-arc { width: 234px; height: 116px; top: 84px; }
-            .hero-score-main .gauge-needle { top: 94px; height: 84px; }
-            .hero-score-main .gauge-hub { top: 176px; }
-            .hero-row {
-                grid-template-columns: 112px minmax(0, 1fr) 84px;
-                gap: 12px;
+            .dashboard-top-grid { grid-template-columns: 1fr; }
+            .dashboard-hero-row {
+                grid-template-columns: minmax(110px, 148px) minmax(0, 1fr) minmax(74px, 94px);
+                gap: 10px;
             }
         }
         @media (max-width: 1200px) {
@@ -1308,34 +1355,35 @@ def _inject_styles() -> None:
                 padding-right: 0.62rem;
                 padding-top: 0.78rem;
             }
-            .hero-shell {
-                padding: 15px 14px 12px;
+            .dashboard-hero {
+                padding: 13px 12px 11px;
                 border-radius: 14px;
                 margin-bottom: 8px;
             }
-            .hero-row {
+            .dashboard-hero-row {
                 grid-template-columns: 1fr;
                 text-align: center;
                 gap: 8px;
             }
-            .hero-logo-badge {
+            .dashboard-main-logo,
+            .dashboard-side-logo {
                 min-height: auto;
-                width: 110px;
+                width: 124px;
                 margin: 0 auto;
                 padding: 7px;
                 border-radius: 10px;
             }
-            .hero-logo-badge-right {
+            .dashboard-side-logo {
                 display: none;
             }
-            .hero-title-block h1 {
+            .dashboard-title-stack h1 {
                 font-size: clamp(1.45rem, 7vw, 1.95rem);
                 line-height: 1.08;
                 max-width: 11ch;
                 margin: 0 auto;
                 overflow-wrap: normal;
             }
-            .hero-subtitle {
+            .dashboard-title-sub {
                 margin-top: 5px;
                 font-size: clamp(0.78rem, 3.2vw, 0.92rem);
                 line-height: 1.3;
@@ -1343,25 +1391,25 @@ def _inject_styles() -> None:
                 margin-left: auto;
                 margin-right: auto;
             }
-            .hero-pill-row {
+            .dashboard-pill-row {
                 margin-top: 7px;
                 justify-content: center;
             }
-            .hero-pill {
+            .dashboard-pill {
                 font-size: 0.66rem;
                 padding: 5px 8px;
             }
-            .hero-shell-divider {
+            .dashboard-hero-divider {
                 margin-top: 10px;
             }
             .panel-card,
-            .hero-identity-card,
-            .hero-score-card,
-            .hero-headline-card {
+            .player-overview-card,
+            .grev-feature-card,
+            .headline-compact-card {
                 padding: 9px;
                 border-radius: 12px;
             }
-            .identity-left {
+            .player-identity-left {
                 grid-template-columns: 1fr;
             }
             .portrait-shell,
@@ -1370,7 +1418,7 @@ def _inject_styles() -> None:
             }
             .profile-name { font-size: clamp(1.52rem, 6.2vw, 1.95rem); }
             .quick-profile-grid,
-            .hero-score-micro {
+            .grev-micro-row {
                 grid-template-columns: 1fr;
             }
             .achievement-row {
@@ -1384,10 +1432,7 @@ def _inject_styles() -> None:
             .headline-grid { gap: 7px; }
             .headline-card { min-height: 82px; }
             .headline-value { font-size: 1.36rem; }
-            .hero-score-main .gauge-wrap { height: 152px; }
-            .hero-score-main .gauge-arc { width: 188px; height: 94px; top: 65px; }
-            .hero-score-main .gauge-needle { top: 76px; height: 68px; }
-            .hero-score-main .gauge-hub { top: 145px; width: 14px; height: 14px; }
+            .grev-dial { height: 128px; }
         }
         </style>
         """,
@@ -1408,30 +1453,31 @@ def _image_to_data_uri(image_path: Path) -> str:
 
 def _render_top_hero(active_page: str, subtitle: str) -> None:
     medicart_logo_html = (
-        f'<img src="{_image_to_data_uri(MEDISPORTS_LOGO)}" alt="Medicart logo" style="max-width:144px;">'
+        f'<img src="{_image_to_data_uri(MEDISPORTS_LOGO)}" alt="Medicart logo" style="max-width:184px;">'
         if MEDISPORTS_LOGO.exists()
         else '<span style="color:#c7d5f1;font-size:0.8rem;">Medicart logo missing</span>'
     )
     cpl_logo_html = (
-        f'<img src="{_image_to_data_uri(CPL_LOGO)}" alt="CPL logo" style="max-width:108px;">'
+        f'<img src="{_image_to_data_uri(CPL_LOGO)}" alt="CPL logo" style="max-width:74px;">'
         if CPL_LOGO.exists()
         else '<span style="color:#c7d5f1;font-size:0.8rem;">CPL logo missing</span>'
     )
     st.markdown(
         f"""
-        <section class="hero-shell">
-            <div class="hero-row">
-                <div class="hero-logo-badge hero-logo-badge-left">{medicart_logo_html}</div>
-                <div class="hero-title-block">
+        <section class="dashboard-hero">
+            <div class="dashboard-hero-row">
+                <div class="dashboard-main-logo">{medicart_logo_html}</div>
+                <div class="dashboard-title-stack">
                     <h1>Grev's CPL Dashboard</h1>
-                    <div class="hero-subtitle">{subtitle}</div>
-                    <div class="hero-pill-row">
-                        <span class="hero-pill">S10 Active</span>
+                    <div class="dashboard-title-sub">{subtitle}</div>
+                    <div class="dashboard-pill-row">
+                        <span class="dashboard-pill">S10 Active</span>
+                        <span class="dashboard-pill">Desktop analytics</span>
                     </div>
                 </div>
-                <div class="hero-logo-badge hero-logo-badge-right">{cpl_logo_html}</div>
+                <div class="dashboard-side-logo">{cpl_logo_html}</div>
             </div>
-            <div class="hero-shell-divider"></div>
+            <div class="dashboard-hero-divider"></div>
         </section>
         """,
         unsafe_allow_html=True,
@@ -2498,9 +2544,6 @@ def _hltv_profile_view(
     rank_total = max(int(len(rank_df)), 1)
     percentile = ((rank_total - team_rank) / rank_total) * 100.0
     score_tier = _score_tier_label(metrics["grevscore"])
-    gauge_pct = min(max(((metrics["grevscore"] - 0.75) / (1.5 - 0.75)) * 100.0, 0.0), 100.0)
-    gauge_angle = -90 + (gauge_pct * 1.8)
-
     avg_acc = float(filtered_players["accuracy_pct"].mean()) if not filtered_players.empty else 0.0
     avg_hs = float(filtered_players["hs_pct"].mean()) if not filtered_players.empty else 0.0
     avg_kpd = float(filtered_players["kpd"].mean()) if not filtered_players.empty else 0.0
@@ -2566,6 +2609,7 @@ def _hltv_profile_view(
         _headline_stat_card_html("Form", f"{form_score:.1f}", trend_direction),
         _headline_stat_card_html("Matches", f"{int(metrics['matches'])}", record_text),
     ]
+    grev_dial_pct = max(0.0, min((metrics["grevscore"] - 0.65) / (1.28 - 0.65), 1.0)) * 100
 
     priority_cards = [
         _metric_card_html("Grevscore", f"{metrics['grevscore']:.2f}", metrics["grevscore"], 0.95, 1.18, priority=True),
@@ -2586,10 +2630,10 @@ def _hltv_profile_view(
     st.markdown(
         f"""
         <div class="panel-card">
-            <div class="profile-hero-grid">
-                <div class="hero-identity-card">
-                    <div class="identity-header">
-                        <div class="identity-left">
+            <div class="dashboard-top-grid">
+                <div class="player-overview-card">
+                    <div class="player-overview-layout">
+                        <div class="player-identity-left">
                             <div class="portrait-shell">{player_img_html}</div>
                             <div>
                                 <div class="profile-label">Player Identity</div>
@@ -2599,39 +2643,51 @@ def _hltv_profile_view(
                                     <div class="quick-profile-tile"><div class="label">Role</div><div class="value">{html.escape(player_role)}</div></div>
                                     <div class="quick-profile-tile"><div class="label">Best Map</div><div class="value">{html.escape(str(best_map))}</div></div>
                                     <div class="quick-profile-tile"><div class="label">Best Side</div><div class="value">{html.escape(side_split)}</div></div>
-                                    <div class="quick-profile-tile"><div class="label">Team Rank</div><div class="value">#{team_rank}/{rank_total}</div></div>
+                                    <div class="quick-profile-tile"><div class="label">Nationality</div><div class="value">{html.escape(str(profile_data.get('nation', '-')))}</div></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="identity-right">
-                            <div class="section-label">Achievements & Form Context</div>
+                        <div class="player-context-right">
+                            <div class="section-label">Achievements & Quick Facts</div>
                             <div>{achievements_inline_html}</div>
-                            <div class="panel-muted">Current streak: {streak:+d} · Record: {record_text}</div>
+                            <div class="quick-profile-grid">
+                                <div class="quick-profile-tile"><div class="label">Team Rank</div><div class="value">#{team_rank}/{rank_total}</div></div>
+                                <div class="quick-profile-tile"><div class="label">Current Streak</div><div class="value">{streak:+d}</div></div>
+                                <div class="quick-profile-tile"><div class="label">Record</div><div class="value">{record_text}</div></div>
+                                <div class="quick-profile-tile"><div class="label">Last 10 Δ</div><div class="value">{recent10_delta:+.2f}</div></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="hero-score-card">
-                    <div class="hero-score-heading">Grevscore</div>
-                    <div class="hero-score-main">
-                        <div class="gauge-score">{metrics['grevscore']:.2f}</div>
-                        <div class="hero-score-status">
-                            <div class="hero-status-pill">{score_tier}</div>
-                            <div class="hero-score-percentile">{percentile:.0f}th percentile</div>
-                        </div>
-                        <div class="gauge-wrap">
-                            <div class="gauge-arc"></div>
-                            <div class="gauge-needle" style="transform: translateX(-50%) rotate({gauge_angle:.1f}deg);"></div>
-                            <div class="gauge-hub"></div>
-                        </div>
-                        <div class="grev-meter-labels"><span>Poor</span><span>Average</span><span>Strong</span><span>Elite</span></div>
+                <div class="grev-feature-card">
+                    <div class="grev-feature-label">GREVSCORE</div>
+                    <div class="grev-feature-score">{metrics['grevscore']:.2f}</div>
+                    <div class="grev-feature-status">
+                        <div class="grev-status-pill">{score_tier}</div>
+                        <div class="grev-percentile">{percentile:.0f}th percentile</div>
                     </div>
-                    <div class="hero-score-micro">
-                        <div class="hero-score-micro-item"><div class="label">Team Rank</div><div class="value">#{team_rank}/{rank_total}</div></div>
-                        <div class="hero-score-micro-item"><div class="label">Trend</div><div class="value">{trend_direction}</div></div>
-                        <div class="hero-score-micro-item"><div class="label">Last 10 Δ</div><div class="value">{recent10_delta:+.2f}</div></div>
+                    <div class="grev-dial-wrap">
+                        <div class="grev-dial">
+                            <svg viewBox="0 0 220 130" width="100%" height="100%" aria-label="Grevscore dial">
+                                <defs>
+                                    <linearGradient id="grevGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#ff6878"></stop>
+                                        <stop offset="52%" stop-color="#f0bf4f"></stop>
+                                        <stop offset="100%" stop-color="#49da9f"></stop>
+                                    </linearGradient>
+                                </defs>
+                                <path class="track" pathLength="100" d="M 20 110 A 90 90 0 0 1 200 110"></path>
+                                <path class="fill" pathLength="100" d="M 20 110 A 90 90 0 0 1 200 110" style="stroke-dasharray: {grev_dial_pct:.1f} 100;"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="grev-micro-row">
+                        <div class="grev-micro-item"><div class="label">Team Rank</div><div class="value">#{team_rank}/{rank_total}</div></div>
+                        <div class="grev-micro-item"><div class="label">Trend</div><div class="value">{trend_direction}</div></div>
+                        <div class="grev-micro-item"><div class="label">Last 10 Δ</div><div class="value">{recent10_delta:+.2f}</div></div>
                     </div>
                 </div>
-                <div class="hero-headline-card">
+                <div class="headline-compact-card">
                     <div class="section-label" style="margin-top:0;">Headline Stats</div>
                     <div class="headline-grid">{''.join(headline_cards)}</div>
                 </div>
