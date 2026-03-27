@@ -910,50 +910,35 @@ def _inject_styles() -> None:
             padding-right: 1rem;
         }
         .cpl-hero {
-            position: relative;
-            overflow: hidden;
-            border-radius: 14px;
-            border: 1px solid rgba(137, 160, 210, 0.34);
-            padding: 10px 14px;
-            margin-bottom: 10px;
+            border: 1px solid rgba(156, 182, 236, 0.34);
+            border-radius: 18px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
             background:
-                radial-gradient(circle at 16% 0%, rgba(44, 201, 119, 0.15), transparent 38%),
-                radial-gradient(circle at 88% 2%, rgba(94, 169, 255, 0.16), transparent 44%),
-                linear-gradient(135deg, #0f1622 0%, #0a111c 52%, #090f18 100%);
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34);
-        }
-        .cpl-hero::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            background-image: linear-gradient(rgba(136, 158, 197, 0.06) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(136, 158, 197, 0.05) 1px, transparent 1px);
-            background-size: 24px 24px;
-            opacity: 0.14;
+                radial-gradient(circle at 12% 12%, rgba(61, 209, 132, 0.18), transparent 43%),
+                radial-gradient(circle at 84% 16%, rgba(122, 166, 255, 0.19), transparent 42%),
+                linear-gradient(140deg, #0f1728 0%, #0d1321 58%, #0a0f18 100%);
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.33);
         }
         .cpl-hero-grid {
-            position: relative;
-            z-index: 1;
             display: grid;
-            grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) minmax(76px, 96px);
+            grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) minmax(60px, 78px);
             align-items: center;
-            gap: 10px;
+            gap: 14px;
         }
         .cpl-hero-main-logo,
         .cpl-hero-side-logo {
-            border: 1px solid rgba(137, 160, 210, 0.4);
-            border-radius: 12px;
-            background: rgba(10, 16, 29, 0.74);
+            border-radius: 14px;
+            border: 1px solid rgba(156, 182, 236, 0.42);
+            background: linear-gradient(170deg, rgba(18, 28, 44, 0.88), rgba(9, 15, 28, 0.92));
             display: grid;
             place-items: center;
-            padding: 8px;
-            backdrop-filter: blur(4px);
+            padding: 10px 8px;
         }
-        .cpl-hero-main-logo { min-height: 70px; }
+        .cpl-hero-main-logo { min-height: 76px; }
         .cpl-hero-side-logo {
-            min-height: 58px;
-            max-width: 90px;
+            min-height: 56px;
+            max-width: 76px;
             justify-self: end;
         }
         .cpl-hero-main-logo img,
@@ -962,34 +947,33 @@ def _inject_styles() -> None:
             object-fit: contain;
         }
         .cpl-hero-title {
-            display: grid;
-            justify-items: center;
             text-align: center;
-            gap: 4px;
-            min-width: 0;
+            display: grid;
+            gap: 5px;
+            justify-items: center;
         }
         .cpl-hero-title h1 {
             margin: 0;
-            color: #f6f9ff;
-            font-size: clamp(1.36rem, 1.7vw, 1.85rem);
-            line-height: 1.04;
+            color: #f6fbff;
+            font-size: clamp(1.32rem, 1.62vw, 1.8rem);
+            line-height: 1.05;
             letter-spacing: 0.01em;
         }
         .cpl-hero-subtitle {
-            color: #cad8f1;
-            font-size: clamp(0.8rem, 0.95vw, 0.92rem);
-            line-height: 1.25;
+            color: #c9d6ed;
+            font-size: clamp(0.78rem, 0.92vw, 0.9rem);
+            line-height: 1.24;
         }
         .cpl-hero-badge {
-            margin-top: 2px;
+            margin-top: 1px;
             border-radius: 999px;
-            border: 1px solid rgba(146, 170, 220, 0.48);
-            background: rgba(19, 28, 44, 0.88);
-            color: #e5edff;
-            font-weight: 700;
-            font-size: 0.66rem;
-            text-transform: uppercase;
+            border: 1px solid rgba(156, 182, 236, 0.5);
+            background: rgba(13, 20, 35, 0.88);
+            color: #dbe7ff;
+            font-size: 0.64rem;
+            font-weight: 760;
             letter-spacing: 0.08em;
+            text-transform: uppercase;
             padding: 5px 10px;
         }
         .cpl-top-grid {
@@ -1026,13 +1010,13 @@ def _inject_styles() -> None:
         .cpl-player-layout {
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap: 12px;
+            gap: 14px;
             height: 100%;
         }
         .cpl-player-left {
             display: grid;
-            grid-template-columns: 124px minmax(0, 1fr);
-            gap: 10px;
+            grid-template-columns: 132px minmax(0, 1fr);
+            gap: 12px;
             align-content: start;
         }
         .portrait-shell {
@@ -1041,7 +1025,7 @@ def _inject_styles() -> None:
             background:
                 radial-gradient(circle at 50% 0%, rgba(95, 173, 255, 0.35), transparent 58%),
                 linear-gradient(180deg, rgba(30, 47, 78, 0.72), rgba(11, 17, 28, 0.92));
-            min-height: 204px;
+            min-height: 214px;
             overflow: hidden;
             display: grid;
             place-items: center;
@@ -1050,7 +1034,7 @@ def _inject_styles() -> None:
         .portrait-shell img.player-headshot {
             width: 100%;
             height: 100%;
-            min-height: 206px;
+            min-height: 214px;
             object-fit: cover;
             object-position: center top;
         }
@@ -1081,10 +1065,10 @@ def _inject_styles() -> None:
             border: 1px solid rgba(151, 166, 195, 0.2);
             border-radius: 12px;
             background: rgba(11, 17, 28, 0.66);
-            padding: 9px;
+            padding: 10px;
             display: grid;
             grid-template-rows: auto auto 1fr;
-            gap: 7px;
+            gap: 8px;
         }
         .cpl-player-right .section-label {
             margin: 0;
@@ -1093,15 +1077,15 @@ def _inject_styles() -> None:
         .quick-profile-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 7px;
+            gap: 8px;
             margin-top: 8px;
         }
         .quick-profile-tile {
             border: 1px solid rgba(151, 166, 195, 0.24);
             border-radius: 10px;
             background: rgba(9, 14, 24, 0.78);
-            padding: 6px 8px;
-            min-height: 50px;
+            padding: 7px 9px;
+            min-height: 52px;
         }
         .quick-profile-tile .label {
             color: #8fa0c2;
@@ -1111,7 +1095,7 @@ def _inject_styles() -> None:
         }
         .quick-profile-tile .value {
             color: #f1f6ff;
-            font-size: 0.84rem;
+            font-size: 0.88rem;
             font-weight: 760;
             margin-top: 3px;
             line-height: 1.18;
@@ -1119,25 +1103,25 @@ def _inject_styles() -> None:
         .cpl-stats-card {
             display: grid;
             align-content: start;
-            gap: 8px;
-            padding: 10px;
+            gap: 9px;
+            padding: 11px;
         }
         .headline-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 7px;
+            gap: 8px;
         }
         .headline-card {
             border: 1px solid rgba(151, 166, 195, 0.22);
             border-radius: 12px;
-            padding: 8px;
+            padding: 9px;
             background: rgba(11, 17, 28, 0.78);
-            min-height: 86px;
+            min-height: 90px;
             display: grid;
             align-content: center;
         }
         .headline-label { color: #97a7c7; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
-        .headline-value { color: #f5f8ff; font-size: 2.2rem; font-weight: 900; margin-top: 2px; line-height: 1.01; }
+        .headline-value { color: #f5f8ff; font-size: 2.35rem; font-weight: 900; margin-top: 2px; line-height: 1.01; }
         .headline-sub { color: #c8d5f0; font-size: 0.7rem; margin-top: 2px; }
         .achievement-row {
             display: flex;
@@ -1444,12 +1428,12 @@ def _image_to_data_uri(image_path: Path) -> str:
 
 def _render_top_hero(active_page: str, subtitle: str) -> None:
     medicart_logo_html = (
-        f'<img src="{_image_to_data_uri(MEDISPORTS_LOGO)}" alt="Medicart logo" style="max-width:184px;">'
+        f'<img src="{_image_to_data_uri(MEDISPORTS_LOGO)}" alt="Medicart logo" style="max-width:170px;">'
         if MEDISPORTS_LOGO.exists()
         else '<span style="color:#c7d5f1;font-size:0.8rem;">Medicart logo missing</span>'
     )
     cpl_logo_html = (
-        f'<img src="{_image_to_data_uri(CPL_LOGO)}" alt="CPL logo" style="max-width:74px;">'
+        f'<img src="{_image_to_data_uri(CPL_LOGO)}" alt="CPL logo" style="max-width:54px;">'
         if CPL_LOGO.exists()
         else '<span style="color:#c7d5f1;font-size:0.8rem;">CPL logo missing</span>'
     )
@@ -1457,13 +1441,13 @@ def _render_top_hero(active_page: str, subtitle: str) -> None:
         f"""
         <section class="cpl-hero">
             <div class="cpl-hero-grid">
-                <div class="cpl-hero-main-logo">{medicart_logo_html}</div>
+                <aside class="cpl-hero-main-logo">{medicart_logo_html}</aside>
                 <div class="cpl-hero-title">
                     <h1>Grev's CPL Dashboard</h1>
                     <div class="cpl-hero-subtitle">{subtitle}</div>
                     <span class="cpl-hero-badge">S10 Active • Desktop analytics</span>
                 </div>
-                <div class="cpl-hero-side-logo">{cpl_logo_html}</div>
+                <aside class="cpl-hero-side-logo">{cpl_logo_html}</aside>
             </div>
         </section>
         """,
@@ -2600,8 +2584,9 @@ def _hltv_profile_view(
     ]
     core_cards = priority_cards + support_cards
 
-    # Verification: old st.columns hero was removed and replaced by custom HTML/CSS `.cpl-hero` in `_render_top_hero`.
-    # Verification: old st.columns first-row layout was removed and replaced by custom HTML/CSS `.cpl-top-grid` below.
+    # Verification: old st.columns hero was removed from this view and replaced by custom HTML/CSS in `_render_top_hero`.
+    # Verification: old st.columns first-row layout was removed from this view and replaced by custom HTML/CSS `.cpl-top-grid` below.
+    # Verification: both sections now render as explicit custom HTML/CSS containers (hero + first row), not Streamlit columns.
     st.markdown(
         f"""
         <section class="panel-card">
@@ -2637,14 +2622,11 @@ def _hltv_profile_view(
                 <article class="cpl-grev-card">
                     <div class="cpl-grev-label">GREVSCORE INDEX</div>
                     <div class="cpl-grev-score">{metrics['grevscore']:.2f}</div>
-                    <div class="cpl-grev-status">
-                        <div class="grev-status-pill">{score_tier}</div>
-                        <div class="grev-percentile">{percentile:.0f}th percentile</div>
-                    </div>
-                    <div class="grev-percentile" style="font-size:0.82rem;">Status: {trend_direction} form signal</div>
+                    <div class="grev-percentile">Status: {score_tier} • {trend_direction} form signal</div>
+                    <div class="grev-percentile">{percentile:.0f}th percentile</div>
                     <div class="cpl-grev-dial-wrap">
                         <div class="cpl-grev-dial">
-                            <svg viewBox="0 0 280 170" width="100%" height="100%" aria-label="Grevscore dial">
+                            <svg viewBox="0 0 320 190" width="100%" height="100%" aria-label="Grevscore dial">
                                 <defs>
                                     <linearGradient id="grevGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                                         <stop offset="0%" stop-color="#ff6878"></stop>
@@ -2652,8 +2634,8 @@ def _hltv_profile_view(
                                         <stop offset="100%" stop-color="#49da9f"></stop>
                                     </linearGradient>
                                 </defs>
-                                <path class="track" pathLength="100" d="M 30 145 A 110 110 0 0 1 250 145"></path>
-                                <path class="fill" pathLength="100" d="M 30 145 A 110 110 0 0 1 250 145" style="stroke-dasharray: {grev_dial_pct:.1f} 100;"></path>
+                                <path class="track" pathLength="100" d="M 34 162 A 126 126 0 0 1 286 162"></path>
+                                <path class="fill" pathLength="100" d="M 34 162 A 126 126 0 0 1 286 162" style="stroke-dasharray: {grev_dial_pct:.1f} 100;"></path>
                             </svg>
                         </div>
                     </div>
