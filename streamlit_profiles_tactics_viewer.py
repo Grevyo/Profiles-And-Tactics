@@ -16,7 +16,6 @@ import unicodedata
 
 import pandas as pd
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
 
 
 def _load_plotly_modules():
@@ -2587,6 +2586,66 @@ def _build_match_level_results(tactics_df: pd.DataFrame, competition_source_col:
     return merged
 
 
+
+
+def _load_profile_viewer_v2_module():
+    v2_path = APP_ROOT / "pages" / "99_Profile_Viewer_V2.py"
+    if not v2_path.exists():
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location("profile_viewer_v2_page", v2_path)
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    except Exception:
+        return None
+
+
+def _render_profile_viewer_v2_inline() -> bool:
+    module = _load_profile_viewer_v2_module()
+    if module is None:
+        return False
+    try:
+        module.inject_styles()
+        matches = module.load_player_matches()
+        player_meta = module.load_player_meta()
+        achievements = module.load_achievements()
+
+        st.markdown("<div class='v2-title'>Player Profile Viewer V2</div>", unsafe_allow_html=True)
+        st.markdown(
+            "<div class='v2-sub'>Fresh rebuild using direct CSV sources only (PlayerDataMatser.csv, players/play metadata, Achievements.csv).</div>",
+            unsafe_allow_html=True,
+        )
+
+        left, mid, right = st.columns([1.4, 1, 1])
+        with left:
+            player_options = sorted(matches["player"].dropna().unique().tolist())
+            chosen_player = st.selectbox("Player", player_options, key="profiles_v2_player")
+        with mid:
+            maps = ["All"] + sorted(matches["map"].dropna().unique().tolist())
+            chosen_map = st.selectbox("Map Filter", maps, key="profiles_v2_map")
+        with right:
+            competitions = ["All"] + sorted(matches["competition"].dropna().unique().tolist())
+            chosen_comp = st.selectbox("Competition Filter", competitions, key="profiles_v2_comp")
+
+        filtered = matches[matches["player"] == chosen_player].copy()
+        if chosen_map != "All":
+            filtered = filtered[filtered["map"] == chosen_map]
+        if chosen_comp != "All":
+            filtered = filtered[filtered["competition"] == chosen_comp]
+
+        if filtered.empty:
+            st.warning("No rows match your filter combination.")
+            return True
+
+        snapshot = module.build_player_snapshot(chosen_player, filtered, matches, player_meta)
+        module.render_top_cards(snapshot, achievements, chosen_player)
+        module.render_bottom_sections(filtered)
+        return True
+    except Exception:
+        return False
 def _apply_shared_filters(
     player_df: pd.DataFrame,
     tactics_df: pd.DataFrame,
@@ -2668,21 +2727,18 @@ def _hltv_profile_view(
         active_page="profiles",
         subtitle="Medicart analytics, player profiles, tactics, and event breakdowns.",
     )
-    st.markdown("### Current Profile Viewer (Legacy)")
-    st.caption("Use this stable legacy view for now, or open the rebuilt page below.")
-    v2_page_path = "pages/99_Profile_Viewer_V2.py"
-    try:
-        st.page_link(
-            v2_page_path,
-            label="Open Profile Viewer V2 (Rebuilt)",
-            icon="🆕",
-        )
-    except (KeyError, StreamlitAPIException):
-        st.link_button("Open Profile Viewer V2 (Rebuilt)", v2_page_path, icon="🆕")
-        st.caption(
-            "V2 page-link integration is unavailable in this Streamlit runtime, "
-            "so an in-app file link is shown instead."
-        )
+    st.markdown("### Profile Viewer")
+    viewer_mode = st.radio(
+        "Viewer mode",
+        options=["V2 (same tab)", "Legacy"],
+        horizontal=True,
+        key="profile_viewer_mode",
+    )
+    if viewer_mode == "V2 (same tab)":
+        rendered = _render_profile_viewer_v2_inline()
+        if rendered:
+            return
+        st.warning("Profile Viewer V2 could not be rendered inline. Falling back to legacy view.")
     st.divider()
 
     players = sorted(
