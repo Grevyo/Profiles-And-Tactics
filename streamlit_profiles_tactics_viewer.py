@@ -222,8 +222,8 @@ def _inject_styles() -> None:
             background: linear-gradient(180deg, rgba(57, 48, 27, 0.8), rgba(28, 24, 18, 0.76));
         }
         .chip-bad {
-            border-color: rgba(255, 108, 122, 0.44);
-            background: linear-gradient(180deg, rgba(66, 31, 37, 0.8), rgba(30, 18, 23, 0.76));
+            border-color: rgba(255, 124, 136, 0.34);
+            background: linear-gradient(180deg, rgba(56, 30, 35, 0.62), rgba(26, 18, 22, 0.66));
         }
         .stat-meter {
             width: 100%;
@@ -1079,14 +1079,14 @@ def _inject_styles() -> None:
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 7px;
-            margin-top: 7px;
+            margin-top: 6px;
         }
         .quick-profile-tile {
             border: 1px solid rgba(151, 166, 195, 0.24);
             border-radius: 10px;
             background: rgba(9, 14, 24, 0.78);
             padding: 7px 9px;
-            min-height: 52px;
+            min-height: 44px;
         }
         .achievement-zone {
             border: 1px solid rgba(140, 159, 191, 0.22);
@@ -1107,7 +1107,7 @@ def _inject_styles() -> None:
             color: #f1f6ff;
             font-size: 0.88rem;
             font-weight: 760;
-            margin-top: 3px;
+            margin-top: 2px;
             line-height: 1.18;
         }
         .cpl-stats-card {
@@ -1141,28 +1141,28 @@ def _inject_styles() -> None:
             align-items: flex-start;
         }
         .achievement-premium {
-            width: 124px;
-            height: 166px;
+            width: 154px;
+            height: 206px;
             border-radius: 12px;
             position: relative;
             overflow: hidden;
             border: 1px solid rgba(151, 166, 195, 0.32);
             background: linear-gradient(180deg, rgba(19, 28, 43, 0.95), rgba(9, 14, 24, 0.96));
-            flex: 0 0 124px;
+            flex: 0 0 154px;
         }
         .achievement-premium img {
             width: 100%;
-            height: 96px;
+            height: 124px;
             object-fit: contain;
             object-position: center;
-            margin-top: 23px;
+            margin-top: 26px;
             padding: 0 6px;
             box-sizing: border-box;
         }
         .achievement-inline-cabinet {
             border-top: none;
             padding-top: 0;
-            min-height: 144px;
+            min-height: 190px;
             align-content: start;
         }
         .achievement-inline-empty {
@@ -1199,11 +1199,24 @@ def _inject_styles() -> None:
             grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 8px;
         }
-        .metric-card { border: 1px solid rgba(151,166,195,0.24); border-radius: 12px; padding: 9px 10px; background: rgba(11,17,28,0.76); }
-        .metric-card.priority { min-height: 74px; }
-        .metric-title { color:#97a7c7; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.08em; }
-        .metric-value { color:#f5f8ff; font-size:1.2rem; font-weight:850; }
+        .metric-card { border: 1px solid rgba(151,166,195,0.24); border-radius: 12px; padding: 7px 9px; background: rgba(11,17,28,0.76); }
+        .metric-card.priority { min-height: 66px; }
+        .metric-title { color:#97a7c7; font-size:0.6rem; text-transform:uppercase; letter-spacing:0.09em; }
+        .metric-value { color:#f5f8ff; font-size:1.32rem; font-weight:860; line-height:1.02; }
         .metric-state { font-size:0.68rem; font-weight:700; margin-top:2px; }
+        .form-card .stat-chip {
+            background: rgba(16, 23, 36, 0.68);
+            border-color: rgba(151, 166, 195, 0.18);
+        }
+        .form-card .stat-value {
+            font-size: 1.28rem;
+            font-weight: 860;
+        }
+        .form-card .chip-bad {
+            border-color: rgba(255, 125, 136, 0.3);
+            background: linear-gradient(180deg, rgba(52, 28, 34, 0.52), rgba(24, 18, 22, 0.56));
+            box-shadow: none;
+        }
         .cpl-grev-card {
             display: grid;
             grid-template-rows: auto auto auto 1fr auto;
@@ -1382,14 +1395,14 @@ def _inject_styles() -> None:
             border: 1px solid rgba(151, 166, 195, 0.24);
             border-radius: 18px;
             background: linear-gradient(180deg, rgba(13, 20, 32, 0.92), rgba(8, 12, 20, 0.94));
-            padding: 10px;
-            min-height: 320px;
+            padding: 12px;
+            min-height: 374px;
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
         }
         .player-card-inner {
             display: grid;
             grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
-            gap: 10px;
+            gap: 12px;
             height: 100%;
         }
         .player-main {
@@ -1397,61 +1410,62 @@ def _inject_styles() -> None:
             grid-template-columns: 118px minmax(0, 1fr);
             gap: 10px;
             align-content: start;
+            padding-right: 8px;
         }
         .player-side {
             border: 1px solid rgba(151, 166, 195, 0.2);
             border-radius: 12px;
             background: rgba(11, 17, 28, 0.66);
-            padding: 8px;
+            padding: 10px;
             display: grid;
             grid-template-rows: auto 1fr auto;
             gap: 6px;
         }
         .player-side .section-label { margin: 0; font-size: 0.72rem; }
         .achievement-zone {
-            padding: 6px;
-            min-height: 210px;
+            padding: 8px;
+            min-height: 248px;
         }
         .grevscore-wrap {
             display: grid;
             grid-template-rows: auto auto auto 1fr auto;
             align-items: center;
             text-align: center;
-            gap: 4px;
+            gap: 3px;
             height: 100%;
         }
         .grevscore-label {
             color: #b8caf0;
-            font-size: 0.76rem;
+            font-size: 0.78rem;
             letter-spacing: 0.2em;
             text-transform: uppercase;
-            font-weight: 820;
+            font-weight: 860;
         }
         .grevscore-value {
-            font-size: clamp(4.3rem, 6vw, 6rem);
+            font-size: clamp(4.9rem, 6.8vw, 6.8rem);
             font-weight: 920;
-            line-height: 0.86;
+            line-height: 0.82;
             letter-spacing: 0.01em;
             color: #f7fbff;
-            text-shadow: 0 0 24px rgba(123, 177, 255, 0.2);
+            text-shadow: 0 0 28px rgba(123, 177, 255, 0.28);
         }
         .grevscore-status {
             color: #bfd0ed;
-            font-size: 0.82rem;
+            font-size: 0.86rem;
             letter-spacing: 0.02em;
             font-weight: 700;
-            margin-top: -2px;
+            margin-top: -1px;
         }
         .grevscore-gauge {
             display: grid;
             justify-items: center;
             align-items: center;
         }
-        .grevscore-gauge svg { width: min(100%, 360px); height: 232px; }
+        .grevscore-gauge svg { width: min(100%, 390px); height: 252px; }
         .grevscore-gauge .track,
         .grevscore-gauge .fill {
             fill: none;
-            stroke-width: 20;
+            stroke-width: 22;
             stroke-linecap: round;
         }
         .grevscore-gauge .track { stroke: rgba(129, 154, 196, 0.34); }
@@ -1467,15 +1481,15 @@ def _inject_styles() -> None:
             background: rgba(10, 16, 27, 0.7);
             padding: 6px 7px;
             text-align: center;
-            font-size: 0.62rem;
+            font-size: 0.64rem;
             color: #d0def8;
             font-weight: 700;
         }
         .stats-card {
             display: grid;
             align-content: start;
-            gap: 8px;
-            padding: 10px;
+            gap: 10px;
+            padding: 12px 11px;
         }
         .stats-tile-grid {
             display: grid;
@@ -1487,7 +1501,7 @@ def _inject_styles() -> None:
             border-radius: 12px;
             padding: 8px;
             background: rgba(11, 17, 28, 0.78);
-            min-height: 140px;
+            min-height: 152px;
             display: grid;
             align-content: center;
         }
