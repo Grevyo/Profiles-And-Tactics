@@ -1556,6 +1556,121 @@ def _inject_styles() -> None:
         .stats-tile .value { color: #f5f8ff; font-size: 2.15rem; font-weight: 900; margin-top: 2px; line-height: 1.01; }
         .stats-tile .sub { color: #c8d5f0; font-size: 0.66rem; margin-top: 2px; }
         .chart-section-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
+        .pv-shell {
+            max-width: var(--dashboard-max-width);
+            margin: 0 auto 16px;
+            display: grid;
+            gap: 14px;
+        }
+        .pv-hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 22px;
+            border: 1px solid rgba(145, 169, 216, 0.42);
+            background:
+                radial-gradient(circle at 10% 10%, rgba(72, 224, 161, 0.19), transparent 36%),
+                radial-gradient(circle at 82% 0%, rgba(92, 169, 255, 0.22), transparent 38%),
+                linear-gradient(140deg, rgba(15, 22, 36, 0.95), rgba(8, 12, 20, 0.96));
+            box-shadow: 0 20px 38px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(208, 227, 255, 0.05);
+            padding: 18px 20px;
+        }
+        .pv-hero-grid {
+            display: grid;
+            grid-template-columns: 180px minmax(0, 1fr) minmax(300px, 0.85fr);
+            gap: 16px;
+            align-items: stretch;
+        }
+        .pv-portrait {
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(157, 188, 236, 0.46);
+            min-height: 238px;
+            background: linear-gradient(180deg, rgba(21, 34, 56, 0.86), rgba(11, 17, 29, 0.96));
+            box-shadow: 0 16px 30px rgba(1, 8, 18, 0.64);
+        }
+        .pv-portrait img.player-headshot {
+            width: 100%;
+            min-height: 238px;
+            height: 100%;
+            object-fit: cover;
+        }
+        .pv-main-copy { display: grid; align-content: start; gap: 10px; }
+        .pv-context-pill {
+            display: inline-flex;
+            width: fit-content;
+            border-radius: 999px;
+            border: 1px solid rgba(160, 192, 241, 0.42);
+            background: rgba(12, 20, 34, 0.84);
+            color: #d4e5ff;
+            padding: 5px 11px;
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 800;
+        }
+        .pv-name { font-size: clamp(2.2rem, 3.3vw, 3.2rem); color: #f4f9ff; font-weight: 920; line-height: 0.95; margin: 0; }
+        .pv-teamline { display:flex; align-items:center; gap:8px; color:#d7e4fd; font-size:0.92rem; font-weight:700; }
+        .pv-meta-row { display:flex; flex-wrap:wrap; gap:8px; }
+        .pv-meta-chip {
+            border-radius: 999px;
+            border: 1px solid rgba(151, 173, 214, 0.4);
+            background: rgba(12, 19, 32, 0.72);
+            color: #dce9ff;
+            font-size: 0.68rem;
+            padding: 6px 10px;
+            letter-spacing: 0.04em;
+            font-weight: 700;
+        }
+        .pv-summary {
+            border-left: 3px solid rgba(72, 224, 161, 0.78);
+            padding: 8px 10px;
+            background: linear-gradient(90deg, rgba(38, 86, 72, 0.28), rgba(12, 20, 33, 0.18));
+            color: #e0ecff;
+            font-size: 0.86rem;
+            line-height: 1.4;
+            border-radius: 10px;
+            margin-top: 2px;
+        }
+        .pv-side-stack { display: grid; gap: 8px; align-content: start; }
+        .pv-side-tile {
+            border: 1px solid rgba(143, 165, 208, 0.32);
+            border-radius: 12px;
+            padding: 8px 9px;
+            background: rgba(11, 18, 31, 0.74);
+        }
+        .pv-side-tile .k { color:#9cb1d6; font-size:0.6rem; text-transform:uppercase; letter-spacing:0.08em; }
+        .pv-side-tile .v { color:#f3f8ff; font-size:0.96rem; font-weight:820; margin-top:2px; }
+        .pv-achievement-ribbon {
+            border-radius: 16px;
+            border: 1px solid rgba(143, 168, 213, 0.3);
+            background: linear-gradient(180deg, rgba(14, 20, 33, 0.88), rgba(8, 13, 22, 0.92));
+            padding: 10px;
+        }
+        .pv-achievement-title { color:#d7e5ff; font-size:0.74rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px; }
+        .pv-achievement-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+        .pv-achievement-scroll .achievement-premium { width: 108px; height: 138px; flex: 0 0 108px; }
+        .pv-score-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+            gap: 14px;
+        }
+        .pv-form-summary {
+            display: grid;
+            gap: 8px;
+            border: 1px solid rgba(151, 166, 195, 0.24);
+            border-radius: 14px;
+            padding: 10px;
+            background: linear-gradient(180deg, rgba(12, 18, 29, 0.84), rgba(9, 14, 24, 0.9));
+        }
+        .pv-form-track { display:grid; gap:4px; }
+        .pv-form-track .label { color:#9eb2d8; font-size:0.63rem; letter-spacing:0.08em; text-transform:uppercase; }
+        .pv-form-track .bar { height:7px; border-radius:999px; background:rgba(141,162,200,0.2); overflow:hidden; }
+        .pv-form-track .bar > span { height:100%; display:block; background: linear-gradient(90deg, #ff7f8e 0%, #f2c25f 52%, #52ddab 100%); }
         .section-block-title {
             margin: 10px auto 6px;
             color:#e9f1ff;
@@ -1586,10 +1701,14 @@ def _inject_styles() -> None:
             .player-main { grid-template-columns: 132px minmax(0, 1fr); }
             .chart-section-grid { grid-template-columns: 1fr; }
             .performance-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+            .pv-hero-grid { grid-template-columns: 150px minmax(0, 1fr); }
+            .pv-side-stack { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .pv-score-grid { grid-template-columns: 1fr; }
         }
         @media (max-width: 1024px) {
             .cpl-top-grid { grid-template-columns: 1fr; }
             .cpl-hero { grid-template-columns: minmax(90px, 120px) minmax(0, 1fr) minmax(70px, 90px); }
+            .pv-side-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         @media (max-width: 1200px) {
             .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1668,6 +1787,10 @@ def _inject_styles() -> None:
             .stats-tile { min-height: 82px; }
             .stats-tile .value { font-size: 1.36rem; }
             .grevscore-gauge svg { height: 172px; }
+            .pv-hero-grid { grid-template-columns: 1fr; }
+            .pv-portrait { min-height: 188px; }
+            .pv-portrait img.player-headshot { min-height: 188px; }
+            .pv-side-stack { grid-template-columns: 1fr; }
         }
         </style>
         """,
@@ -2604,6 +2727,21 @@ def render_player_achievements_inline(player_achievements: pd.DataFrame) -> str:
     return f"<div class='achievement-row achievement-inline-cabinet'>{cards}</div>"
 
 
+def _trend_icon_and_class(trend_direction: str) -> tuple[str, str]:
+    if str(trend_direction).strip().lower() == "rising":
+        return "↗", "up"
+    return "↘", "down"
+
+
+def _build_performance_summary(metrics: dict[str, float], trend_direction: str, form_score: float) -> str:
+    fragger_state = "elite fragger" if metrics["kpm"] >= 0.74 else ("stable fragger" if metrics["kpm"] >= 0.62 else "below-average fragger")
+    utility_state = "high utility impact" if metrics["impact"] >= 76 else ("solid utility impact" if metrics["impact"] >= 66 else "light utility impact")
+    form_state = "form currently rising" if trend_direction == "Rising" and form_score >= 65 else (
+        "form unstable recently" if trend_direction == "Rising" else "form currently dropping"
+    )
+    return f"{fragger_state}, {utility_state}, {form_state}"
+
+
 def _home() -> None:
     _inject_styles()
     _render_top_hero(
@@ -2817,10 +2955,12 @@ def _hltv_profile_view(
         )
     )
 
+    trend_icon, trend_class = _trend_icon_and_class(trend_direction)
+    performance_summary = _build_performance_summary(metrics, trend_direction, form_score)
     stats_tiles = [
-        f"<div class='stats-tile'><div class='label'>Rating</div><div class='value'>{metrics['grevscore']:.2f}</div><div class='sub'>{score_tier}</div></div>",
+        f"<div class='stats-tile'><div class='label'>Rating</div><div class='value'>{metrics['grevscore']:.2f}</div><div class='sub'>Tier: {score_tier}</div></div>",
         f"<div class='stats-tile'><div class='label'>Impact</div><div class='value'>{metrics['impact']:.1f}</div><div class='sub'>{percentile:.0f}th percentile</div></div>",
-        f"<div class='stats-tile'><div class='label'>Form</div><div class='value'>{form_score:.1f}</div><div class='sub'>{trend_direction}</div></div>",
+        f"<div class='stats-tile'><div class='label'>Form</div><div class='value'>{form_score:.1f}</div><div class='sub trend-{trend_class}'> {trend_icon} {trend_direction}</div></div>",
         f"<div class='stats-tile'><div class='label'>Matches</div><div class='value'>{int(metrics['matches'])}</div><div class='sub'>{record_text}</div></div>",
     ]
     grev_meter_pct = max(0.0, min((metrics["grevscore"] - 0.65) / (1.28 - 0.65), 1.0)) * 100
@@ -2847,39 +2987,38 @@ def _hltv_profile_view(
     # Verification: both sections now render as explicit custom HTML/CSS containers (hero + first row), not Streamlit columns.
     st.markdown(
         f"""
-        <section class="panel-card">
-            <section class="cpl-top-grid">
-                <article class="player-card">
-                    <div class="player-card-inner">
-                        <div class="player-main">
-                            <div class="portrait-shell">{player_img_html}</div>
-                            <div>
-                                <div class="profile-label">Player Identity</div>
-                                <div class="profile-name" style="font-size:2.2rem;">{profile_name}</div>
-                                <div class="team-line">{team_logo_html}<strong>{html.escape(str(profile_data.get('team', '-')))}</strong></div>
-                                <div class="quick-profile-grid">
-                                    <div class="quick-profile-tile"><div class="label">Role</div><div class="value">{html.escape(player_role)}</div></div>
-                                    <div class="quick-profile-tile"><div class="label">Best Map</div><div class="value">{html.escape(str(best_map))}</div></div>
-                                    <div class="quick-profile-tile"><div class="label">Best Side</div><div class="value">{html.escape(side_split)}</div></div>
-                                    <div class="quick-profile-tile"><div class="label">Team Rank</div><div class="value">#{team_rank}/{rank_total}</div></div>
-                                </div>
-                            </div>
+        <section class="pv-shell">
+            <article class="pv-hero">
+                <div class="pv-hero-grid">
+                    <div class="pv-portrait">{player_img_html}</div>
+                    <div class="pv-main-copy">
+                        <div class="pv-context-pill">Season Context · {html.escape(st.session_state.get("profile_season", "Lifetime"))}</div>
+                        <h2 class="pv-name">{profile_name}</h2>
+                        <div class="pv-teamline">{team_logo_html}<strong>{html.escape(str(profile_data.get('team', '-')))}</strong></div>
+                        <div class="pv-meta-row">
+                            <span class="pv-meta-chip">🎯 {html.escape(player_role)}</span>
+                            <span class="pv-meta-chip">🌍 {html.escape(str(profile_data.get('nation', '-')))}</span>
+                            <span class="pv-meta-chip">🗺️ Best map: {html.escape(str(best_map))}</span>
+                            <span class="pv-meta-chip">🧭 Best side: {html.escape(side_split)}</span>
                         </div>
-                        <div class="player-side">
-                            <div class="section-label">Achievements Cabinet</div>
-                            <div class="achievement-zone">{achievements_inline_html}</div>
-                            <div class="quick-profile-grid">
-                                <div class="quick-profile-tile"><div class="label">Current Streak</div><div class="value">{streak:+d}</div></div>
-                                <div class="quick-profile-tile"><div class="label">Record</div><div class="value">{record_text}</div></div>
-                                <div class="quick-profile-tile"><div class="label">Last 10 Δ</div><div class="value">{recent10_delta:+.2f}</div></div>
-                                <div class="quick-profile-tile"><div class="label">Nationality</div><div class="value">{html.escape(str(profile_data.get('nation', '-')))}</div></div>
-                            </div>
-                        </div>
+                        <div class="pv-summary">"{html.escape(performance_summary)}"</div>
                     </div>
-                </article>
+                    <div class="pv-side-stack">
+                        <div class="pv-side-tile"><div class="k">Team Rank</div><div class="v">#{team_rank}/{rank_total}</div></div>
+                        <div class="pv-side-tile"><div class="k">Record</div><div class="v">{record_text}</div></div>
+                        <div class="pv-side-tile"><div class="k">Current Streak</div><div class="v">{streak:+d}</div></div>
+                        <div class="pv-side-tile"><div class="k">Last 10 Δ</div><div class="v">{recent10_delta:+.2f}</div></div>
+                    </div>
+                </div>
+            </article>
+            <article class="pv-achievement-ribbon">
+                <div class="pv-achievement-title">🏆 Achievement Ribbon</div>
+                <div class="pv-achievement-scroll">{achievements_inline_html}</div>
+            </article>
+            <section class="pv-score-grid">
                 <article class="grevscore-card">
                     <div class="grevscore-wrap">
-                        <div class="grevscore-label">GREVSCORE</div>
+                        <div class="grevscore-label">Signature Stat · GREVSCORE</div>
                         <div class="grevscore-value">{metrics['grevscore']:.2f}</div>
                         <div class="grevscore-band {grev_band_class}">{score_tier}</div>
                         <div class="grevscore-status">{percentile:.0f}th percentile in current filter set</div>
@@ -2887,15 +3026,11 @@ def _hltv_profile_view(
                             <div class="grevscore-meter-track">
                                 <div class="grevscore-meter-fill" style="width:{grev_meter_pct:.1f}%;"></div>
                             </div>
-                            <div class="grevscore-meter-labels">
-                                <span>Weak</span>
-                                <span>Average</span>
-                                <span>Elite</span>
-                            </div>
+                            <div class="grevscore-meter-labels"><span>Weak</span><span>Average</span><span>Elite</span></div>
                         </div>
                         <div class="grevscore-meta">
                             <span>Rank #{team_rank}/{rank_total}</span>
-                            <span>Trend: {trend_direction}</span>
+                            <span>Trend {trend_icon} {trend_direction}</span>
                             <span>Last 10: {recent10_delta:+.2f}</span>
                         </div>
                     </div>
@@ -2979,14 +3114,26 @@ def _hltv_profile_view(
         _apply_plotly_dark_style(side_chart, height=290)
 
     st.markdown("<div class='section-block-title'>Form</div>", unsafe_allow_html=True)
+    bar_5 = max(0.0, min((form_avg_5 - 0.75) / 0.55, 1.0)) * 100
+    bar_10 = max(0.0, min((form_avg_10 - 0.75) / 0.55, 1.0)) * 100
+    dir_pct = 100.0 if trend_direction == "Rising" else 28.0
     form_stats_html = (
         _build_stat_chip("Streak", f"{streak:+d}", float(streak), -1, 2)
         + _build_stat_chip("Last 5 avg", f"{form_avg_5:.2f}", form_avg_5, 0.9, 1.15)
         + _build_stat_chip("Last 10 avg", f"{form_avg_10:.2f}", form_avg_10, 0.9, 1.15)
-        + _build_stat_chip("Direction", trend_direction, 1 if trend_direction == "Rising" else 0, 0.5, 1.0)
+        + _build_stat_chip("Direction", f"{trend_icon} {trend_direction}", 1 if trend_direction == "Rising" else 0, 0.5, 1.0)
     )
     st.markdown(
-        f"<div class='form-card'><div class='stats-grid overview-grid'>{form_stats_html}</div></div>",
+        (
+            f"<div class='form-card'>"
+            f"<div class='stats-grid overview-grid'>{form_stats_html}</div>"
+            f"<div class='pv-form-summary'>"
+            f"<div class='pv-form-track'><div class='label'>Last 5 Momentum</div><div class='bar'><span style='width:{bar_5:.1f}%;'></span></div></div>"
+            f"<div class='pv-form-track'><div class='label'>Last 10 Momentum</div><div class='bar'><span style='width:{bar_10:.1f}%;'></span></div></div>"
+            f"<div class='pv-form-track'><div class='label'>Direction Bias</div><div class='bar'><span style='width:{dir_pct:.1f}%;'></span></div></div>"
+            f"</div>"
+            f"</div>"
+        ),
         unsafe_allow_html=True,
     )
     if trend_chart is not None:
