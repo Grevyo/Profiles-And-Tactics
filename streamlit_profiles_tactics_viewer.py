@@ -901,13 +901,13 @@ def _inject_styles() -> None:
 
         .stApp [data-testid="stMainBlockContainer"] {
             width: 100%;
-            max-width: 1280px;
+            max-width: 1420px;
             margin-left: auto;
             margin-right: auto;
-            padding-top: 0.9rem;
-            padding-bottom: 1.35rem;
-            padding-left: 1rem;
-            padding-right: 1rem;
+            padding-top: 1.1rem;
+            padding-bottom: 1.6rem;
+            padding-left: clamp(1.5rem, 4vw, 3.4rem);
+            padding-right: clamp(1.5rem, 4vw, 3.4rem);
         }
         .cpl-hero {
             border: 1px solid rgba(156, 182, 236, 0.34);
@@ -1000,8 +1000,8 @@ def _inject_styles() -> None:
             max-width: 1320px;
             margin-left: auto;
             margin-right: auto;
-            padding: 11px;
-            margin-bottom: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
         }
         .cpl-player-card,
         .cpl-grev-card,
@@ -1078,15 +1078,15 @@ def _inject_styles() -> None:
         .quick-profile-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 7px;
-            margin-top: 6px;
+            gap: 8px;
+            margin-top: 8px;
         }
         .quick-profile-tile {
-            border: 1px solid rgba(151, 166, 195, 0.24);
-            border-radius: 10px;
-            background: rgba(9, 14, 24, 0.78);
-            padding: 7px 9px;
-            min-height: 44px;
+            border: 1px solid rgba(151, 166, 195, 0.3);
+            border-radius: 11px;
+            background: linear-gradient(180deg, rgba(15, 22, 35, 0.92), rgba(10, 16, 27, 0.88));
+            padding: 8px 10px;
+            min-height: 52px;
         }
         .achievement-zone {
             border: 1px solid rgba(140, 159, 191, 0.22);
@@ -1141,21 +1141,21 @@ def _inject_styles() -> None:
             align-items: flex-start;
         }
         .achievement-premium {
-            width: 154px;
-            height: 206px;
+            width: 104px;
+            height: 140px;
             border-radius: 12px;
             position: relative;
             overflow: hidden;
             border: 1px solid rgba(151, 166, 195, 0.32);
             background: linear-gradient(180deg, rgba(19, 28, 43, 0.95), rgba(9, 14, 24, 0.96));
-            flex: 0 0 154px;
+            flex: 0 0 104px;
         }
         .achievement-premium img {
             width: 100%;
-            height: 124px;
+            height: 86px;
             object-fit: contain;
             object-position: center;
-            margin-top: 26px;
+            margin-top: 20px;
             padding: 0 6px;
             box-sizing: border-box;
         }
@@ -1385,123 +1385,165 @@ def _inject_styles() -> None:
         }
         .cpl-top-grid {
             display: grid;
-            grid-template-columns: 1.2fr 0.95fr 0.8fr;
-            gap: 16px;
+            grid-template-columns: minmax(0, 1.45fr) minmax(0, 1.02fr) minmax(0, 0.86fr);
+            gap: 22px;
             align-items: stretch;
         }
         .player-card,
         .grevscore-card,
         .stats-card {
-            border: 1px solid rgba(151, 166, 195, 0.24);
-            border-radius: 18px;
-            background: linear-gradient(180deg, rgba(13, 20, 32, 0.92), rgba(8, 12, 20, 0.94));
-            padding: 12px;
+            border: 1px solid rgba(155, 174, 214, 0.27);
+            border-radius: 20px;
+            background: linear-gradient(180deg, rgba(14, 20, 32, 0.95), rgba(9, 13, 22, 0.96));
+            padding: 15px;
             min-height: 374px;
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
         }
         .player-card-inner {
             display: grid;
-            grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
-            gap: 12px;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+            gap: 14px;
             height: 100%;
         }
         .player-main {
             display: grid;
-            grid-template-columns: 118px minmax(0, 1fr);
-            gap: 10px;
+            grid-template-columns: 138px minmax(0, 1fr);
+            gap: 12px;
             align-content: start;
-            padding-right: 8px;
+            padding-right: 6px;
         }
         .player-side {
             border: 1px solid rgba(151, 166, 195, 0.2);
-            border-radius: 12px;
-            background: rgba(11, 17, 28, 0.66);
-            padding: 10px;
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(13, 20, 33, 0.75), rgba(9, 14, 24, 0.76));
+            padding: 10px 11px;
             display: grid;
             grid-template-rows: auto 1fr auto;
-            gap: 6px;
+            gap: 8px;
         }
         .player-side .section-label { margin: 0; font-size: 0.72rem; }
         .achievement-zone {
             padding: 8px;
-            min-height: 248px;
+            min-height: 136px;
+            max-height: 168px;
+            overflow: auto;
         }
         .grevscore-wrap {
             display: grid;
-            grid-template-rows: auto auto auto 1fr auto;
-            align-items: center;
-            text-align: center;
-            gap: 3px;
+            grid-template-rows: auto auto auto auto 1fr auto;
+            align-items: start;
+            text-align: left;
+            gap: 8px;
             height: 100%;
         }
         .grevscore-label {
-            color: #b8caf0;
-            font-size: 0.78rem;
-            letter-spacing: 0.2em;
+            color: #b8c9ee;
+            font-size: 0.72rem;
+            letter-spacing: 0.16em;
             text-transform: uppercase;
             font-weight: 860;
         }
         .grevscore-value {
-            font-size: clamp(4.9rem, 6.8vw, 6.8rem);
+            font-size: clamp(3.8rem, 5.8vw, 5.6rem);
             font-weight: 920;
-            line-height: 0.82;
+            line-height: 0.86;
             letter-spacing: 0.01em;
             color: #f7fbff;
-            text-shadow: 0 0 28px rgba(123, 177, 255, 0.28);
+            text-shadow: 0 0 28px rgba(68, 222, 160, 0.2);
         }
         .grevscore-status {
-            color: #bfd0ed;
-            font-size: 0.86rem;
+            color: #c4d4f0;
+            font-size: 0.83rem;
             letter-spacing: 0.02em;
-            font-weight: 700;
-            margin-top: -1px;
+            font-weight: 730;
         }
-        .grevscore-gauge {
-            display: grid;
-            justify-items: center;
+        .grevscore-band {
+            display: inline-flex;
             align-items: center;
+            justify-content: center;
+            width: fit-content;
+            border-radius: 999px;
+            padding: 5px 12px;
+            border: 1px solid rgba(151, 166, 195, 0.45);
+            font-size: 0.68rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 820;
         }
-        .grevscore-gauge svg { width: min(100%, 390px); height: 252px; }
-        .grevscore-gauge .track,
-        .grevscore-gauge .fill {
-            fill: none;
-            stroke-width: 22;
-            stroke-linecap: round;
+        .grevscore-band.good {
+            color: #aaf4cc;
+            border-color: rgba(49, 209, 123, 0.52);
+            background: linear-gradient(180deg, rgba(19, 60, 43, 0.7), rgba(12, 31, 24, 0.65));
         }
-        .grevscore-gauge .track { stroke: rgba(129, 154, 196, 0.34); }
-        .grevscore-gauge .fill { stroke: url(#grevGrad); transition: stroke-dasharray 0.35s ease; }
+        .grevscore-band.mid {
+            color: #ffe1a5;
+            border-color: rgba(240, 190, 79, 0.52);
+            background: linear-gradient(180deg, rgba(66, 50, 23, 0.72), rgba(36, 28, 14, 0.65));
+        }
+        .grevscore-band.bad {
+            color: #ffc1cb;
+            border-color: rgba(255, 108, 122, 0.52);
+            background: linear-gradient(180deg, rgba(73, 33, 40, 0.72), rgba(37, 19, 24, 0.68));
+        }
+        .grevscore-meter {
+            margin-top: 2px;
+            display: grid;
+            gap: 6px;
+        }
+        .grevscore-meter-track {
+            width: 100%;
+            border-radius: 999px;
+            height: 14px;
+            background: rgba(136, 157, 198, 0.22);
+            overflow: hidden;
+            border: 1px solid rgba(146, 166, 205, 0.34);
+        }
+        .grevscore-meter-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #ff6878 0%, #f0bf4f 52%, #49da9f 100%);
+            box-shadow: 0 0 18px rgba(80, 225, 168, 0.28);
+        }
+        .grevscore-meter-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.64rem;
+            color: #9fb1d3;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
         .grevscore-meta {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 5px;
+            gap: 7px;
         }
         .grevscore-meta span {
-            border: 1px solid rgba(151, 166, 195, 0.22);
+            border: 1px solid rgba(151, 166, 195, 0.3);
             border-radius: 10px;
-            background: rgba(10, 16, 27, 0.7);
-            padding: 6px 7px;
+            background: rgba(10, 17, 28, 0.82);
+            padding: 8px 7px;
             text-align: center;
             font-size: 0.64rem;
-            color: #d0def8;
-            font-weight: 700;
+            color: #d5e2f9;
+            font-weight: 760;
         }
         .stats-card {
             display: grid;
             align-content: start;
-            gap: 10px;
-            padding: 12px 11px;
+            gap: 12px;
+            padding: 14px 12px;
         }
         .stats-tile-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 7px;
+            gap: 9px;
         }
         .stats-tile {
-            border: 1px solid rgba(151, 166, 195, 0.22);
+            border: 1px solid rgba(151, 166, 195, 0.32);
             border-radius: 12px;
-            padding: 8px;
-            background: rgba(11, 17, 28, 0.78);
-            min-height: 152px;
+            padding: 10px;
+            background: linear-gradient(180deg, rgba(16, 23, 36, 0.92), rgba(11, 17, 28, 0.88));
+            min-height: 142px;
             display: grid;
             align-content: center;
         }
@@ -1529,14 +1571,14 @@ def _inject_styles() -> None:
             .section-block-title,
             .form-card, .impact-card, .support-table, .chart-panel,
             .panel-card {
-                max-width: 1360px;
+                max-width: 1440px;
             }
         }
         @media (max-width: 1280px) {
-            .cpl-top-grid { grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.92fr); }
+            .cpl-top-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
             .stats-card { grid-column: 1 / -1; }
             .player-card-inner { grid-template-columns: 1fr; }
-            .player-main { grid-template-columns: 128px minmax(0, 1fr); }
+            .player-main { grid-template-columns: 132px minmax(0, 1fr); }
             .chart-section-grid { grid-template-columns: 1fr; }
             .performance-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
         }
@@ -1550,8 +1592,8 @@ def _inject_styles() -> None:
         }
         @media (max-width: 768px) {
             .stApp [data-testid="stMainBlockContainer"] {
-                padding-left: 0.62rem;
-                padding-right: 0.62rem;
+                padding-left: 0.84rem;
+                padding-right: 0.84rem;
                 padding-top: 0.78rem;
             }
             .cpl-hero {
@@ -1613,9 +1655,9 @@ def _inject_styles() -> None:
                 gap: 6px;
             }
             .achievement-premium {
-                width: 94px;
-                height: 132px;
-                flex-basis: 94px;
+                width: 82px;
+                height: 112px;
+                flex-basis: 82px;
             }
             .stats-tile-grid { gap: 7px; }
             .stats-tile { min-height: 82px; }
@@ -2776,7 +2818,8 @@ def _hltv_profile_view(
         f"<div class='stats-tile'><div class='label'>Form</div><div class='value'>{form_score:.1f}</div><div class='sub'>{trend_direction}</div></div>",
         f"<div class='stats-tile'><div class='label'>Matches</div><div class='value'>{int(metrics['matches'])}</div><div class='sub'>{record_text}</div></div>",
     ]
-    grev_dial_pct = max(0.0, min((metrics["grevscore"] - 0.65) / (1.28 - 0.65), 1.0)) * 100
+    grev_meter_pct = max(0.0, min((metrics["grevscore"] - 0.65) / (1.28 - 0.65), 1.0)) * 100
+    grev_band_class = "good" if metrics["grevscore"] >= 1.02 else ("mid" if metrics["grevscore"] >= 0.85 else "bad")
 
     priority_cards = [
         _metric_card_html("Grevscore", f"{metrics['grevscore']:.2f}", metrics["grevscore"], 0.95, 1.18, priority=True),
@@ -2807,7 +2850,7 @@ def _hltv_profile_view(
                             <div class="portrait-shell">{player_img_html}</div>
                             <div>
                                 <div class="profile-label">Player Identity</div>
-                                <div class="profile-name" style="font-size:2rem;">{profile_name}</div>
+                                <div class="profile-name" style="font-size:2.2rem;">{profile_name}</div>
                                 <div class="team-line">{team_logo_html}<strong>{html.escape(str(profile_data.get('team', '-')))}</strong></div>
                                 <div class="quick-profile-grid">
                                     <div class="quick-profile-tile"><div class="label">Role</div><div class="value">{html.escape(player_role)}</div></div>
@@ -2833,19 +2876,17 @@ def _hltv_profile_view(
                     <div class="grevscore-wrap">
                         <div class="grevscore-label">GREVSCORE</div>
                         <div class="grevscore-value">{metrics['grevscore']:.2f}</div>
-                        <div class="grevscore-status">{score_tier} • {percentile:.0f}th percentile</div>
-                        <div class="grevscore-gauge">
-                            <svg viewBox="0 0 360 220" width="100%" height="100%" aria-label="Grevscore dial">
-                                <defs>
-                                    <linearGradient id="grevGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" stop-color="#ff6878"></stop>
-                                        <stop offset="52%" stop-color="#f0bf4f"></stop>
-                                        <stop offset="100%" stop-color="#49da9f"></stop>
-                                    </linearGradient>
-                                </defs>
-                                <path class="track" pathLength="100" d="M 26 188 A 154 154 0 0 1 334 188"></path>
-                                <path class="fill" pathLength="100" d="M 26 188 A 154 154 0 0 1 334 188" style="stroke-dasharray: {grev_dial_pct:.1f} 100;"></path>
-                            </svg>
+                        <div class="grevscore-band {grev_band_class}">{score_tier}</div>
+                        <div class="grevscore-status">{percentile:.0f}th percentile in current filter set</div>
+                        <div class="grevscore-meter">
+                            <div class="grevscore-meter-track">
+                                <div class="grevscore-meter-fill" style="width:{grev_meter_pct:.1f}%;"></div>
+                            </div>
+                            <div class="grevscore-meter-labels">
+                                <span>Weak</span>
+                                <span>Average</span>
+                                <span>Elite</span>
+                            </div>
                         </div>
                         <div class="grevscore-meta">
                             <span>Rank #{team_rank}/{rank_total}</span>
