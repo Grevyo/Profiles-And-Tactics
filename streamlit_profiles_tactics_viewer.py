@@ -988,6 +988,9 @@ def _build_image_index() -> dict[str, dict[str, Path]]:
                 if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS:
                     entries[_normalize_key(path.stem)] = path
         image_index[image_type] = entries
+        if image_type == "competition":
+            indexed_competitions = sorted((key, value.name) for key, value in entries.items())
+            print("[logo_resolver:index] competition_keys=%r" % indexed_competitions)
     return image_index
 
 
@@ -996,27 +999,54 @@ def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value:
         return None
 
     normalized_key = normalize_logo_key(value)
+    normalized = _normalize_key(normalized_key)
+    entries = image_index.get(image_type, {})
+    resolved_filename: str | None = None
+    resolved_logo: Path | None = None
+    resolved_logo_exists = False
 
     if image_type == "competition":
         resolved_filename = resolve_competition_logo_filename(value)
         if resolved_filename:
             resolved_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / resolved_filename
-            if resolved_logo.exists():
+            resolved_logo_exists = resolved_logo.exists()
+            if resolved_logo_exists:
+                final_path = resolved_logo
+                fallback_found = entries.get(normalized) is not None
                 print(
-                    "[logo_resolver] competition=%r normalized=%r resolved=%r"
-                    % (value, normalized_key, resolved_logo.name)
+                    "[logo_resolver] raw=%s repr=%r normalized_key=%s resolved_filename=%r resolved_path=%r resolved_exists=%s fallback_key=%s fallback_found=%s final_return=%r"
+                    % (
+                        str(value),
+                        value,
+                        normalized_key,
+                        resolved_filename,
+                        str(resolved_logo),
+                        resolved_logo_exists,
+                        normalized,
+                        fallback_found,
+                        str(final_path),
+                    )
                 )
-                return resolved_logo
+                return final_path
 
-    normalized = _normalize_key(normalized_key)
-    entries = image_index.get(image_type, {})
-    resolved_logo = entries.get(normalized)
+    fallback_logo = entries.get(normalized)
     if image_type == "competition":
+        final_path = fallback_logo
         print(
-            "[logo_resolver] competition=%r normalized=%r resolved=%r"
-            % (value, normalized_key, resolved_logo.name if resolved_logo else None)
+            "[logo_resolver] raw=%s repr=%r normalized_key=%s resolved_filename=%r resolved_path=%r resolved_exists=%s fallback_key=%s fallback_found=%s final_return=%r"
+            % (
+                str(value),
+                value,
+                normalized_key,
+                resolved_filename,
+                str(resolved_logo) if resolved_logo else None,
+                resolved_logo_exists,
+                normalized,
+                fallback_logo is not None,
+                str(final_path) if final_path else None,
+            )
         )
-    return resolved_logo
+    return fallback_logo
 
 
 def _competition_logo_uri(image_index: dict[str, dict[str, Path]], competition: str | None) -> str:
