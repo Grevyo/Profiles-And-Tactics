@@ -1084,6 +1084,43 @@ def normalize_competition_name(competition: str | None) -> str | None:
     return re.sub(r"\b(S\d+)\.\d+\b", r"\1", str(competition))
 
 
+def extract_season_number(name: object) -> int | None:
+    if name is None or (isinstance(name, float) and pd.isna(name)):
+        return None
+    text = str(name)
+    season_patterns = [
+        r"\bS(?:eason)?\s*[-_.]?\s*(\d+)\b",
+        r"\bSeason\s+(\d+)\b",
+    ]
+    for pattern in season_patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def detect_latest_season(df: pd.DataFrame, competition_col: str = "competition") -> int | None:
+    if df.empty or competition_col not in df.columns:
+        return None
+    seasons = df[competition_col].apply(extract_season_number).dropna()
+    if seasons.empty:
+        return None
+    return int(seasons.max())
+
+
+def apply_season_filter(df: pd.DataFrame, selected_season: str, competition_col: str = "competition") -> pd.DataFrame:
+    if df.empty or competition_col not in df.columns or selected_season == "Lifetime":
+        return df.copy()
+    season_match = re.match(r"^S(\d+)$", str(selected_season), flags=re.IGNORECASE)
+    if season_match is None:
+        return df.copy()
+    target_season = int(season_match.group(1))
+    filtered_df = df.copy()
+    filtered_df["_season_number"] = filtered_df[competition_col].apply(extract_season_number)
+    filtered_df = filtered_df[filtered_df["_season_number"] == target_season].drop(columns="_season_number")
+    return filtered_df
+
+
 def _sanitize_competition_value(value: object) -> object:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return value
@@ -2789,8 +2826,8 @@ def _medisports_vs_breakdown(
         st.warning("No match-level results available.")
         return
 
-    st.markdown("### A) Overall team health")
-    c1, c2, c3 = st.columns([1.1, 1.2, 1.7])
+    st.markdown("### Overall team health")
+    c1, c2, c3, c4 = st.columns([1.0, 1.2, 1.6, 1.0])
     with c1:
         min_matches = int(st.slider("Minimum matches", 1, 8, 2, key="medisports_min_matches"))
     with c2:
@@ -2810,9 +2847,36 @@ def _medisports_vs_breakdown(
             key="medisports_comp_filter",
         )
 
+    season_pool = match_results.copy()
+    if selected_comp:
+        season_pool = season_pool[season_pool["competition"].isin(selected_comp)]
+    season_pool["_season_number"] = season_pool["competition"].apply(extract_season_number)
+    available_seasons = sorted(
+        season_pool["_season_number"].dropna().astype(int).unique().tolist(),
+        reverse=True,
+    )
+    latest_season = detect_latest_season(season_pool, "competition")
+    default_season_option = f"S{latest_season}" if latest_season is not None else "Lifetime"
+
+    st.markdown(
+        f"<div class='panel-muted'>Active season: {html.escape(default_season_option)}</div>",
+        unsafe_allow_html=True,
+    )
+
+    with c4:
+        season_options = ["Lifetime"] + [f"S{season}" for season in available_seasons]
+        default_season_index = season_options.index(default_season_option) if default_season_option in season_options else 0
+        selected_season = st.selectbox(
+            "Season",
+            season_options,
+            index=default_season_index,
+            key="medisports_season_filter",
+        )
+
     filtered = match_results.copy()
     if selected_comp:
         filtered = filtered[filtered["competition"].isin(selected_comp)]
+    filtered = apply_season_filter(filtered, selected_season, "competition")
     if form_window != "All time":
         n_recent = int(form_window.split(" ")[1])
         filtered = filtered.sort_values("date", ascending=False).head(n_recent)
@@ -2973,7 +3037,7 @@ def _medisports_vs_breakdown(
         unsafe_allow_html=True,
     )
 
-    st.markdown("### D) What needs fixing? (Auto insights)")
+    st.markdown("### What needs fixing?")
     insights = []
     if overall_win_rate < 50 and overall_round_diff > 0:
         insights.append("Win rate is low while round differential is positive (close losses / unstable conversion).")
@@ -2996,7 +3060,7 @@ def _medisports_vs_breakdown(
         unsafe_allow_html=True,
     )
 
-    st.markdown("### B) Who do we beat / lose to?")
+    st.markdown("### Who do we beat / lose to?")
     leaderboard = vs_summary[vs_summary["matches"] >= min_matches].copy()
     if leaderboard.empty:
         demo_rows = [
@@ -3069,7 +3133,7 @@ def _medisports_vs_breakdown(
                     unsafe_allow_html=True,
                 )
 
-    st.markdown("### C) Where do we perform best?")
+    st.markdown("### Where do we perform best?")
     chart_col_1, chart_col_2 = st.columns(2)
     with chart_col_1:
         st.markdown("#### Matchup strength (round differential)")
