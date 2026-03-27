@@ -901,9 +901,11 @@ def _inject_styles() -> None:
 
         .profile-hero-grid {
             display: grid;
-            grid-template-columns: 1.2fr 1fr 0.9fr;
-            gap: 14px;
+            grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.72fr) minmax(0, 0.93fr);
+            gap: 10px;
             align-items: stretch;
+            max-width: 1240px;
+            margin: 0 auto;
         }
         .hero-identity-card,
         .hero-score-card,
@@ -915,7 +917,7 @@ def _inject_styles() -> None:
             border: 1px solid rgba(151, 166, 195, 0.24);
             border-radius: 16px;
             background: linear-gradient(180deg, rgba(13, 20, 32, 0.92), rgba(8, 12, 20, 0.94));
-            padding: 14px;
+            padding: 12px;
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
         }
         .identity-header {
@@ -1029,20 +1031,68 @@ def _inject_styles() -> None:
         .glow-a { box-shadow: 0 0 15px rgba(156, 109, 246, 0.24); }
         .glow-b { box-shadow: 0 0 14px rgba(94, 169, 255, 0.24); }
         .glow-c { box-shadow: 0 0 13px rgba(78, 208, 131, 0.2); }
-        .core-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-top: 8px; }
-        .priority-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
-        .support-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+        .core-grid {
+            margin-top: 8px;
+            max-width: 1240px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .performance-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 8px;
+        }
         .metric-card { border: 1px solid rgba(151,166,195,0.24); border-radius: 12px; padding: 9px 10px; background: rgba(11,17,28,0.76); }
-        .metric-card.priority { min-height: 82px; }
+        .metric-card.priority { min-height: 74px; }
         .metric-title { color:#97a7c7; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.08em; }
         .metric-value { color:#f5f8ff; font-size:1.2rem; font-weight:850; }
         .metric-state { font-size:0.68rem; font-weight:700; margin-top:2px; }
+        .hero-score-card {
+            display: grid;
+            align-content: start;
+            gap: 4px;
+        }
+        .hero-score-card .gauge-wrap {
+            height: 118px;
+            margin-top: 4px;
+        }
+        .hero-score-card .gauge-score {
+            font-size: 1.8rem;
+            margin-bottom: 2px;
+        }
+        .hero-score-card .gauge-arc {
+            top: 54px;
+            width: 154px;
+            height: 74px;
+            border-radius: 154px 154px 0 0;
+        }
+        .hero-score-card .gauge-needle {
+            top: 67px;
+            height: 56px;
+        }
+        .hero-score-card .gauge-hub {
+            top: 116px;
+            width: 12px;
+            height: 12px;
+        }
         .chart-section-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
-        .section-block-title { margin: 12px 0 6px; color:#e9f1ff; font-size:1rem; font-weight:800; letter-spacing:0.02em; }
+        .section-block-title {
+            margin: 12px auto 6px;
+            color:#e9f1ff;
+            font-size:1rem;
+            font-weight:800;
+            letter-spacing:0.02em;
+            max-width: 1240px;
+        }
+        .form-card, .impact-card, .support-table, .chart-panel {
+            max-width: 1240px;
+            margin-left: auto;
+            margin-right: auto;
+        }
         @media (max-width: 1280px) {
             .profile-hero-grid { grid-template-columns: 1fr; }
-            .core-grid, .chart-section-grid { grid-template-columns: 1fr; }
-            .support-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+            .chart-section-grid { grid-template-columns: 1fr; }
+            .performance-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
         }
         @media (max-width: 1200px) {
             .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2237,6 +2287,7 @@ def _hltv_profile_view(
         _metric_card_html("Accuracy%", f"{avg_acc:.1f}%", avg_acc, 50, 66),
         _metric_card_html("Kills", f"{int(metrics['kills'])}", float(metrics["kills"]), 120, 220),
     ]
+    core_cards = priority_cards + support_cards
 
     st.markdown(
         f"""
@@ -2282,7 +2333,7 @@ def _hltv_profile_view(
 
     st.markdown("<div class='section-block-title'>Core Performance</div>", unsafe_allow_html=True)
     st.markdown(
-        f"<div class='core-grid'><div class='priority-grid'>{''.join(priority_cards)}</div><div class='support-grid'>{''.join(support_cards)}</div></div>",
+        f"<div class='core-grid'><div class='performance-grid'>{''.join(core_cards)}</div></div>",
         unsafe_allow_html=True,
     )
 
