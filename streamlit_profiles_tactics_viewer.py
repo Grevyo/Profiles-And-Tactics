@@ -2730,7 +2730,10 @@ def _hltv_profile_view(
     st.markdown("### Profile Viewer (Current)")
     nav_col, text_col = st.columns([1, 2.2], vertical_alignment="center")
     with nav_col:
-        st.page_link("pages/99_Profile_Viewer_V2.py", label="Open Profile Viewer V2", icon="🆕")
+        try:
+            st.page_link("pages/99_Profile_Viewer_V2.py", label="Open Profile Viewer V2", icon="🆕")
+        except KeyError:
+            st.caption("Profile Viewer V2 link unavailable in this runtime.")
     with text_col:
         st.caption("Use this page for the current/legacy view. Open V2 for the rebuilt standalone page.")
     st.divider()
