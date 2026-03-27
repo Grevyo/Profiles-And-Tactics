@@ -289,20 +289,20 @@ def _inject_styles() -> None:
         }
         .achievement-season {
             position: absolute;
-            top: 6px;
+            top: 7px;
             left: 8px;
-            right: 34px;
-            color: #d7e3ff;
-            font-size: 0.62rem;
-            letter-spacing: 0.06em;
+            z-index: 3;
+            padding: 2px 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(160, 186, 233, 0.52);
+            background: rgba(7, 12, 20, 0.86);
+            color: #d7e8ff;
+            font-size: 0.52rem;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
-            font-weight: 800;
-            text-align: left;
-            z-index: 2;
+            font-weight: 850;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         .achievement-image-wrap {
             position: relative;
@@ -317,7 +317,7 @@ def _inject_styles() -> None:
         }
         .achievement-tier-icon {
             position: absolute;
-            top: 6px;
+            top: 7px;
             right: 7px;
             min-width: 18px;
             height: 18px;
@@ -326,26 +326,72 @@ def _inject_styles() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.56rem;
+            font-size: 0.53rem;
             font-weight: 900;
-            letter-spacing: 0.02em;
-            border: none;
+            letter-spacing: 0.03em;
+            border: 1px solid rgba(148, 173, 214, 0.36);
+            box-shadow: 0 0 0 1px rgba(3, 8, 17, 0.48) inset;
             background: rgba(10, 15, 24, 0.94);
-            z-index: 2;
+            z-index: 3;
+        }
+        .achievement-position {
+            position: absolute;
+            top: 7px;
+            right: 30px;
+            min-height: 18px;
+            min-width: 26px;
+            max-width: 52px;
+            padding: 0 7px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.52rem;
+            font-weight: 860;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            z-index: 3;
+            border: 1px solid rgba(156, 178, 215, 0.44);
+            background: rgba(10, 16, 27, 0.92);
+            color: #dbe8ff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .achievement-position.pos-gold {
+            border-color: rgba(244, 199, 103, 0.7);
+            background: linear-gradient(180deg, rgba(100, 70, 18, 0.82), rgba(48, 34, 10, 0.92));
+            color: #ffebc0;
+        }
+        .achievement-position.pos-silver {
+            border-color: rgba(191, 208, 232, 0.7);
+            background: linear-gradient(180deg, rgba(73, 86, 105, 0.82), rgba(37, 46, 59, 0.92));
+            color: #eaf4ff;
+        }
+        .achievement-position.pos-bronze {
+            border-color: rgba(226, 157, 109, 0.7);
+            background: linear-gradient(180deg, rgba(109, 65, 33, 0.82), rgba(58, 34, 18, 0.92));
+            color: #ffe0c8;
+        }
+        .achievement-position.pos-ladder {
+            border-color: rgba(108, 216, 199, 0.62);
+            background: linear-gradient(180deg, rgba(27, 82, 83, 0.82), rgba(12, 41, 48, 0.92));
+            color: #d6fffa;
         }
         .achievement-inline-name {
             position: absolute;
             left: 6px;
             right: 6px;
-            bottom: 6px;
-            color: #f5f7fb;
-            font-weight: 800;
-            line-height: 1.2;
-            font-size: 0.54rem;
-            letter-spacing: 0.04em;
+            bottom: 5px;
+            color: #ebf3ff;
+            font-weight: 820;
+            line-height: 1.15;
+            font-size: 0.53rem;
+            letter-spacing: 0.045em;
             text-transform: uppercase;
             text-align: center;
-            z-index: 2;
+            z-index: 3;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
             white-space: nowrap;
             overflow: hidden;
@@ -1122,7 +1168,7 @@ def _inject_styles() -> None:
         .achievement-premium .achievement-image-wrap {
             width: 100%;
             height: 100%;
-            padding: 16px 8px 30px;
+            padding: 20px 7px 24px;
             box-sizing: border-box;
             background: linear-gradient(180deg, rgba(18, 27, 41, 0.55), rgba(9, 13, 22, 0.72));
         }
@@ -1138,7 +1184,7 @@ def _inject_styles() -> None:
             top: 0;
             left: 0;
             right: 0;
-            height: 34px;
+            height: 38px;
             background: linear-gradient(180deg, rgba(4, 7, 12, 0.78), rgba(4, 7, 12, 0));
             z-index: 1;
             pointer-events: none;
@@ -1148,7 +1194,7 @@ def _inject_styles() -> None:
             left: 0;
             right: 0;
             bottom: 0;
-            height: 40px;
+            height: 34px;
             background: linear-gradient(180deg, rgba(4, 7, 12, 0), rgba(4, 7, 12, 0.86));
             z-index: 1;
             pointer-events: none;
@@ -1165,25 +1211,11 @@ def _inject_styles() -> None:
             background: rgba(9, 14, 24, 0.62);
             width: 100%;
         }
-        .achievement-finish {
-            position: absolute;
-            left: 6px;
-            right: 6px;
-            bottom: 4px;
-            z-index: 2;
-            text-align: center;
-            font-size: 0.57rem;
-            letter-spacing: 0.05em;
-            color: #d2dff7;
-            text-transform: uppercase;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        .achievement-finish { display: none; }
         .achievement-inline-cabinet {
             border-top: none;
             padding-top: 0;
-            min-height: 190px;
+            min-height: 150px;
             align-content: start;
         }
         .achievement-inline-empty {
@@ -1596,94 +1628,162 @@ def _inject_styles() -> None:
             position: relative;
             overflow: hidden;
             border-radius: 22px;
-            border: 1px solid rgba(145, 169, 216, 0.42);
+            border: 1px solid rgba(145, 169, 216, 0.48);
             background:
-                radial-gradient(circle at 10% 10%, rgba(72, 224, 161, 0.19), transparent 36%),
-                radial-gradient(circle at 82% 0%, rgba(92, 169, 255, 0.22), transparent 38%),
+                radial-gradient(circle at 8% 8%, rgba(72, 224, 161, 0.24), transparent 38%),
+                radial-gradient(circle at 82% -4%, rgba(92, 169, 255, 0.28), transparent 42%),
+                radial-gradient(circle at 100% 80%, rgba(243, 186, 86, 0.12), transparent 36%),
                 linear-gradient(140deg, rgba(15, 22, 36, 0.95), rgba(8, 12, 20, 0.96));
-            box-shadow: 0 20px 38px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(208, 227, 255, 0.05);
-            padding: 18px 20px;
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(208, 227, 255, 0.08);
+            padding: 14px 16px 13px;
         }
         .pv-hero-grid {
             display: grid;
             grid-template-columns: 180px minmax(0, 1fr) minmax(300px, 0.85fr);
-            gap: 16px;
+            gap: 12px;
             align-items: stretch;
         }
         .pv-portrait {
             border-radius: 16px;
             overflow: hidden;
-            border: 1px solid rgba(157, 188, 236, 0.46);
-            min-height: 238px;
-            background: linear-gradient(180deg, rgba(21, 34, 56, 0.86), rgba(11, 17, 29, 0.96));
+            border: 1px solid rgba(157, 188, 236, 0.5);
+            min-height: 222px;
+            background: linear-gradient(180deg, rgba(23, 40, 66, 0.9), rgba(11, 17, 29, 0.96));
             box-shadow: 0 16px 30px rgba(1, 8, 18, 0.64);
         }
         .pv-portrait img.player-headshot {
             width: 100%;
-            min-height: 238px;
+            min-height: 222px;
             height: 100%;
             object-fit: cover;
         }
-        .pv-main-copy { display: grid; align-content: start; gap: 10px; }
+        .pv-main-copy {
+            display: grid;
+            align-content: center;
+            gap: 8px;
+            padding: 3px 0;
+        }
         .pv-context-pill {
             display: inline-flex;
             width: fit-content;
             border-radius: 999px;
-            border: 1px solid rgba(160, 192, 241, 0.42);
-            background: rgba(12, 20, 34, 0.84);
-            color: #d4e5ff;
-            padding: 5px 11px;
-            font-size: 0.66rem;
+            border: 1px solid rgba(131, 195, 248, 0.52);
+            background: linear-gradient(120deg, rgba(22, 63, 93, 0.7), rgba(10, 25, 43, 0.82));
+            color: #d5efff;
+            padding: 4px 11px;
+            font-size: 0.62rem;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.11em;
             font-weight: 800;
         }
         .pv-name { font-size: clamp(2.2rem, 3.3vw, 3.2rem); color: #f4f9ff; font-weight: 920; line-height: 0.95; margin: 0; }
-        .pv-teamline { display:flex; align-items:center; gap:8px; color:#d7e4fd; font-size:0.92rem; font-weight:700; }
-        .pv-meta-row { display:flex; flex-wrap:wrap; gap:8px; }
+        .pv-teamline { display:flex; align-items:center; gap:8px; color:#cfe2ff; font-size:0.86rem; font-weight:760; }
+        .pv-meta-row { display:flex; flex-wrap:wrap; gap:6px; }
         .pv-meta-chip {
             border-radius: 999px;
-            border: 1px solid rgba(151, 173, 214, 0.4);
-            background: rgba(12, 19, 32, 0.72);
+            border: 1px solid rgba(151, 173, 214, 0.44);
+            background: linear-gradient(170deg, rgba(20, 39, 67, 0.66), rgba(10, 17, 30, 0.72));
             color: #dce9ff;
-            font-size: 0.68rem;
-            padding: 6px 10px;
-            letter-spacing: 0.04em;
+            font-size: 0.62rem;
+            padding: 5px 9px;
+            letter-spacing: 0.045em;
             font-weight: 700;
         }
+        .pv-meta-chip.role { border-color: rgba(104, 211, 255, 0.55); color: #d4f2ff; }
+        .pv-meta-chip.nation { border-color: rgba(113, 232, 196, 0.54); color: #d9fff1; }
+        .pv-meta-chip.map { border-color: rgba(244, 190, 109, 0.5); color: #ffe8c2; }
+        .pv-meta-chip.side { border-color: rgba(150, 176, 237, 0.48); color: #d9e5ff; }
         .pv-summary {
-            border-left: 3px solid rgba(72, 224, 161, 0.78);
-            padding: 8px 10px;
-            background: linear-gradient(90deg, rgba(38, 86, 72, 0.28), rgba(12, 20, 33, 0.18));
-            color: #e0ecff;
-            font-size: 0.86rem;
-            line-height: 1.4;
+            border: 1px solid rgba(92, 180, 255, 0.36);
+            border-left: 3px solid rgba(91, 224, 168, 0.86);
+            padding: 7px 10px;
+            background: linear-gradient(90deg, rgba(24, 63, 101, 0.34), rgba(18, 60, 52, 0.3) 46%, rgba(10, 19, 33, 0.22));
+            color: #e3efff;
+            font-size: 0.79rem;
+            line-height: 1.34;
             border-radius: 10px;
-            margin-top: 2px;
+            margin-top: 1px;
         }
-        .pv-side-stack { display: grid; gap: 8px; align-content: start; }
+        .pv-side-stack {
+            display: grid;
+            gap: 7px;
+            align-content: center;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
         .pv-side-tile {
-            border: 1px solid rgba(143, 165, 208, 0.32);
+            border: 1px solid rgba(143, 165, 208, 0.38);
             border-radius: 12px;
-            padding: 8px 9px;
-            background: rgba(11, 18, 31, 0.74);
+            min-height: 76px;
+            padding: 7px 9px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(165deg, rgba(14, 29, 50, 0.78), rgba(10, 18, 31, 0.82));
+            box-shadow: inset 0 0 0 1px rgba(216, 231, 255, 0.03);
+            position: relative;
+            overflow: hidden;
         }
-        .pv-side-tile .k { color:#9cb1d6; font-size:0.6rem; text-transform:uppercase; letter-spacing:0.08em; }
-        .pv-side-tile .v { color:#f3f8ff; font-size:0.96rem; font-weight:820; margin-top:2px; }
+        .pv-side-tile::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(123, 196, 255, 0.75), rgba(93, 228, 181, 0.6));
+            opacity: 0.8;
+        }
+        .pv-side-tile .k {
+            color: #a9c6f5;
+            font-size: 0.56rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 780;
+        }
+        .pv-side-tile .v {
+            color: #f3f8ff;
+            font-size: 1.08rem;
+            font-weight: 870;
+            margin-top: 5px;
+            line-height: 1.03;
+        }
+        .pv-side-tile.rank { border-color: rgba(105, 198, 255, 0.44); }
+        .pv-side-tile.rank .k { color: #8bd8ff; }
+        .pv-side-tile.record { border-color: rgba(130, 224, 182, 0.4); }
+        .pv-side-tile.record .k { color: #95f0c5; }
+        .pv-side-tile.streak { border-color: rgba(255, 180, 112, 0.46); }
+        .pv-side-tile.streak .k { color: #ffcda5; }
+        .pv-side-tile.delta { border-color: rgba(166, 155, 245, 0.46); }
+        .pv-side-tile.delta .k { color: #c4bbff; }
+        .pv-side-tile .v.up { color: #84efb8; text-shadow: 0 0 12px rgba(77, 219, 148, 0.18); }
+        .pv-side-tile .v.down { color: #ffb2a0; text-shadow: 0 0 12px rgba(245, 115, 115, 0.18); }
+        .pv-side-tile .v.flat { color: #dbe8ff; }
         .pv-achievement-ribbon {
             border-radius: 16px;
-            border: 1px solid rgba(143, 168, 213, 0.3);
-            background: linear-gradient(180deg, rgba(14, 20, 33, 0.88), rgba(8, 13, 22, 0.92));
-            padding: 10px;
+            border: 1px solid rgba(143, 168, 213, 0.36);
+            background:
+                linear-gradient(130deg, rgba(22, 35, 58, 0.34), rgba(15, 40, 38, 0.24) 42%, rgba(8, 13, 22, 0.94)),
+                linear-gradient(180deg, rgba(14, 20, 33, 0.9), rgba(8, 13, 22, 0.95));
+            padding: 8px 10px 9px;
         }
-        .pv-achievement-title { color:#d7e5ff; font-size:0.74rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px; }
+        .pv-achievement-title {
+            color:#cce6ff;
+            font-size:0.68rem;
+            font-weight:820;
+            letter-spacing:0.1em;
+            text-transform:uppercase;
+            margin-bottom:6px;
+            text-align: center;
+        }
         .pv-achievement-scroll {
             display: flex;
             gap: 8px;
             overflow-x: auto;
-            padding-bottom: 2px;
+            padding: 1px 1px 2px;
         }
-        .pv-achievement-scroll .achievement-premium { width: 108px; height: 140px; flex: 0 0 108px; }
+        .pv-achievement-scroll .achievement-premium { width: 114px; height: 146px; flex: 0 0 114px; }
         .pv-score-grid {
             display: grid;
             grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
@@ -2825,6 +2925,22 @@ def _achievement_tier_class(tier: str | None) -> str:
     return "tier-unknown"
 
 
+def _achievement_position_class(position_value: object) -> str:
+    raw = str(position_value or "").strip()
+    if not raw:
+        return ""
+    position_num = extract_position_number(raw)
+    if position_num is None:
+        return "pos-ladder"
+    if position_num == 1:
+        return "pos-gold"
+    if position_num == 2:
+        return "pos-silver"
+    if position_num == 3:
+        return "pos-bronze"
+    return "pos-ladder"
+
+
 def build_player_achievements(
     achievements_df: pd.DataFrame,
     image_index: dict[str, dict[str, Path]],
@@ -3006,23 +3122,25 @@ def _headline_stat_card_html(label: str, value: str, subtext: str) -> str:
 def _achievement_premium_card_html(ach_row: pd.Series) -> str:
     ach_tier = str(ach_row.get("achievement_tier", "")).strip().upper()[:1] or "?"
     tier_class = _achievement_tier_class(ach_tier).replace("tier-", "")
+    position_class = _achievement_position_class(ach_row.get("position"))
     ach_image = ach_row.get("achievement_image")
     season = html.escape(str(ach_row.get("season_display", ach_row.get("season_name", "SEASON ?"))))
     label = html.escape(str(ach_row.get("achievement_title", ach_row.get("achievement_name", "-"))))
-    finish = html.escape(str(ach_row.get("position", "-")))
+    finish = html.escape(str(ach_row.get("position", "")).strip())
     top_badge = html.escape(str(ach_row.get("top_badge", ach_tier)))
     image_html = "<div class='achievement-missing'>Achievement image missing</div>"
     if isinstance(ach_image, Path) and ach_image.exists():
         image_html = f'<img src="{_image_to_data_uri(ach_image)}" alt="{label}">'
+    position_badge_html = f"<span class='achievement-position {position_class}'>{finish}</span>" if finish else ""
     return (
         f"<div class='achievement-premium glow-{tier_class}'>"
         "<div class='achievement-header-gradient'></div>"
         "<div class='achievement-footer-gradient'></div>"
         f"<div class='achievement-image-wrap'>{image_html}</div>"
         f"<div class='achievement-season'>{season}</div>"
+        f"{position_badge_html}"
         f"<span class='achievement-tier achievement-tier-icon tier-{tier_class}'>{top_badge}</span>"
         f"<div class='achievement-inline-name'>{label}</div>"
-        f"<div class='achievement-finish'>{finish}</div>"
         "</div>"
     )
 
@@ -3275,6 +3393,8 @@ def _hltv_profile_view(
 
     trend_icon, trend_class = _trend_icon_and_class(trend_direction)
     performance_summary = _build_performance_summary(metrics, trend_direction, form_score)
+    streak_value_class = "up" if streak > 0 else ("down" if streak < 0 else "flat")
+    delta_value_class = "up" if recent10_delta > 0 else ("down" if recent10_delta < 0 else "flat")
     stats_tiles = [
         f"<div class='stats-tile'><div class='label'>Rating</div><div class='value'>{metrics['grevscore']:.2f}</div><div class='sub'>Tier: {score_tier}</div></div>",
         f"<div class='stats-tile'><div class='label'>Impact <span class='stat-help' title='{html.escape(metrics['impact_formula'])}'>ⓘ</span></div><div class='value'>{metrics['impact']:.1f}</div><div class='sub'>{percentile:.0f}th percentile</div></div>",
@@ -3314,18 +3434,18 @@ def _hltv_profile_view(
                         <h2 class="pv-name">{profile_name}</h2>
                         <div class="pv-teamline">{team_logo_html}<strong>{html.escape(str(profile_data.get('team', '-')))}</strong></div>
                         <div class="pv-meta-row">
-                            <span class="pv-meta-chip">🎯 {html.escape(player_role)}</span>
-                            <span class="pv-meta-chip">{html.escape(nation_badge)}</span>
-                            <span class="pv-meta-chip">🗺️ Best map: {html.escape(str(best_map))}</span>
-                            <span class="pv-meta-chip">🧭 Best side: {html.escape(side_split)}</span>
+                            <span class="pv-meta-chip role">🎯 {html.escape(player_role)}</span>
+                            <span class="pv-meta-chip nation">{html.escape(nation_badge)}</span>
+                            <span class="pv-meta-chip map">🗺️ Best map: {html.escape(str(best_map))}</span>
+                            <span class="pv-meta-chip side">🧭 Best side: {html.escape(side_split)}</span>
                         </div>
                         <div class="pv-summary">"{html.escape(performance_summary)}"</div>
                     </div>
                     <div class="pv-side-stack">
-                        <div class="pv-side-tile"><div class="k">Team Rank</div><div class="v">#{team_rank}/{rank_total}</div></div>
-                        <div class="pv-side-tile"><div class="k">Record</div><div class="v">{record_text}</div></div>
-                        <div class="pv-side-tile"><div class="k">Current Streak</div><div class="v">{streak:+d}</div></div>
-                        <div class="pv-side-tile"><div class="k">Last 10 Δ</div><div class="v">{recent10_delta:+.2f}</div></div>
+                        <div class="pv-side-tile rank"><div class="k">Team Rank</div><div class="v">#{team_rank}/{rank_total}</div></div>
+                        <div class="pv-side-tile record"><div class="k">Record</div><div class="v">{record_text}</div></div>
+                        <div class="pv-side-tile streak"><div class="k">Current Streak</div><div class="v {streak_value_class}">{streak:+d}</div></div>
+                        <div class="pv-side-tile delta"><div class="k">Last 10 Δ</div><div class="v {delta_value_class}">{recent10_delta:+.2f}</div></div>
                     </div>
                 </div>
             </article>
