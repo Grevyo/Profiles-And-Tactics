@@ -2727,18 +2727,12 @@ def _hltv_profile_view(
         active_page="profiles",
         subtitle="Medicart analytics, player profiles, tactics, and event breakdowns.",
     )
-    st.markdown("### Profile Viewer")
-    viewer_mode = st.radio(
-        "Viewer mode",
-        options=["V2 (same tab)", "Legacy"],
-        horizontal=True,
-        key="profile_viewer_mode",
-    )
-    if viewer_mode == "V2 (same tab)":
-        rendered = _render_profile_viewer_v2_inline()
-        if rendered:
-            return
-        st.warning("Profile Viewer V2 could not be rendered inline. Falling back to legacy view.")
+    st.markdown("### Profile Viewer (Current)")
+    nav_col, text_col = st.columns([1, 2.2], vertical_alignment="center")
+    with nav_col:
+        st.page_link("pages/99_Profile_Viewer_V2.py", label="Open Profile Viewer V2", icon="🆕")
+    with text_col:
+        st.caption("Use this page for the current/legacy view. Open V2 for the rebuilt standalone page.")
     st.divider()
 
     players = sorted(
