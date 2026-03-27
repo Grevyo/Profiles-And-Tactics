@@ -2820,24 +2820,6 @@ def _medisports_vs_breakdown(
         st.info("No matches left after filters.")
         return
     image_index = _build_image_index()
-    role_blocks = [
-        ("Top summary / health", "summary cards"),
-        ("Auto insights", "summary cards"),
-        ("Opponent summary / spotlight", "ranked visual rows"),
-        ("Matchup strength + heatmap", "hero chart"),
-        ("Tournament + tier context", "ranked visual rows"),
-        ("Match explorer + opponent table", "detailed table"),
-    ]
-    st.markdown(
-        "<div class='panel-card'><div class='panel-muted'>Section role map</div><div class='vs-role-grid'>"
-        + "".join(
-            f"<div class='vs-role-chip'><div class='vs-role-label'>{label}</div><div class='vs-role-value'>{value}</div></div>"
-            for label, value in role_blocks
-        )
-        + "</div></div>",
-        unsafe_allow_html=True,
-    )
-
     vs_summary = (
         filtered.groupby("opponent_team", as_index=False)
         .agg(
