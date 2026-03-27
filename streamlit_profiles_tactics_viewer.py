@@ -896,6 +896,101 @@ def _inject_styles() -> None:
             font-size: 0.8rem;
             line-height: 1.45;
         }
+
+        .profile-hero-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 0.9fr;
+            gap: 14px;
+            align-items: stretch;
+        }
+        .hero-identity-card,
+        .hero-score-card,
+        .hero-headline-card,
+        .chart-panel,
+        .impact-card,
+        .form-card,
+        .support-table {
+            border: 1px solid rgba(151, 166, 195, 0.24);
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(13, 20, 32, 0.92), rgba(8, 12, 20, 0.94));
+            padding: 14px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        }
+        .identity-header {
+            display: grid;
+            grid-template-columns: 132px 1fr;
+            gap: 12px;
+        }
+        .portrait-shell {
+            border: 1px solid rgba(122, 164, 240, 0.45);
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(30, 47, 78, 0.55), rgba(11, 17, 28, 0.8));
+            min-height: 158px;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+        }
+        .portrait-fallback {
+            text-align: center;
+            color: #b8caf0;
+            font-size: 0.75rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .headline-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+        .headline-card {
+            border: 1px solid rgba(151, 166, 195, 0.22);
+            border-radius: 12px;
+            padding: 10px;
+            background: rgba(11, 17, 28, 0.78);
+        }
+        .headline-label { color: #97a7c7; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
+        .headline-value { color: #f5f8ff; font-size: 1.25rem; font-weight: 850; margin-top: 2px; }
+        .headline-sub { color: #c8d5f0; font-size: 0.7rem; margin-top: 2px; }
+        .achievement-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .achievement-premium {
+            width: 118px;
+            height: 146px;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(151, 166, 195, 0.32);
+            background: linear-gradient(180deg, rgba(19, 28, 43, 0.95), rgba(9, 14, 24, 0.96));
+            flex: 0 0 118px;
+        }
+        .achievement-premium img {
+            width: 100%;
+            height: 88px;
+            object-fit: contain;
+            object-position: center;
+            margin-top: 22px;
+            padding: 0 7px;
+            box-sizing: border-box;
+        }
+        .glow-s { box-shadow: 0 0 16px rgba(245, 196, 81, 0.26); }
+        .glow-a { box-shadow: 0 0 15px rgba(156, 109, 246, 0.24); }
+        .glow-b { box-shadow: 0 0 14px rgba(94, 169, 255, 0.24); }
+        .glow-c { box-shadow: 0 0 13px rgba(78, 208, 131, 0.2); }
+        .core-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-top: 8px; }
+        .priority-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+        .support-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+        .metric-card { border: 1px solid rgba(151,166,195,0.24); border-radius: 12px; padding: 9px 10px; background: rgba(11,17,28,0.76); }
+        .metric-card.priority { min-height: 82px; }
+        .metric-title { color:#97a7c7; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.08em; }
+        .metric-value { color:#f5f8ff; font-size:1.2rem; font-weight:850; }
+        .metric-state { font-size:0.68rem; font-weight:700; margin-top:2px; }
+        .chart-section-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
+        .section-block-title { margin: 12px 0 6px; color:#e9f1ff; font-size:1rem; font-weight:800; letter-spacing:0.02em; }
+        @media (max-width: 1280px) {
+            .profile-hero-grid { grid-template-columns: 1fr; }
+            .core-grid, .chart-section-grid { grid-template-columns: 1fr; }
+            .support-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        }
         @media (max-width: 1200px) {
             .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .status-strip { grid-template-columns: 1fr; }
@@ -1148,6 +1243,57 @@ def _find_achievement_image(
             if by_name:
                 return by_name
     return _find_image(image_index, "achievement", achievement_name)
+
+
+PLAYER_PHOTO_ALIAS_MAP = {
+    "8eer": "ⓜ | 8eeR.png",
+}
+
+
+def _player_name_variants(player_name: str) -> list[str]:
+    raw = str(player_name or "").strip()
+    if not raw:
+        return []
+    parts = [raw]
+    if "|" in raw:
+        parts.extend([chunk.strip() for chunk in raw.split("|") if chunk.strip()])
+        parts.append(raw.split("|")[-1].strip())
+    normalized_ascii = unicodedata.normalize("NFKD", raw).encode("ascii", "ignore").decode("ascii").strip()
+    if normalized_ascii:
+        parts.append(normalized_ascii)
+    for chunk in list(parts):
+        if chunk.startswith("ⓜ"):
+            parts.append(chunk.replace("ⓜ", "").strip(" |"))
+    dedup: list[str] = []
+    for candidate in parts:
+        if candidate and candidate not in dedup:
+            dedup.append(candidate)
+    return dedup
+
+
+def resolve_player_photo(image_index: dict[str, dict[str, Path]], player_name: str) -> Path | None:
+    variants = _player_name_variants(player_name)
+    player_dir = APP_ROOT / IMAGE_FOLDERS["player"]
+    indexed_paths = image_index.get("player", {})
+    for candidate in variants:
+        direct_path = player_dir / candidate
+        if direct_path.exists() and direct_path.is_file():
+            return direct_path
+        for ext in IMAGE_EXTENSIONS:
+            exact = player_dir / f"{candidate}{ext}"
+            if exact.exists() and exact.is_file():
+                return exact
+
+    normalized_keys = [_normalize_key(normalize_logo_key(name)) for name in variants]
+    for key in normalized_keys:
+        if key in PLAYER_PHOTO_ALIAS_MAP:
+            alias_path = player_dir / PLAYER_PHOTO_ALIAS_MAP[key]
+            if alias_path.exists():
+                return alias_path
+        hit = indexed_paths.get(key)
+        if hit is not None:
+            return hit
+    return None
 
 
 def _normalize_match_id_column(df: pd.DataFrame) -> pd.DataFrame:
@@ -1635,6 +1781,59 @@ def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame)
     return form_score, recent
 
 
+def _metric_state(value: float, low: float, high: float) -> tuple[str, str]:
+    if value >= high:
+        return "Excellent", "trend-good"
+    if value >= low:
+        return "Average", "trend-mid"
+    return "Below par", "trend-bad"
+
+
+def _metric_card_html(label: str, value_text: str, value: float, low: float, high: float, *, priority: bool = False) -> str:
+    state, cls = _metric_state(value, low, high)
+    priority_cls = " priority" if priority else ""
+    return (
+        f"<div class='metric-card{priority_cls}'>"
+        f"<div class='metric-title'>{html.escape(label)}</div>"
+        f"<div class='metric-value'>{html.escape(value_text)}</div>"
+        f"<div class='metric-state {cls}'>{state}</div>"
+        "</div>"
+    )
+
+
+def _headline_stat_card_html(label: str, value: str, subtext: str) -> str:
+    return (
+        "<div class='headline-card'>"
+        f"<div class='headline-label'>{html.escape(label)}</div>"
+        f"<div class='headline-value'>{html.escape(value)}</div>"
+        f"<div class='headline-sub'>{html.escape(subtext)}</div>"
+        "</div>"
+    )
+
+
+def _achievement_premium_card_html(ach_row: pd.Series) -> str:
+    ach_tier = str(ach_row.get("achievement_tier", "")).strip().upper()[:1] or "?"
+    tier_class = _achievement_tier_class(ach_tier).replace("tier-", "")
+    ach_image = ach_row.get("achievement_image")
+    season = html.escape(str(ach_row.get("season_name", "-")))
+    name = html.escape(str(ach_row.get("achievement_name", "-")))
+    finish = html.escape(str(ach_row.get("position", "-")))
+    league = html.escape(str(ach_row.get("competition", ach_row.get("league", "-"))))
+    image_html = ""
+    if isinstance(ach_image, Path) and ach_image.exists():
+        image_html = f'<img src="{_image_to_data_uri(ach_image)}" alt="{name}">'
+    return (
+        f"<div class='achievement-premium glow-{tier_class}'>"
+        f"<div class='achievement-season'>{season}</div>"
+        f"{image_html}"
+        f"<span class='achievement-tier achievement-tier-icon tier-{tier_class}'>{html.escape(ach_tier)}</span>"
+        f"<span class='achievement-inline-name'>{name}</span>"
+        f"<div style='position:absolute;left:6px;right:6px;bottom:20px;font-size:0.56rem;color:#c8d5ef;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{league}</div>"
+        f"<div style='position:absolute;left:6px;right:6px;bottom:6px;font-size:0.6rem;color:#edf3ff;text-align:center;font-weight:700;'>{finish}</div>"
+        "</div>"
+    )
+
+
 def _home() -> None:
     _inject_styles()
     _render_top_hero(
@@ -1671,29 +1870,35 @@ def _apply_shared_filters(
     competition_source_col: str,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     filtered_players = player_df[player_df["player"] == selected_player].copy()
+    latest_season = detect_latest_season(filtered_players, competition_source_col)
 
     min_date = filtered_players["date"].min().date()
     max_date = filtered_players["date"].max().date()
 
     st.markdown('<p class="compact-filter-header">Player Filters</p>', unsafe_allow_html=True)
-    filter_cols = st.columns(5)
-    tier_options = sorted(filtered_players["tier"].dropna().unique().tolist())
+    filter_cols = st.columns(6)
+    season_options = ["Lifetime"]
+    if latest_season is not None:
+        season_options = [f"S{latest_season}", "Lifetime"]
     with filter_cols[0]:
+        selected_season = st.selectbox("Season", options=season_options, index=0, key="profile_season")
+    tier_options = sorted(filtered_players["tier"].dropna().unique().tolist())
+    with filter_cols[1]:
         selected_tiers = _multiselect_filter("Tier of Team", tier_options, key="profile_tier")
 
     event_options = sorted(filtered_players[competition_source_col].dropna().unique().tolist())
-    with filter_cols[1]:
+    with filter_cols[2]:
         selected_events = _multiselect_filter("Event", event_options, key="profile_event")
 
     opp_options = sorted(filtered_players["opponent_team"].dropna().unique().tolist())
-    with filter_cols[2]:
+    with filter_cols[3]:
         selected_opp = _multiselect_filter("Opponent", opp_options, key="profile_opp")
 
     side_options = sorted(tactics_df["side"].dropna().unique().tolist()) if "side" in tactics_df else []
-    with filter_cols[3]:
+    with filter_cols[4]:
         selected_sides = _multiselect_filter("Side (Red/Blue)", side_options, key="profile_side")
 
-    date_range = filter_cols[4].date_input(
+    date_range = filter_cols[5].date_input(
         "Date Range",
         value=(min_date, max_date),
         min_value=min_date,
@@ -1705,6 +1910,7 @@ def _apply_shared_filters(
     else:
         start_date = end_date = pd.to_datetime(date_range[0])
 
+    filtered_players = apply_season_filter(filtered_players, selected_season, competition_source_col)
     if selected_tiers:
         filtered_players = filtered_players[filtered_players["tier"].isin(selected_tiers)]
     if selected_events:
@@ -1760,13 +1966,13 @@ def _hltv_profile_view(
             selected_player,
             competition_source_col,
         )
-    image_index = _build_image_index()
-    player_metadata = _load_player_metadata()
 
     if filtered_players.empty:
         st.warning("No player rows match the current filters.")
         return
 
+    image_index = _build_image_index()
+    player_metadata = _load_player_metadata()
     first_row = filtered_players.sort_values("date", ascending=False).iloc[0]
 
     player_meta_row = None
@@ -1776,14 +1982,13 @@ def _hltv_profile_view(
         if not meta_rows.empty:
             player_meta_row = meta_rows.iloc[0]
 
-    player_image = _find_image(image_index, "player", selected_player)
+    player_image = resolve_player_photo(image_index, selected_player)
     team_logo = _find_image(image_index, "team", first_row.get("my_team"))
+    team_logo_html = f'<img style="width:30px;height:30px;border-radius:7px;object-fit:contain;border:1px solid rgba(151,166,195,0.25);" src="{_image_to_data_uri(team_logo)}">' if team_logo else ""
 
     metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
+    team_scope = player_df[player_df["player"].astype(str).str.contains("ⓜ", regex=False, na=False)]
     rank_scope = []
-    team_scope = player_df[
-        player_df["player"].astype(str).str.contains("ⓜ", regex=False, na=False)
-    ]
     for player_name, rows in team_scope.groupby("player"):
         p_metrics = _calc_player_card_metrics(rows, tactics_df[tactics_df["match_id"].isin(rows["match_id"].unique())])
         rank_scope.append({"player": player_name, "score": p_metrics["grevscore"]})
@@ -1794,346 +1999,237 @@ def _hltv_profile_view(
     score_tier = _score_tier_label(metrics["grevscore"])
     gauge_pct = min(max(((metrics["grevscore"] - 0.75) / (1.5 - 0.75)) * 100.0, 0.0), 100.0)
     gauge_angle = -90 + (gauge_pct * 1.8)
-    kills = int(metrics["kills"])
-    damage = int(filtered_players["damage"].sum())
-    rounds = int(filtered_players["rounds_played"].sum())
+
     avg_acc = float(filtered_players["accuracy_pct"].mean()) if not filtered_players.empty else 0.0
     avg_hs = float(filtered_players["hs_pct"].mean()) if not filtered_players.empty else 0.0
     avg_kpd = float(filtered_players["kpd"].mean()) if not filtered_players.empty else 0.0
+    player_role = _player_meta_value(player_meta_row, "role", "Fragger")
 
-    stat_chips_overview = [
-        _build_stat_chip("🎯 Rating", f'{metrics["grevscore"]:.2f}', metrics["grevscore"], 0.65, 1.35),
-        _build_stat_chip("🏆 Matches", f'{int(metrics["matches"])}', metrics["matches"], 3, 16),
-        _build_stat_chip("🗡️ K/D", f'{metrics["kd"]:.2f}', metrics["kd"], 0.7, 1.3),
-        _build_stat_chip("🛡️ Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
-    ]
-    stat_chips_core = [
-        _build_stat_chip("DPM", f'{metrics["dpm"]:.1f}', metrics["dpm"], 1800, 3600),
-        _build_stat_chip("KPM", f'{metrics["kpm"]:.2f}', metrics["kpm"], 0.45, 1.0),
-        _build_stat_chip("Impact", f'{metrics["impact"]:.1f}', metrics["impact"], 45, 95),
-        _build_stat_chip("Acc%", f'{metrics["acc"]:.1f}%', metrics["acc"], 45, 80),
-        _build_stat_chip("Avg KPD", f"{avg_kpd:.2f}", avg_kpd, 0.8, 1.5),
-        _build_stat_chip("KDA", f'{metrics["kda"]:.2f}', metrics["kda"], 1.0, 2.2),
-        _build_stat_chip("HS%", f"{avg_hs:.1f}%", avg_hs, 24, 55),
-        _build_stat_chip("Kills", f"{kills}", float(kills), 80, 260),
-    ]
     side_split = "-"
     side_chart_data = pd.DataFrame(columns=["side", "rating"])
     if not filtered_tactics.empty and "side" in filtered_tactics.columns:
-        side_summary = (
-            filtered_tactics.groupby("side", as_index=False)[["wins", "losses"]].sum().sort_values("wins", ascending=False)
-        )
+        side_summary = filtered_tactics.groupby("side", as_index=False)[["wins", "losses"]].sum().sort_values("wins", ascending=False)
         if not side_summary.empty:
             s = side_summary.iloc[0]
             side_split = f'{s["side"]}: {int(s["wins"])}W-{int(s["losses"])}L'
     if "side" in filtered_players.columns:
-        side_chart_data = (
-            filtered_players.dropna(subset=["side"])
-            .groupby("side", as_index=False)["kpd"]
-            .mean()
-            .rename(columns={"kpd": "rating"})
-            .sort_values("rating", ascending=False)
-        )
-    best_map = (
-        filtered_players.groupby("map")["kills"].sum().sort_values(ascending=False).index[0]
-        if "map" in filtered_players.columns and not filtered_players.empty
-        else "-"
-    )
+        side_chart_data = filtered_players.dropna(subset=["side"]).groupby("side", as_index=False)["kpd"].mean().rename(columns={"kpd": "rating"}).sort_values("rating", ascending=False)
+
+    best_map = filtered_players.groupby("map")["kills"].sum().sort_values(ascending=False).index[0] if "map" in filtered_players.columns and not filtered_players.empty else "-"
     record_text = f"{int(filtered_tactics['wins'].sum())}W-{int(filtered_tactics['losses'].sum())}L" if not filtered_tactics.empty else "-"
 
-    player_ach = achievements_df[
-        achievements_df["player"].astype(str).str.strip().str.casefold() == str(selected_player).strip().casefold()
-    ].copy()
+    player_ach = achievements_df[achievements_df["player"].astype(str).str.strip().str.casefold() == str(selected_player).strip().casefold()].copy()
     if not player_ach.empty:
         player_ach = player_ach.sort_values(["season_name", "position"], ascending=[False, True])
-    if not player_ach.empty:
-        player_ach["achievement_image"] = player_ach.apply(
-            lambda row: _find_achievement_image(
-                image_index,
-                row.get("achievement_link"),
-                row.get("achievement_name"),
-            ),
-            axis=1,
-        )
-    team_logo_html = ""
-    if team_logo:
-        team_logo_html = (
-            f'<img style="width:42px;border-radius:8px;vertical-align:middle;margin-right:8px;" src="data:image/png;base64,{base64.b64encode(team_logo.read_bytes()).decode("utf-8")}">'
-        )
-    achievement_inline_html = "<div class='panel-muted'>No achievements found.</div>"
-    if not player_ach.empty:
-        achievement_rows = [_achievement_card_html(ach_row) for _, ach_row in player_ach.iterrows()]
-        achievement_list_class = "achievement-inline-list achievement-inline-list-single" if len(achievement_rows) == 1 else "achievement-inline-list"
-        achievement_inline_html = f"<div class='{achievement_list_class}'>{''.join(achievement_rows)}</div>"
+        player_ach["achievement_image"] = player_ach.apply(lambda row: _find_achievement_image(image_index, row.get("achievement_link"), row.get("achievement_name")), axis=1)
+
     form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
-    form_blocks = []
-    if not recent_form.empty:
-        for score in recent_form.sort_values("date")["match_form_score"].tail(10).tolist():
-            color = "#31d17b" if score >= 70 else ("#f0be4f" if score >= 45 else "#ff6c7a")
-            form_blocks.append(f"<div class='form-dot' style='background:{color};'></div>")
-    form_block_html = "".join(form_blocks) if form_blocks else "<div class='panel-muted'>No recent form data.</div>"
-    player_role = _player_meta_value(player_meta_row, "role", "Fragger")
-    player_nation = _player_meta_value(player_meta_row, "nation")
-    nation_flag = _nation_flag_emoji(player_nation)
-    nation_with_flag = f"{nation_flag} {player_nation}".strip() if player_nation != "-" else player_nation
-    handedness = _player_meta_value(player_meta_row, "handedness")
+    recent10 = recent_form.sort_values("date").tail(10).copy() if not recent_form.empty else pd.DataFrame()
+    recent20 = filtered_players.sort_values("date", ascending=False).head(20).sort_values("date").copy()
+    trend_direction = "Rising"
+    if len(recent20) >= 6:
+        first = recent20["kpd"].head(len(recent20) // 2).mean()
+        second = recent20["kpd"].tail(len(recent20) // 2).mean()
+        trend_direction = "Rising" if second >= first else "Dropping"
+    streak = 0
+    if not recent20.empty and {"wins", "losses"}.issubset(recent20.columns):
+        results = (recent20.sort_values("date", ascending=False)["wins"].fillna(0) > recent20.sort_values("date", ascending=False)["losses"].fillna(0)).tolist()
+        if results:
+            current = results[0]
+            streak = sum(1 for r in results if r == current)
+        streak = streak if results and results[0] else -streak
+
+    profile_name = html.escape(selected_player)
+    player_img_html = f"<img class='player-headshot' src='{_image_to_data_uri(player_image)}'>" if player_image else "<div class='portrait-fallback'>Player Portrait<br><strong style='color:#eff4ff;'>Loading fallback</strong></div>"
+
+    headline_cards = [
+        _headline_stat_card_html("Rating", f"{metrics['grevscore']:.2f}", score_tier),
+        _headline_stat_card_html("Impact", f"{metrics['impact']:.1f}", f"{percentile:.0f}th percentile"),
+        _headline_stat_card_html("Form", f"{form_score:.1f}", trend_direction),
+        _headline_stat_card_html("Matches", f"{int(metrics['matches'])}", record_text),
+    ]
+
+    priority_cards = [
+        _metric_card_html("Grevscore", f"{metrics['grevscore']:.2f}", metrics["grevscore"], 0.95, 1.18, priority=True),
+        _metric_card_html("Impact", f"{metrics['impact']:.1f}", metrics["impact"], 62, 78, priority=True),
+        _metric_card_html("Form", f"{form_score:.1f}", form_score, 55, 74, priority=True),
+        _metric_card_html("Rating", f"{avg_kpd:.2f}", avg_kpd, 0.9, 1.18, priority=True),
+    ]
+    support_cards = [
+        _metric_card_html("K/D", f"{metrics['kd']:.2f}", metrics["kd"], 0.9, 1.2),
+        _metric_card_html("KPR", f"{metrics['kpm']:.2f}", metrics["kpm"], 0.58, 0.76),
+        _metric_card_html("DPM", f"{metrics['dpm']:.0f}", metrics["dpm"], 2200, 2800),
+        _metric_card_html("HS%", f"{avg_hs:.1f}%", avg_hs, 27, 39),
+        _metric_card_html("Accuracy%", f"{avg_acc:.1f}%", avg_acc, 50, 66),
+        _metric_card_html("Kills", f"{int(metrics['kills'])}", float(metrics["kills"]), 120, 220),
+    ]
 
     st.markdown(
         f"""
         <div class="panel-card">
-            <div class="top-identity-grid">
-                <div class="identity-strip">
-                    <div class="identity-strip-main">
-                        <div class="portrait-frame">
-                            {"<img class='player-headshot' src='data:image/png;base64," + base64.b64encode(player_image.read_bytes()).decode("utf-8") + "'>" if player_image else "<div class='panel-muted'>No portrait found.</div>"}
-                        </div>
+            <div class="profile-hero-grid">
+                <div class="hero-identity-card">
+                    <div class="identity-header">
+                        <div class="portrait-shell">{player_img_html}</div>
                         <div>
                             <div class="profile-label">Player Identity</div>
-                            <div class="profile-name">{selected_player}</div>
-                            <div class="identity-meta-line">{team_logo_html}<span>{first_row.get("my_team", "-")} · {player_role} · {nation_with_flag} · {handedness}</span></div>
+                            <div class="profile-name" style="font-size:2rem;">{profile_name}</div>
+                            <div class="team-line">{team_logo_html}<strong>{html.escape(str(first_row.get('my_team', '-')))}</strong></div>
+                            <div class="identity-meta-line">Role: {html.escape(player_role)}</div>
+                            <div class="identity-meta-line">Best Map: {html.escape(str(best_map))}</div>
+                            <div class="identity-meta-line">Best Side: {html.escape(side_split)}</div>
+                            <div class="identity-meta-line">Team Rank: #{team_rank}/{rank_total}</div>
                         </div>
                     </div>
-                    <div class="section-label">Achievements</div>
-                    {achievement_inline_html}
                 </div>
-                <div class="hero-grevscore">
-                    <div class="hero-grevscore-label">GrevScore</div>
+                <div class="hero-score-card">
+                    <div class="hero-grevscore-label">Grevscore Feature</div>
                     <div class="hero-grevscore-tier">{percentile:.0f}th percentile · {score_tier}</div>
                     <div class="gauge-wrap">
-                        <div class="gauge-score">{metrics["grevscore"]:.2f}</div>
+                        <div class="gauge-score">{metrics['grevscore']:.2f}</div>
                         <div class="gauge-arc"></div>
                         <div class="gauge-needle" style="transform: translateX(-50%) rotate({gauge_angle:.1f}deg);"></div>
                         <div class="gauge-hub"></div>
                     </div>
-                    <div class="grev-meter-labels">
-                        <span>Poor</span>
-                        <span>Average</span>
-                        <span>Good</span>
-                        <span>Star</span>
-                    </div>
-                    <div class="panel-muted" style="margin-top:6px;">Team rank #{team_rank}/{rank_total}</div>
+                    <div class="grev-meter-labels"><span>Poor</span><span>Average</span><span>Good</span><span>Star</span></div>
+                    <div class="panel-muted" style="margin-top:6px;">Team placement #{team_rank}/{rank_total}</div>
+                    <div class="panel-muted">Trend vs recent 10: {trend_direction}</div>
                 </div>
-                <div class="overview-side">
-                    <div class="section-label">Overview</div>
-                    <div class="stats-grid overview-grid">
-                        {"".join(stat_chips_overview)}
-                    </div>
+                <div class="hero-headline-card">
+                    <div class="section-label" style="margin-top:0;">Headline Stats</div>
+                    <div class="headline-grid">{''.join(headline_cards)}</div>
                 </div>
-            </div>
-            <div class="section-label">Core Performance</div>
-            <div class="stats-grid">
-                {"".join(stat_chips_core)}
-            </div>
-            <div class="section-label">Context</div>
-            <div class="context-summary">
-                <div class="context-summary-grid">
-                    <div class="context-row"><span class="context-key">Best map</span><span class="context-val">{best_map}</span></div>
-                    <div class="context-row"><span class="context-key">Team rank</span><span class="context-val">#{team_rank}/{rank_total}</span></div>
-                    <div class="context-row"><span class="context-key">Record</span><span class="context-val">{record_text}</span></div>
-                    <div class="context-row"><span class="context-key">Best side split</span><span class="context-val">{side_split}</span></div>
-                </div>
-            </div>
-            <div class="form-mini">
-                <div class="section-label" style="margin-top:0;">Form (Last 10)</div>
-                <div class="panel-muted">Form score <strong>{form_score:.1f}/100</strong></div>
-                <div class="form-dot-row">{form_block_html}</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.subheader("Player Analytics")
-    recent_window = (
-        filtered_players.sort_values("date", ascending=False)
-        .head(20)
-        .sort_values("date")
-        .copy()
+    st.markdown("<div class='section-block-title'>Achievements</div>", unsafe_allow_html=True)
+    if not player_ach.empty:
+        achievement_html = "".join(_achievement_premium_card_html(ach_row) for _, ach_row in player_ach.iterrows())
+        st.markdown(f"<div class='achievement-row'>{achievement_html}</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='section-block-title'>Core Performance</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='core-grid'><div class='priority-grid'>{''.join(priority_cards)}</div><div class='support-grid'>{''.join(support_cards)}</div></div>",
+        unsafe_allow_html=True,
     )
-    if not recent_window.empty and go is not None:
-        recent_window["match_index"] = range(1, len(recent_window) + 1)
-        recent_window["rating"] = recent_window["kpd"].fillna(0.0)
-        recent_window["wins"] = recent_window["wins"] if "wins" in recent_window.columns else 0
-        recent_window["losses"] = recent_window["losses"] if "losses" in recent_window.columns else 0
-        recent_window["result"] = recent_window["wins"].fillna(0) > recent_window["losses"].fillna(0)
+
+    trend_chart = None
+    if not recent20.empty and go is not None:
+        recent20["match_index"] = range(1, len(recent20) + 1)
         trend_chart = go.Figure()
-        trend_chart.add_trace(
-            go.Scatter(
-                x=recent_window["match_index"],
-                y=recent_window["rating"],
-                mode="lines+markers",
-                line=dict(color="#63b8ff", width=2.4),
-                marker=dict(
-                    size=9,
-                    color=recent_window["result"].map({True: "#31d17b", False: "#ff6c7a"}),
-                    line=dict(width=0),
-                ),
-                customdata=recent_window[["date", "map", "opponent_team", "wins", "losses", "kpd"]],
-                hovertemplate=(
-                    "Match: %{x}<br>Rating: %{y:.2f}<br>Date: %{customdata[0]}<br>"
-                    "Map: %{customdata[1]}<br>Opponent: %{customdata[2]}<br>"
-                    "W-L: %{customdata[3]}-%{customdata[4]}<br>K/D: %{customdata[5]:.2f}<extra></extra>"
-                ),
-                showlegend=False,
-            )
-        )
+        trend_chart.add_trace(go.Scatter(
+            x=recent20["match_index"], y=recent20["kpd"], mode="lines+markers",
+            line=dict(color="#6cc0ff", width=2.7), marker=dict(size=8, color="#31d17b"),
+            hovertemplate="Match %{x}<br>Rating: %{y:.2f}<extra></extra>", showlegend=False,
+        ))
         trend_chart.update_layout(title="Recent Form (Last 20)")
         trend_chart.update_xaxes(title_text="Recent matches")
-        trend_chart.update_yaxes(title_text="Rating", rangemode="normal")
-        _apply_plotly_dark_style(trend_chart, height=280, hovermode="x unified")
-    else:
-        trend_chart = None
+        trend_chart.update_yaxes(title_text="Rating")
+        _apply_plotly_dark_style(trend_chart, height=290, hovermode="x unified")
 
-    map_perf = (
-        filtered_players.groupby("map", as_index=False)["kpd"]
-        .mean()
-        .rename(columns={"kpd": "rating"})
-        .sort_values("rating", ascending=False)
-    )
+    form_avg_5 = float(recent20["kpd"].tail(5).mean()) if not recent20.empty else 0.0
+    form_avg_10 = float(recent20["kpd"].tail(10).mean()) if not recent20.empty else 0.0
+
+    impact_chart = None
+    impact_map = filtered_players.groupby("map", as_index=False)["kpd"].mean().rename(columns={"kpd": "impact"}).sort_values("impact", ascending=False)
+    if not impact_map.empty and go is not None:
+        impact_chart = go.Figure(go.Bar(x=impact_map["impact"], y=impact_map["map"], orientation="h", marker=dict(color="#f0be4f"), showlegend=False))
+        impact_chart.update_layout(title="Impact by Map")
+        impact_chart.update_xaxes(title_text="Impact proxy")
+        impact_chart.update_yaxes(title_text=None, autorange="reversed")
+        _apply_plotly_dark_style(impact_chart, height=290)
+
     map_chart = None
+    map_perf = filtered_players.groupby("map", as_index=False)["kpd"].mean().rename(columns={"kpd": "rating"}).sort_values("rating", ascending=False)
     if not map_perf.empty and go is not None:
-        map_chart = go.Figure(
-            go.Bar(
-                x=map_perf["rating"],
-                y=map_perf["map"],
-                orientation="h",
-                marker=dict(color="#5ea9ff"),
-                hovertemplate="Map: %{y}<br>Rating: %{x:.2f}<extra></extra>",
-                showlegend=False,
-            )
-        )
+        map_chart = go.Figure(go.Bar(x=map_perf["rating"], y=map_perf["map"], orientation="h", marker=dict(color="#5ea9ff"), showlegend=False))
         map_chart.update_layout(title="Map Performance")
         map_chart.update_xaxes(title_text="Rating")
         map_chart.update_yaxes(title_text=None, autorange="reversed")
-        _apply_plotly_dark_style(map_chart, height=280)
+        _apply_plotly_dark_style(map_chart, height=290)
 
-    comparison_metrics = pd.DataFrame(
-        [
-            {"metric": "Rating", "player": metrics["grevscore"], "team_avg": _safe_mean(team_scope, "kpd")},
-            {"metric": "K/D", "player": metrics["kd"], "team_avg": _safe_mean(team_scope, "kpd")},
-            {
-                "metric": "Impact",
-                "player": metrics["impact"],
-                "team_avg": _safe_mean(team_scope, "impact_score", _safe_mean(team_scope, "impact")),
-            },
-            {"metric": "HS%", "player": avg_hs, "team_avg": _safe_mean(team_scope, "hs_pct")},
-            {"metric": "Acc%", "player": avg_acc, "team_avg": _safe_mean(team_scope, "accuracy_pct")},
-            {"metric": "DPM", "player": metrics["dpm"], "team_avg": _safe_mean(team_scope, "dpm")},
-        ]
-    ).melt("metric", var_name="group", value_name="value")
+    comparison_metrics = pd.DataFrame([
+        {"metric": "Rating", "player": metrics["grevscore"], "team_avg": _safe_mean(team_scope, "kpd")},
+        {"metric": "K/D", "player": metrics["kd"], "team_avg": _safe_mean(team_scope, "kpd")},
+        {"metric": "Impact", "player": metrics["impact"], "team_avg": _safe_mean(team_scope, "impact_score", _safe_mean(team_scope, "impact"))},
+        {"metric": "HS%", "player": avg_hs, "team_avg": _safe_mean(team_scope, "hs_pct")},
+    ]).melt("metric", var_name="group", value_name="value")
     comparison_metrics["group"] = comparison_metrics["group"].map({"player": selected_player, "team_avg": "Team Avg"})
+
     comparison_chart = None
     if go is not None:
         comparison_chart = go.Figure()
         for group_name, color in [(selected_player, "#31d17b"), ("Team Avg", "#9da7bd")]:
-            group_df = comparison_metrics[comparison_metrics["group"] == group_name]
-            comparison_chart.add_trace(
-                go.Bar(
-                    x=group_df["value"],
-                    y=group_df["metric"],
-                    orientation="h",
-                    name=group_name,
-                    marker=dict(color=color),
-                    hovertemplate="Metric: %{y}<br>Group: " + group_name + "<br>Value: %{x:.2f}<extra></extra>",
-                )
-            )
+            gdf = comparison_metrics[comparison_metrics["group"] == group_name]
+            comparison_chart.add_trace(go.Bar(x=gdf["value"], y=gdf["metric"], orientation="h", marker=dict(color=color), name=group_name))
         comparison_chart.update_layout(title="Player vs Team Average", barmode="group")
         comparison_chart.update_xaxes(title_text="Value")
         comparison_chart.update_yaxes(title_text=None, categoryorder="array", categoryarray=list(reversed(comparison_metrics["metric"].drop_duplicates().tolist())))
-        _apply_plotly_dark_style(comparison_chart, height=280)
+        _apply_plotly_dark_style(comparison_chart, height=290)
 
     side_chart = None
     if not side_chart_data.empty and go is not None:
-        side_chart = go.Figure(
-            go.Bar(
-                x=side_chart_data["side"],
-                y=side_chart_data["rating"],
-                marker=dict(color="#f0be4f"),
-                hovertemplate="Side: %{x}<br>Avg K/D: %{y:.2f}<extra></extra>",
-                showlegend=False,
-            )
-        )
-        side_chart.update_layout(title="Side Split")
+        side_chart = go.Figure(go.Bar(x=side_chart_data["side"], y=side_chart_data["rating"], marker=dict(color="#f48966"), showlegend=False))
+        side_chart.update_layout(title="Side Split Comparison")
         side_chart.update_xaxes(title_text="Side")
         side_chart.update_yaxes(title_text="Avg K/D")
-        _apply_plotly_dark_style(side_chart, height=280)
+        _apply_plotly_dark_style(side_chart, height=290)
 
-    top_row_left, top_row_right = st.columns(2)
-    with top_row_left:
-        if trend_chart is None:
-            if go is None:
+    st.markdown("<div class='section-block-title'>Form</div>", unsafe_allow_html=True)
+    form_stats_html = (
+        _build_stat_chip("Streak", f"{streak:+d}", float(streak), -1, 2)
+        + _build_stat_chip("Last 5 avg", f"{form_avg_5:.2f}", form_avg_5, 0.9, 1.15)
+        + _build_stat_chip("Last 10 avg", f"{form_avg_10:.2f}", form_avg_10, 0.9, 1.15)
+        + _build_stat_chip("Direction", trend_direction, 1 if trend_direction == "Rising" else 0, 0.5, 1.0)
+    )
+    st.markdown(
+        f"<div class='form-card'><div class='stats-grid overview-grid'>{form_stats_html}</div></div>",
+        unsafe_allow_html=True,
+    )
+    if trend_chart is not None:
+        st.plotly_chart(trend_chart, use_container_width=True)
+
+    st.markdown("<div class='section-block-title'>Impact</div>", unsafe_allow_html=True)
+    team_impact = _safe_mean(team_scope, "impact_score", _safe_mean(team_scope, "impact"))
+    impact_delta = metrics["impact"] - team_impact
+    impact_stats_html = (
+        _build_stat_chip("Impact", f"{metrics['impact']:.1f}", metrics["impact"], 62, 78)
+        + _build_stat_chip("Percentile", f"{percentile:.0f}th", percentile, 45, 75)
+        + _build_stat_chip("vs Team Avg", f"{impact_delta:+.1f}", impact_delta, -2.0, 3.0)
+        + _build_stat_chip("Recent trend", trend_direction, 1 if trend_direction == "Rising" else 0, 0.5, 1.0)
+    )
+    st.markdown(
+        f"<div class='impact-card'><div class='stats-grid overview-grid'>{impact_stats_html}</div></div>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='section-block-title'>Visual Analytics</div>", unsafe_allow_html=True)
+    chart_entries = [(map_chart, "No map data available."), (comparison_chart, "Comparison chart unavailable."), (side_chart, "No side split data available."), (impact_chart, "No impact-by-map data available.")]
+    cols = st.columns(2)
+    for idx, (chart_obj, empty_msg) in enumerate(chart_entries):
+        with cols[idx % 2]:
+            if chart_obj is not None:
+                st.plotly_chart(chart_obj, use_container_width=True)
+            elif go is None:
                 _render_plotly_unavailable()
             else:
-                st.info("Not enough recent match data for trend graph.")
-        else:
-            st.plotly_chart(trend_chart, use_container_width=True)
-    with top_row_right:
-        if map_chart is None:
-            if go is None:
-                _render_plotly_unavailable()
-            else:
-                st.info("No map data available for selected filters.")
-        else:
-            st.plotly_chart(map_chart, use_container_width=True)
+                pass
 
-    bottom_row_left, bottom_row_right = st.columns(2)
-    with bottom_row_left:
-        if comparison_chart is None:
-            _render_plotly_unavailable()
-        else:
-            st.plotly_chart(comparison_chart, use_container_width=True)
-    with bottom_row_right:
-        if side_chart is None:
-            if go is None:
-                _render_plotly_unavailable()
-            else:
-                st.info("No side split data available for selected filters.")
-        else:
-            st.plotly_chart(side_chart, use_container_width=True)
-
-    st.caption(f"Total rounds played in filter: {rounds}")
-
-    st.subheader("Tactical Context for Selected Matches")
+    st.markdown("<div class='section-block-title'>Tactical Context</div>", unsafe_allow_html=True)
     if filtered_tactics.empty:
         st.info("No tactic data after side/date filters.")
     else:
-        top_tactics = (
-            filtered_tactics.groupby("tactic_name", as_index=False)[["wins", "losses"]]
-            .sum()
-            .assign(win_rate=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
-            .sort_values(["wins", "win_rate"], ascending=False)
-            .head(10)
-        )
+        top_tactics = filtered_tactics.groupby("tactic_name", as_index=False)[["wins", "losses"]].sum().assign(win_rate=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1)).sort_values(["wins", "win_rate"], ascending=False).head(10)
         st.dataframe(top_tactics, use_container_width=True, hide_index=True)
 
-    st.subheader("Achievements")
-    if player_ach.empty:
-        st.info("No achievements found for this player.")
-    else:
-        achievement_html = "".join(_achievement_card_html(ach_row) for _, ach_row in player_ach.iterrows())
-        achievement_list_class = "achievement-inline-list achievement-inline-list-single" if len(player_ach) == 1 else "achievement-inline-list"
-        st.markdown(f"<div class='{achievement_list_class}'>{achievement_html}</div>", unsafe_allow_html=True)
-
-    st.subheader("Full Player Match Stats")
-    show_cols = [
-        "date",
-        competition_source_col,
-        "map",
-        "opponent_team",
-        "tier",
-        "kills",
-        "deaths",
-        "kpd",
-        "accuracy_pct",
-        "hs_pct",
-        "mvps",
-        "damage",
-        "rounds_played",
-    ]
+    st.markdown("<div class='section-block-title'>Full Player Match Stats</div>", unsafe_allow_html=True)
+    show_cols = ["date", competition_source_col, "map", "opponent_team", "tier", "kills", "deaths", "kpd", "accuracy_pct", "hs_pct", "mvps", "damage", "rounds_played"]
     show_cols = [c for c in show_cols if c in filtered_players.columns]
     display_df = filtered_players[show_cols].rename(columns={competition_source_col: "competition"})
     st.dataframe(display_df.sort_values("date", ascending=False), use_container_width=True, hide_index=True)
-
 
 def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame, competition_source_col: str) -> None:
     _inject_styles()
