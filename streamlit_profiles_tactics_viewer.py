@@ -2243,6 +2243,15 @@ def _normalize_achievement_text(value: object) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def extract_core_player_name(name: object) -> str:
+    raw = "" if name is None else str(name)
+    normalized = unicodedata.normalize("NFKC", raw)
+    normalized = re.sub(r"\s+", " ", normalized).strip().casefold()
+    if "|" in normalized:
+        normalized = normalized.split("|")[-1].strip()
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
 def format_achievement_title(competition: object, achievement_name: object) -> str:
     raw = _normalize_achievement_text(competition) or _normalize_achievement_text(achievement_name)
     if not raw:
@@ -2482,6 +2491,7 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         if col not in achievements.columns:
             achievements[col] = ""
     achievements = achievements[ACHIEVEMENT_REQUIRED_COLUMNS].copy()
+    achievements["player_core"] = achievements["player"].apply(extract_core_player_name)
 
     players["date"] = pd.to_datetime(players["date"], errors="coerce")
     tactics["date"] = pd.to_datetime(tactics["date"], errors="coerce")
@@ -2946,10 +2956,16 @@ def build_player_achievements(
     if achievements_df.empty:
         return pd.DataFrame()
 
-    player_key = str(selected_player).strip().casefold()
-    scoped = achievements_df[
-        achievements_df["player"].astype(str).apply(lambda value: str(value).strip().casefold()) == player_key
-    ].copy()
+    selected_player_core = extract_core_player_name(selected_player)
+    if "player_core" in achievements_df.columns:
+        player_core_series = achievements_df["player_core"].astype(str).apply(extract_core_player_name)
+    else:
+        player_core_series = achievements_df["player"].astype(str).apply(extract_core_player_name)
+
+    scoped = achievements_df[player_core_series == selected_player_core].copy()
+    scoped["selected_player_raw"] = str(selected_player)
+    scoped["selected_player_core"] = selected_player_core
+    scoped["achievement_player_core"] = scoped["player"].apply(extract_core_player_name)
     if scoped.empty:
         return scoped
 
@@ -3146,7 +3162,21 @@ def render_achievement_debug_section(
     player_achievements: pd.DataFrame,
     selected_player: str,
 ) -> None:
+    selected_player_raw = str(selected_player)
+    selected_player_core = extract_core_player_name(selected_player_raw)
     parsed_columns = achievements_df.columns.astype(str).tolist()
+    achievement_players_raw = achievements_df.get("player", pd.Series(dtype=str)).astype(str).tolist()
+    achievement_players_core = [extract_core_player_name(value) for value in achievement_players_raw]
+    matched_preview_cols = [
+        col
+        for col in ["player", "achievement_player_core", "achievement_name", "season_name", "position", "resolved_filename", "image_missing"]
+        if col in player_achievements.columns
+    ]
+    matched_preview = (
+        player_achievements[matched_preview_cols].head(25)
+        if matched_preview_cols
+        else pd.DataFrame()
+    )
     resolved_filenames = []
     missing_filenames = []
     if not player_achievements.empty:
@@ -3171,8 +3201,15 @@ def render_achievement_debug_section(
     with st.expander("Achievement Debug (temporary)", expanded=False):
         st.write(f"Total achievement rows loaded: {len(achievements_df)}")
         st.write(f"Parsed columns: {parsed_columns}")
-        st.write(f"Selected player: {selected_player}")
+        st.write(f"Selected player (raw): {selected_player_raw}")
+        st.write(f"Selected player (core): {selected_player_core}")
+        st.write("Achievement players (raw):")
+        st.write(achievement_players_raw)
+        st.write("Achievement players (core):")
+        st.write(achievement_players_core)
         st.write(f"Matched achievement rows count: {len(player_achievements)}")
+        st.write("Matched rows preview:")
+        st.dataframe(matched_preview, use_container_width=True)
         st.write(f"Resolved filenames: {resolved_filenames}")
         st.write(f"Missing filenames: {missing_filenames}")
 
