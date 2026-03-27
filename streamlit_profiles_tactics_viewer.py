@@ -1467,7 +1467,7 @@ def _inject_styles() -> None:
             border: 1px solid rgba(155, 174, 214, 0.27);
             border-radius: 20px;
             background: linear-gradient(180deg, rgba(14, 20, 32, 0.95), rgba(9, 13, 22, 0.96));
-            padding: 15px;
+            padding: 13px;
             min-height: 374px;
             box-shadow: 0 18px 34px rgba(0, 0, 0, 0.38);
         }
@@ -1499,123 +1499,244 @@ def _inject_styles() -> None:
             grid-template-rows: auto auto auto auto 1fr auto;
             align-items: start;
             text-align: left;
-            gap: 8px;
+            gap: 6px;
             height: 100%;
         }
+        .grevscore-card {
+            position: relative;
+            overflow: hidden;
+            border-color: rgba(130, 176, 255, 0.36);
+            background:
+                radial-gradient(circle at 14% 16%, rgba(100, 175, 255, 0.16), transparent 48%),
+                radial-gradient(circle at 86% -8%, rgba(61, 212, 167, 0.14), transparent 44%),
+                linear-gradient(164deg, rgba(14, 22, 36, 0.96), rgba(7, 12, 22, 0.98));
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(217, 232, 255, 0.07);
+        }
+        .grevscore-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            border-radius: inherit;
+            border: 1px solid rgba(189, 214, 255, 0.06);
+        }
+        .grevscore-card::after {
+            content: "";
+            position: absolute;
+            left: 16px;
+            right: 16px;
+            top: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(175, 208, 255, 0.78), transparent);
+            pointer-events: none;
+        }
+        .grevscore-card.tier-very-poor {
+            box-shadow: 0 20px 34px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 116, 139, 0.15), inset 0 0 34px rgba(139, 25, 54, 0.18);
+        }
+        .grevscore-card.tier-poor {
+            box-shadow: 0 20px 34px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 164, 82, 0.15), inset 0 0 34px rgba(139, 67, 25, 0.18);
+        }
+        .grevscore-card.tier-average {
+            box-shadow: 0 20px 34px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(245, 204, 89, 0.15), inset 0 0 34px rgba(151, 104, 19, 0.2);
+        }
+        .grevscore-card.tier-good {
+            box-shadow: 0 20px 34px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(78, 226, 225, 0.15), inset 0 0 36px rgba(23, 94, 111, 0.2);
+        }
+        .grevscore-card.tier-elite {
+            box-shadow: 0 20px 34px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(89, 230, 149, 0.18), inset 0 0 36px rgba(20, 102, 55, 0.23);
+        }
         .grevscore-label {
-            color: #b8c9ee;
-            font-size: 0.72rem;
-            letter-spacing: 0.16em;
+            color: #cbddff;
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
             text-transform: uppercase;
-            font-weight: 860;
+            font-weight: 900;
+            text-shadow: 0 0 12px rgba(109, 185, 255, 0.24);
         }
         .grevscore-value {
-            font-size: clamp(3.8rem, 5.8vw, 5.6rem);
-            font-weight: 920;
-            line-height: 0.86;
-            letter-spacing: 0.01em;
+            font-size: clamp(4rem, 5.9vw, 5.8rem);
+            font-weight: 940;
+            line-height: 0.84;
+            letter-spacing: 0.008em;
             color: #f7fbff;
-            text-shadow: 0 0 28px rgba(68, 222, 160, 0.2);
+            text-shadow: 0 0 16px rgba(198, 222, 255, 0.35), 0 0 34px rgba(68, 222, 160, 0.24);
         }
+        .grevscore-card.tier-very-poor .grevscore-value { color: #ffd8e0; text-shadow: 0 0 14px rgba(255, 147, 171, 0.42), 0 0 35px rgba(172, 33, 70, 0.4); }
+        .grevscore-card.tier-poor .grevscore-value { color: #ffe4c4; text-shadow: 0 0 14px rgba(255, 177, 114, 0.4), 0 0 35px rgba(186, 87, 19, 0.36); }
+        .grevscore-card.tier-average .grevscore-value { color: #fff0ca; text-shadow: 0 0 14px rgba(244, 194, 75, 0.38), 0 0 35px rgba(151, 108, 19, 0.34); }
+        .grevscore-card.tier-good .grevscore-value { color: #d2f8ff; text-shadow: 0 0 14px rgba(109, 233, 235, 0.42), 0 0 35px rgba(25, 126, 142, 0.36); }
+        .grevscore-card.tier-elite .grevscore-value { color: #d9ffe7; text-shadow: 0 0 14px rgba(88, 240, 152, 0.42), 0 0 35px rgba(27, 138, 69, 0.4); }
         .grevscore-status {
-            color: #c4d4f0;
-            font-size: 0.83rem;
+            color: #bcd2f6;
+            font-size: 0.8rem;
             letter-spacing: 0.02em;
-            font-weight: 730;
+            font-weight: 760;
+            line-height: 1.25;
         }
+        .grevscore-status .accent { font-weight: 860; color: #9fd7ff; }
+        .grevscore-card.tier-very-poor .grevscore-status .accent { color: #ff9fb3; }
+        .grevscore-card.tier-poor .grevscore-status .accent { color: #ffc283; }
+        .grevscore-card.tier-average .grevscore-status .accent { color: #ffd57f; }
+        .grevscore-card.tier-good .grevscore-status .accent { color: #8cecf4; }
+        .grevscore-card.tier-elite .grevscore-status .accent { color: #8cf2ba; }
         .grevscore-band {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             width: fit-content;
             border-radius: 999px;
-            padding: 5px 12px;
-            border: 1px solid rgba(151, 166, 195, 0.45);
-            font-size: 0.68rem;
-            letter-spacing: 0.08em;
+            padding: 5px 14px;
+            border: 1px solid rgba(151, 166, 195, 0.5);
+            font-size: 0.66rem;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            font-weight: 820;
+            font-weight: 860;
+            box-shadow: inset 0 0 0 1px rgba(236, 244, 255, 0.07), 0 0 16px rgba(54, 130, 202, 0.17);
         }
         .grevscore-band.good {
-            color: #aaf4cc;
-            border-color: rgba(49, 209, 123, 0.52);
-            background: linear-gradient(180deg, rgba(19, 60, 43, 0.7), rgba(12, 31, 24, 0.65));
+            color: #d8fff1;
+            border-color: rgba(68, 226, 224, 0.55);
+            background: linear-gradient(170deg, rgba(20, 77, 95, 0.8), rgba(13, 38, 46, 0.66));
         }
         .grevscore-band.mid {
-            color: #ffe1a5;
-            border-color: rgba(240, 190, 79, 0.52);
-            background: linear-gradient(180deg, rgba(66, 50, 23, 0.72), rgba(36, 28, 14, 0.65));
+            color: #fff0cf;
+            border-color: rgba(240, 190, 79, 0.62);
+            background: linear-gradient(170deg, rgba(75, 55, 20, 0.82), rgba(38, 30, 14, 0.68));
         }
         .grevscore-band.bad {
-            color: #ffc1cb;
-            border-color: rgba(255, 108, 122, 0.52);
-            background: linear-gradient(180deg, rgba(73, 33, 40, 0.72), rgba(37, 19, 24, 0.68));
+            color: #ffd7de;
+            border-color: rgba(255, 115, 132, 0.62);
+            background: linear-gradient(170deg, rgba(87, 35, 46, 0.82), rgba(45, 20, 28, 0.72));
         }
         .grevscore-meter {
-            margin-top: 2px;
+            margin-top: 3px;
             display: grid;
-            gap: 6px;
+            gap: 7px;
         }
         .grevscore-meter-track {
             width: 100%;
             border-radius: 999px;
-            height: 14px;
-            background: rgba(136, 157, 198, 0.22);
+            height: 12px;
+            background: linear-gradient(90deg, rgba(109, 32, 51, 0.42), rgba(143, 115, 39, 0.4) 48%, rgba(23, 89, 56, 0.46));
             overflow: hidden;
-            border: 1px solid rgba(146, 166, 205, 0.34);
+            border: 1px solid rgba(146, 166, 205, 0.38);
+            box-shadow: inset 0 1px 0 rgba(207, 226, 255, 0.11), inset 0 -8px 18px rgba(2, 6, 14, 0.58);
         }
         .grevscore-meter-fill {
             height: 100%;
             border-radius: inherit;
             background: linear-gradient(90deg, #ff6878 0%, #f0bf4f 52%, #49da9f 100%);
-            box-shadow: 0 0 18px rgba(80, 225, 168, 0.28);
+            box-shadow: 0 0 18px rgba(80, 225, 168, 0.34), inset 0 0 10px rgba(255, 255, 255, 0.22);
         }
         .grevscore-meter-labels {
             display: flex;
             justify-content: space-between;
-            font-size: 0.64rem;
-            color: #9fb1d3;
-            letter-spacing: 0.08em;
+            font-size: 0.62rem;
+            color: #afc2e6;
+            letter-spacing: 0.09em;
             text-transform: uppercase;
+            font-weight: 760;
         }
+        .grevscore-meter-labels span:first-child { color: #ff9bab; }
+        .grevscore-meter-labels span:nth-child(2) { color: #ffd986; }
+        .grevscore-meter-labels span:last-child { color: #8df0b9; }
         .grevscore-meta {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 7px;
         }
         .grevscore-meta span {
-            border: 1px solid rgba(151, 166, 195, 0.3);
+            border: 1px solid rgba(151, 166, 195, 0.34);
             border-radius: 10px;
-            background: rgba(10, 17, 28, 0.82);
-            padding: 8px 7px;
+            background: linear-gradient(170deg, rgba(17, 31, 50, 0.84), rgba(9, 16, 28, 0.88));
+            padding: 7px 7px 8px;
             text-align: center;
             font-size: 0.64rem;
-            color: #d5e2f9;
-            font-weight: 760;
+            color: #dde9ff;
+            font-weight: 770;
+            box-shadow: inset 0 1px 0 rgba(211, 231, 255, 0.08);
         }
+        .grevscore-card .grevscore-meta span:nth-child(1) { border-color: rgba(108, 183, 255, 0.44); color: #cfe9ff; }
+        .grevscore-card .grevscore-meta span:nth-child(2) { border-color: rgba(104, 240, 194, 0.4); color: #ccffe8; }
+        .grevscore-card .grevscore-meta span:nth-child(3) { border-color: rgba(246, 200, 116, 0.42); color: #ffe7bf; }
         .stats-card {
             display: grid;
             align-content: start;
-            gap: 12px;
-            padding: 14px 12px;
+            gap: 10px;
+            padding: 12px;
+            background:
+                radial-gradient(circle at 16% 0%, rgba(72, 211, 194, 0.18), transparent 40%),
+                radial-gradient(circle at 88% 8%, rgba(93, 176, 255, 0.18), transparent 36%),
+                linear-gradient(160deg, rgba(13, 21, 36, 0.96), rgba(8, 13, 23, 0.98));
+            border-color: rgba(125, 173, 245, 0.38);
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(210, 229, 255, 0.08);
+        }
+        .headline-header {
+            display: grid;
+            gap: 2px;
+            margin-bottom: 1px;
+            border-bottom: 1px solid rgba(140, 183, 245, 0.24);
+            padding-bottom: 7px;
+        }
+        .headline-header .section-label {
+            margin: 0;
+            color: #d2e4ff;
+            font-weight: 860;
+            letter-spacing: 0.11em;
+        }
+        .headline-header-sub {
+            color: #9ec6f6;
+            font-size: 0.65rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-weight: 700;
         }
         .stats-tile-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 9px;
+            gap: 8px;
         }
-        .stats-tile {
-            border: 1px solid rgba(151, 166, 195, 0.32);
-            border-radius: 12px;
-            padding: 10px;
-            background: linear-gradient(180deg, rgba(16, 23, 36, 0.92), rgba(11, 17, 28, 0.88));
-            min-height: 142px;
+        .headline-card {
+            border: 1px solid rgba(151, 166, 195, 0.34);
+            border-radius: 13px;
+            padding: 10px 11px;
+            background: linear-gradient(170deg, rgba(18, 29, 44, 0.94), rgba(9, 15, 26, 0.9));
+            min-height: 134px;
             display: grid;
             align-content: center;
+            gap: 2px;
+            box-shadow: inset 0 1px 0 rgba(219, 234, 255, 0.08);
+            position: relative;
+            overflow: hidden;
         }
-        .stats-tile .label { color: #87bbff; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 760; }
-        .stats-tile .value { color: #f5f8ff; text-shadow: 0 0 14px rgba(92,184,255,0.16); font-size: 2.15rem; font-weight: 900; margin-top: 2px; line-height: 1.01; }
-        .stats-tile .sub { color: #c8d5f0; font-size: 0.66rem; margin-top: 2px; }
+        .headline-card::before {
+            content: "";
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            top: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(184, 218, 255, 0.82), transparent);
+            opacity: 0.72;
+        }
+        .headline-label { color: #95bce6; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.11em; font-weight: 780; }
+        .headline-value { color: #f5f8ff; text-shadow: 0 0 16px rgba(92,184,255,0.2); font-size: 2.22rem; font-weight: 910; margin-top: 1px; line-height: 1.01; }
+        .headline-sub { color: #bfd6fa; font-size: 0.67rem; margin-top: 2px; }
+        .headline-card.metric-rating { border-color: rgba(110, 189, 255, 0.44); background: linear-gradient(165deg, rgba(20, 47, 78, 0.84), rgba(10, 20, 35, 0.94)); box-shadow: inset 0 1px 0 rgba(207, 236, 255, 0.1), 0 0 18px rgba(66, 173, 255, 0.16); }
+        .headline-card.metric-impact { border-color: rgba(115, 218, 223, 0.45); background: linear-gradient(165deg, rgba(24, 56, 74, 0.84), rgba(16, 26, 42, 0.95)); box-shadow: inset 0 1px 0 rgba(211, 248, 255, 0.09), 0 0 18px rgba(92, 206, 225, 0.17); }
+        .headline-card.metric-form { border-color: rgba(244, 189, 98, 0.45); background: linear-gradient(165deg, rgba(75, 52, 24, 0.84), rgba(33, 24, 15, 0.95)); box-shadow: inset 0 1px 0 rgba(255, 232, 191, 0.08), 0 0 18px rgba(246, 178, 79, 0.18); }
+        .headline-card.metric-matches { border-color: rgba(146, 176, 219, 0.42); background: linear-gradient(165deg, rgba(36, 52, 73, 0.84), rgba(16, 25, 39, 0.95)); box-shadow: inset 0 1px 0 rgba(218, 231, 255, 0.08), 0 0 16px rgba(118, 154, 212, 0.16); }
+        .headline-card.metric-rating .headline-label,
+        .headline-card.metric-rating .headline-value { color: #bde9ff; }
+        .headline-card.metric-impact .headline-label,
+        .headline-card.metric-impact .headline-value { color: #bff9f8; }
+        .headline-card.metric-form .headline-label,
+        .headline-card.metric-form .headline-value { color: #ffe0ab; }
+        .headline-card.metric-matches .headline-label,
+        .headline-card.metric-matches .headline-value { color: #d4e8ff; }
+        .headline-card.metric-impact .headline-sub { color: #bde5ff; }
+        .headline-card.metric-form .headline-sub { color: #ffd9a0; }
+        .headline-card.metric-matches .headline-sub { color: #c8dbf8; }
         .stat-help { color:#9ce4c0; font-size:0.73em; margin-left:4px; cursor: help; }
         .chart-section-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
         .pv-shell {
@@ -3109,9 +3230,9 @@ def _metric_card_html(
     )
 
 
-def _headline_stat_card_html(label: str, value: str, subtext: str) -> str:
+def _headline_stat_card_html(label: str, value: str, subtext: str, metric_class: str = "metric-rating") -> str:
     return (
-        "<div class='headline-card'>"
+        f"<div class='headline-card {metric_class}'>"
         f"<div class='headline-label'>{html.escape(label)}</div>"
         f"<div class='headline-value'>{html.escape(value)}</div>"
         f"<div class='headline-sub'>{html.escape(subtext)}</div>"
@@ -3396,13 +3517,23 @@ def _hltv_profile_view(
     streak_value_class = "up" if streak > 0 else ("down" if streak < 0 else "flat")
     delta_value_class = "up" if recent10_delta > 0 else ("down" if recent10_delta < 0 else "flat")
     stats_tiles = [
-        f"<div class='stats-tile'><div class='label'>Rating</div><div class='value'>{metrics['grevscore']:.2f}</div><div class='sub'>Tier: {score_tier}</div></div>",
-        f"<div class='stats-tile'><div class='label'>Impact <span class='stat-help' title='{html.escape(metrics['impact_formula'])}'>ⓘ</span></div><div class='value'>{metrics['impact']:.1f}</div><div class='sub'>{percentile:.0f}th percentile</div></div>",
-        f"<div class='stats-tile'><div class='label'>Form</div><div class='value'>{form_score:.1f}</div><div class='sub trend-{trend_class}'> {trend_icon} {trend_direction}</div></div>",
-        f"<div class='stats-tile'><div class='label'>Matches</div><div class='value'>{int(metrics['matches'])}</div><div class='sub'>{record_text}</div></div>",
+        _headline_stat_card_html("Rating", f"{metrics['grevscore']:.2f}", f"Tier: {score_tier}", metric_class="metric-rating"),
+        _headline_stat_card_html("Impact", f"{metrics['impact']:.1f}", f"{percentile:.0f}th percentile · Weighted", metric_class="metric-impact"),
+        _headline_stat_card_html("Form", f"{form_score:.1f}", f"{trend_icon} {trend_direction}", metric_class="metric-form"),
+        _headline_stat_card_html("Matches", f"{int(metrics['matches'])}", record_text, metric_class="metric-matches"),
     ]
     grev_meter_pct = max(0.0, min((metrics["grevscore"] - 0.65) / (1.28 - 0.65), 1.0)) * 100
     grev_band_class = "good" if metrics["grevscore"] >= 1.02 else ("mid" if metrics["grevscore"] >= 0.85 else "bad")
+    if metrics["grevscore"] < 0.85:
+        grev_tier_class = "tier-very-poor"
+    elif metrics["grevscore"] < 1.0:
+        grev_tier_class = "tier-poor"
+    elif metrics["grevscore"] < 1.2:
+        grev_tier_class = "tier-average"
+    elif metrics["grevscore"] < 1.45:
+        grev_tier_class = "tier-good"
+    else:
+        grev_tier_class = "tier-elite"
 
     priority_cards = [
         _metric_card_html("Grevscore", f"{metrics['grevscore']:.2f}", metrics["grevscore"], 0.95, 1.18, priority=True, delta_note=f"Team #{team_rank}/{rank_total}"),
@@ -3454,12 +3585,12 @@ def _hltv_profile_view(
                 <div class="pv-achievement-scroll">{achievements_inline_html}</div>
             </article>
             <section class="pv-score-grid">
-                <article class="grevscore-card">
+                <article class="grevscore-card {grev_tier_class}">
                     <div class="grevscore-wrap">
                         <div class="grevscore-label">Signature Stat · GREVSCORE</div>
                         <div class="grevscore-value">{metrics['grevscore']:.2f}</div>
                         <div class="grevscore-band {grev_band_class}">{score_tier}</div>
-                        <div class="grevscore-status">{percentile:.0f}th percentile in current filter set · Impact {metrics['impact']:.1f}</div>
+                        <div class="grevscore-status"><span class="accent">{percentile:.0f}th percentile</span> in current filter set · Impact <span class="accent">{metrics['impact']:.1f}</span></div>
                         <div class="grevscore-meter">
                             <div class="grevscore-meter-track">
                                 <div class="grevscore-meter-fill" style="width:{grev_meter_pct:.1f}%;"></div>
@@ -3474,7 +3605,10 @@ def _hltv_profile_view(
                     </div>
                 </article>
                 <article class="stats-card">
-                    <div class="section-label" style="margin-top:0;">Headline Stats</div>
+                    <div class="headline-header">
+                        <div class="section-label">Headline Stats</div>
+                        <div class="headline-header-sub">Live profile snapshot · rating, impact, form, and volume</div>
+                    </div>
                     <div class="stats-tile-grid">{''.join(stats_tiles)}</div>
                 </article>
             </section>
