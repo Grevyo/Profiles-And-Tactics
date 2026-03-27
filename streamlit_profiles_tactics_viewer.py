@@ -39,6 +39,8 @@ PLAYER_CSV = DATA_DIR / "PlayerDataMatser.csv"
 TACTICS_CSV = DATA_DIR / "TacticsDataMaster.csv"
 ACHIEVEMENTS_CSV = DATA_DIR / "Achievements.csv"
 PLAYER_META_CSV_CANDIDATES = (
+    DATA_DIR / "play.csv",
+    DATA_DIR / "Play.csv",
     DATA_DIR / "player.csv",
     DATA_DIR / "Player.csv",
     DATA_DIR / "players.csv",
@@ -918,24 +920,50 @@ def _inject_styles() -> None:
         }
         .identity-header {
             display: grid;
-            grid-template-columns: 132px 1fr;
-            gap: 12px;
+            grid-template-columns: 172px 1fr;
+            gap: 14px;
         }
         .portrait-shell {
-            border: 1px solid rgba(122, 164, 240, 0.45);
-            border-radius: 12px;
-            background: linear-gradient(180deg, rgba(30, 47, 78, 0.55), rgba(11, 17, 28, 0.8));
-            min-height: 158px;
+            border: 1px solid rgba(122, 164, 240, 0.62);
+            border-radius: 14px;
+            background:
+                radial-gradient(circle at 50% 0%, rgba(95, 173, 255, 0.35), transparent 58%),
+                linear-gradient(180deg, rgba(30, 47, 78, 0.72), rgba(11, 17, 28, 0.92));
+            min-height: 220px;
             overflow: hidden;
             display: grid;
             place-items: center;
+            box-shadow: inset 0 0 0 1px rgba(197, 221, 255, 0.09), 0 12px 26px rgba(4, 9, 19, 0.55);
+        }
+        .portrait-shell img.player-headshot {
+            width: 100%;
+            height: 100%;
+            min-height: 220px;
+            object-fit: cover;
+            object-position: center top;
         }
         .portrait-fallback {
             text-align: center;
-            color: #b8caf0;
-            font-size: 0.75rem;
-            letter-spacing: 0.04em;
+            color: #c6d5f2;
+            font-size: 0.76rem;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
+            padding: 14px;
+            display: grid;
+            gap: 6px;
+        }
+        .portrait-fallback-badge {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            margin: 0 auto;
+            display: grid;
+            place-items: center;
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #eef4ff;
+            border: 1px solid rgba(165, 197, 255, 0.55);
+            background: linear-gradient(180deg, rgba(94, 151, 245, 0.42), rgba(28, 40, 64, 0.9));
         }
         .headline-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
         .headline-card {
@@ -951,26 +979,51 @@ def _inject_styles() -> None:
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
-            margin-top: 8px;
+            margin-top: 10px;
+            align-items: flex-start;
         }
         .achievement-premium {
-            width: 118px;
-            height: 146px;
+            width: 112px;
+            height: 150px;
             border-radius: 12px;
             position: relative;
             overflow: hidden;
             border: 1px solid rgba(151, 166, 195, 0.32);
             background: linear-gradient(180deg, rgba(19, 28, 43, 0.95), rgba(9, 14, 24, 0.96));
-            flex: 0 0 118px;
+            flex: 0 0 112px;
         }
         .achievement-premium img {
             width: 100%;
-            height: 88px;
+            height: 84px;
             object-fit: contain;
             object-position: center;
-            margin-top: 22px;
+            margin-top: 24px;
             padding: 0 7px;
             box-sizing: border-box;
+        }
+        .achievement-inline-cabinet {
+            border-top: 1px solid rgba(140, 159, 191, 0.24);
+            padding-top: 10px;
+            min-height: 64px;
+        }
+        .achievement-inline-empty {
+            margin-top: 10px;
+            border: 1px dashed rgba(150, 170, 205, 0.35);
+            border-radius: 12px;
+            background: rgba(12, 19, 30, 0.68);
+            padding: 11px 10px;
+            text-align: center;
+        }
+        .achievement-empty-title {
+            font-size: 0.66rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #95a4c5;
+            margin-bottom: 5px;
+        }
+        .achievement-empty-sub {
+            color: #c8d4ea;
+            font-size: 0.72rem;
         }
         .glow-s { box-shadow: 0 0 16px rgba(245, 196, 81, 0.26); }
         .glow-a { box-shadow: 0 0 15px rgba(156, 109, 246, 0.24); }
@@ -1273,26 +1326,43 @@ def _player_name_variants(player_name: str) -> list[str]:
 
 def resolve_player_photo(image_index: dict[str, dict[str, Path]], player_name: str) -> Path | None:
     variants = _player_name_variants(player_name)
+    if not variants:
+        return None
     player_dir = APP_ROOT / IMAGE_FOLDERS["player"]
     indexed_paths = image_index.get("player", {})
-    for candidate in variants:
-        direct_path = player_dir / candidate
-        if direct_path.exists() and direct_path.is_file():
-            return direct_path
-        for ext in IMAGE_EXTENSIONS:
-            exact = player_dir / f"{candidate}{ext}"
-            if exact.exists() and exact.is_file():
-                return exact
-
     normalized_keys = [_normalize_key(normalize_logo_key(name)) for name in variants]
+
+    # a) explicit alias map
     for key in normalized_keys:
-        if key in PLAYER_PHOTO_ALIAS_MAP:
-            alias_path = player_dir / PLAYER_PHOTO_ALIAS_MAP[key]
-            if alias_path.exists():
-                return alias_path
+        alias_name = PLAYER_PHOTO_ALIAS_MAP.get(key)
+        if not alias_name:
+            continue
+        alias_path = player_dir / alias_name
+        if alias_path.exists() and alias_path.is_file():
+            return alias_path
+
+    # b) exact player-name filename (supports special chars like "ⓜ | 8eeR.png")
+    for candidate in variants:
+        exact_no_ext = player_dir / candidate
+        if exact_no_ext.exists() and exact_no_ext.is_file():
+            return exact_no_ext
+        if Path(candidate).suffix.lower() in IMAGE_EXTENSIONS:
+            exact_with_ext = player_dir / Path(candidate).name
+            if exact_with_ext.exists() and exact_with_ext.is_file():
+                return exact_with_ext
+
+    # c) cleaned / normalized player-name filename
+    for key in normalized_keys:
         hit = indexed_paths.get(key)
         if hit is not None:
             return hit
+
+    # d) common image extensions
+    for candidate in variants:
+        for ext in sorted(IMAGE_EXTENSIONS):
+            exact = player_dir / f"{candidate}{ext}"
+            if exact.exists() and exact.is_file():
+                return exact
     return None
 
 
@@ -1472,6 +1542,93 @@ def _load_player_metadata() -> pd.DataFrame:
     metadata["player_lookup"] = metadata["player"].astype(str).str.strip().str.casefold()
     metadata = metadata.drop_duplicates(subset=["player_lookup"], keep="last")
     return metadata
+
+
+@st.cache_data(show_spinner=False)
+def _load_play_csv_profiles() -> pd.DataFrame:
+    """Load profile identity rows from play.csv (or case variants) as source-of-truth."""
+    play_path = next(
+        (path for path in (DATA_DIR / "play.csv", DATA_DIR / "Play.csv", DATA_DIR / "players.csv", DATA_DIR / "Player.csv") if path.exists()),
+        None,
+    )
+    if play_path is None:
+        return pd.DataFrame()
+
+    def _from_structured_csv(path: Path) -> pd.DataFrame:
+        try:
+            parsed = pd.read_csv(path, sep=None, engine="python", on_bad_lines="skip")
+        except Exception:
+            return pd.DataFrame()
+        if parsed.empty or len(parsed.columns) <= 1:
+            return pd.DataFrame()
+        parsed.columns = parsed.columns.astype(str).str.strip()
+        parsed = parsed.apply(lambda col: col.str.strip() if col.dtype == object else col)
+        aliases = {"name": "player", "country": "nation", "nationality": "nation"}
+        parsed = parsed.rename(columns={col: aliases.get(col.strip().casefold(), col) for col in parsed.columns})
+        player_col = next((col for col in parsed.columns if col.strip().casefold() == "player"), None)
+        if player_col is None:
+            return pd.DataFrame()
+        parsed = parsed.rename(columns={player_col: "player"})
+        return parsed
+
+    profiles = _from_structured_csv(play_path)
+    if profiles.empty:
+        raw_lines = [line.strip() for line in play_path.read_text(encoding="utf-8", errors="ignore").splitlines() if line.strip()]
+        if len(raw_lines) <= 1:
+            return pd.DataFrame()
+        role_tokens = ("igl", "entry", "lurker", "awp", "support", "coach", "flex", "rifler")
+        country_tokens = sorted(COUNTRY_TO_ALPHA2.keys(), key=len, reverse=True)
+        parsed_rows: list[dict[str, str]] = []
+        for raw in raw_lines[1:]:
+            compact = raw.strip()
+            compact = re.sub(r"^\d+", "", compact).strip()
+            compact = re.sub(r"\d+$", "", compact).strip()
+            role_match = next((role for role in role_tokens if compact.casefold().endswith(role)), "")
+            role = role_match.upper() if role_match else ""
+            if role_match:
+                compact = compact[: -len(role_match)].strip()
+            country_match = next((country for country in country_tokens if compact.casefold().endswith(country)), "")
+            nation = country_match.title() if country_match else ""
+            if country_match:
+                player = compact[: -len(country_match)].strip()
+            else:
+                player = compact.strip()
+            if player:
+                parsed_rows.append({"player": player, "nation": nation, "role": role})
+        profiles = pd.DataFrame(parsed_rows)
+
+    if profiles.empty:
+        return profiles
+    if "team" not in profiles.columns:
+        profiles["team"] = "ᴍᴇᴅɪꜱᴘᴏʀᴛꜱ ⓜ"
+    profiles["player_lookup"] = profiles["player"].astype(str).str.strip().str.casefold()
+    profiles = profiles.drop_duplicates(subset=["player_lookup"], keep="first")
+    return profiles
+
+
+def get_player_profile_from_play_csv(selected_player: str) -> dict[str, str]:
+    """Resolve player profile identity from play.csv before any match-row fallback."""
+    profiles = _load_play_csv_profiles()
+    default_profile = {
+        "player": str(selected_player).strip() or "-",
+        "team": "ᴍᴇᴅɪꜱᴘᴏʀᴛꜱ ⓜ",
+        "role": "Fragger",
+        "nation": "",
+    }
+    if profiles.empty or "player_lookup" not in profiles.columns:
+        return default_profile
+
+    lookup = str(selected_player).strip().casefold()
+    row = profiles[profiles["player_lookup"] == lookup]
+    if row.empty:
+        return default_profile
+    row_data = row.iloc[0]
+    profile = default_profile.copy()
+    for key in ("player", "team", "role", "nation"):
+        value = str(row_data.get(key, "")).strip()
+        if value:
+            profile[key] = value
+    return profile
 
 
 def _nation_flag_emoji(value: str | None) -> str:
@@ -1834,6 +1991,19 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
     )
 
 
+def render_player_achievements_inline(player_achievements: pd.DataFrame) -> str:
+    """Render a compact inline achievements cabinet for the profile hero left card."""
+    if player_achievements.empty:
+        return (
+            "<div class='achievement-inline-empty'>"
+            "<div class='achievement-empty-title'>Achievement Cabinet</div>"
+            "<div class='achievement-empty-sub'>No trophies registered for this filter set.</div>"
+            "</div>"
+        )
+    cards = "".join(_achievement_premium_card_html(row) for _, row in player_achievements.iterrows())
+    return f"<div class='achievement-row achievement-inline-cabinet'>{cards}</div>"
+
+
 def _home() -> None:
     _inject_styles()
     _render_top_hero(
@@ -1972,18 +2142,10 @@ def _hltv_profile_view(
         return
 
     image_index = _build_image_index()
-    player_metadata = _load_player_metadata()
-    first_row = filtered_players.sort_values("date", ascending=False).iloc[0]
-
-    player_meta_row = None
-    if not player_metadata.empty and "player_lookup" in player_metadata.columns:
-        selected_lookup = str(selected_player).strip().casefold()
-        meta_rows = player_metadata[player_metadata["player_lookup"] == selected_lookup]
-        if not meta_rows.empty:
-            player_meta_row = meta_rows.iloc[0]
+    profile_data = get_player_profile_from_play_csv(selected_player)
 
     player_image = resolve_player_photo(image_index, selected_player)
-    team_logo = _find_image(image_index, "team", first_row.get("my_team"))
+    team_logo = _find_image(image_index, "team", profile_data.get("team"))
     team_logo_html = f'<img style="width:30px;height:30px;border-radius:7px;object-fit:contain;border:1px solid rgba(151,166,195,0.25);" src="{_image_to_data_uri(team_logo)}">' if team_logo else ""
 
     metrics = _calc_player_card_metrics(filtered_players, filtered_tactics)
@@ -2003,7 +2165,7 @@ def _hltv_profile_view(
     avg_acc = float(filtered_players["accuracy_pct"].mean()) if not filtered_players.empty else 0.0
     avg_hs = float(filtered_players["hs_pct"].mean()) if not filtered_players.empty else 0.0
     avg_kpd = float(filtered_players["kpd"].mean()) if not filtered_players.empty else 0.0
-    player_role = _player_meta_value(player_meta_row, "role", "Fragger")
+    player_role = profile_data.get("role", "Fragger")
 
     side_split = "-"
     side_chart_data = pd.DataFrame(columns=["side", "rating"])
@@ -2022,6 +2184,7 @@ def _hltv_profile_view(
     if not player_ach.empty:
         player_ach = player_ach.sort_values(["season_name", "position"], ascending=[False, True])
         player_ach["achievement_image"] = player_ach.apply(lambda row: _find_achievement_image(image_index, row.get("achievement_link"), row.get("achievement_name")), axis=1)
+    achievements_inline_html = render_player_achievements_inline(player_ach)
 
     form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
     recent10 = recent_form.sort_values("date").tail(10).copy() if not recent_form.empty else pd.DataFrame()
@@ -2039,8 +2202,19 @@ def _hltv_profile_view(
             streak = sum(1 for r in results if r == current)
         streak = streak if results and results[0] else -streak
 
-    profile_name = html.escape(selected_player)
-    player_img_html = f"<img class='player-headshot' src='{_image_to_data_uri(player_image)}'>" if player_image else "<div class='portrait-fallback'>Player Portrait<br><strong style='color:#eff4ff;'>Loading fallback</strong></div>"
+    profile_name = html.escape(profile_data.get("player", selected_player))
+    fallback_initial = html.escape(profile_data.get("player", selected_player).strip()[:1].upper() or "P")
+    player_img_html = (
+        f"<img class='player-headshot' src='{_image_to_data_uri(player_image)}'>"
+        if player_image
+        else (
+            "<div class='portrait-fallback'>"
+            f"<div class='portrait-fallback-badge'>{fallback_initial}</div>"
+            "<div>Player Portrait</div>"
+            "<strong style='color:#eff4ff;'>Visual Profile Card</strong>"
+            "</div>"
+        )
+    )
 
     headline_cards = [
         _headline_stat_card_html("Rating", f"{metrics['grevscore']:.2f}", score_tier),
@@ -2074,13 +2248,14 @@ def _hltv_profile_view(
                         <div>
                             <div class="profile-label">Player Identity</div>
                             <div class="profile-name" style="font-size:2rem;">{profile_name}</div>
-                            <div class="team-line">{team_logo_html}<strong>{html.escape(str(first_row.get('my_team', '-')))}</strong></div>
+                            <div class="team-line">{team_logo_html}<strong>{html.escape(str(profile_data.get('team', '-')))}</strong></div>
                             <div class="identity-meta-line">Role: {html.escape(player_role)}</div>
                             <div class="identity-meta-line">Best Map: {html.escape(str(best_map))}</div>
                             <div class="identity-meta-line">Best Side: {html.escape(side_split)}</div>
                             <div class="identity-meta-line">Team Rank: #{team_rank}/{rank_total}</div>
                         </div>
                     </div>
+                    {achievements_inline_html}
                 </div>
                 <div class="hero-score-card">
                     <div class="hero-grevscore-label">Grevscore Feature</div>
@@ -2104,11 +2279,6 @@ def _hltv_profile_view(
         """,
         unsafe_allow_html=True,
     )
-
-    st.markdown("<div class='section-block-title'>Achievements</div>", unsafe_allow_html=True)
-    if not player_ach.empty:
-        achievement_html = "".join(_achievement_premium_card_html(ach_row) for _, ach_row in player_ach.iterrows())
-        st.markdown(f"<div class='achievement-row'>{achievement_html}</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-block-title'>Core Performance</div>", unsafe_allow_html=True)
     st.markdown(
