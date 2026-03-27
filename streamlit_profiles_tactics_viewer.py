@@ -4917,12 +4917,42 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         st.warning("No tactic summaries available.")
         return
 
-    action_counts = tactic_perf["recommended_action"].value_counts().to_dict()
+    st.markdown("<div class='tb-section-title'>Tactical Action Board</div>", unsafe_allow_html=True)
+    map_options = ["All Maps"] + sorted(tactic_perf["map"].dropna().astype(str).unique().tolist())
+    side_options = ["Both Sides", "Red", "Blue"]
+    filter_map_col, filter_side_col = st.columns(2)
+    with filter_map_col:
+        selected_board_map = st.selectbox(
+            "Map",
+            map_options,
+            key="tactical_action_board_map_filter",
+            help="Limit the Tactical Action Board to one map context, or keep all maps.",
+        )
+    with filter_side_col:
+        selected_board_side = st.selectbox(
+            "Side",
+            side_options,
+            key="tactical_action_board_side_filter",
+            help="Limit the Tactical Action Board to one side context, or keep both sides.",
+        )
+
+    filtered_tactic_perf = tactic_perf.copy()
+    if selected_board_map != "All Maps":
+        filtered_tactic_perf = filtered_tactic_perf[filtered_tactic_perf["map"] == selected_board_map]
+    if selected_board_side != "Both Sides":
+        filtered_tactic_perf = filtered_tactic_perf[filtered_tactic_perf["side"] == selected_board_side]
+
+    st.markdown(
+        f"<div class='tb-note'><strong>Showing:</strong> {selected_board_map} • {selected_board_side}</div>",
+        unsafe_allow_html=True,
+    )
+
+    action_counts = filtered_tactic_perf["recommended_action"].value_counts().to_dict()
     kpi_items = [
-        ("Total tactics", len(tactic_perf)),
-        ("High-confidence good", int((tactic_perf["confidence"] == "Proven good").sum())),
-        ("High-confidence poor", int((tactic_perf["confidence"] == "Proven poor").sum())),
-        ("Underused opportunities", int((tactic_perf["recommended_action"] == "Use More").sum())),
+        ("Total tactics", len(filtered_tactic_perf)),
+        ("High-confidence good", int((filtered_tactic_perf["confidence"] == "Proven good").sum())),
+        ("High-confidence poor", int((filtered_tactic_perf["confidence"] == "Proven poor").sum())),
+        ("Underused opportunities", int((filtered_tactic_perf["recommended_action"] == "Use More").sum())),
     ]
     st.markdown("<div class='tb-kpi-strip'>", unsafe_allow_html=True)
     for label, value in kpi_items:
@@ -4932,7 +4962,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='tb-section-title'>Tactical Action Board</div>", unsafe_allow_html=True)
     action_order = ["Keep", "Use More", "Monitor", "Rework", "Drop"]
     action_class = {
         "Keep": ("keep", "#3fd18b"),
@@ -4941,40 +4970,47 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         "Rework": ("rework", "#f39b54"),
         "Drop": ("drop", "#f16c80"),
     }
-    board_cols = st.columns(len(action_order))
-    for i, action_name in enumerate(action_order):
-        with board_cols[i]:
-            cls_name, accent = action_class[action_name]
-            st.markdown(
-                f"""
-                <div class="tb-action-col {cls_name}">
-                    <div class="tb-action-head">
-                        <span>{action_name}</span>
-                        <span class="tb-action-pill" style="color:{accent};">{action_counts.get(action_name, 0)}</span>
-                    </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            action_df = tactic_perf[tactic_perf["recommended_action"] == action_name].sort_values(
-                ["delta_vs_baseline", "times_used"],
-                ascending=[False, False],
-            )
-            if action_df.empty:
-                st.markdown("<div class='tb-empty'>No tactics in this bucket.</div>", unsafe_allow_html=True)
-            else:
-                for _, row in action_df.head(6).iterrows():
-                    st.markdown(
-                        f"""
-                        <div class="tb-decision-card" style="--accent:{accent};">
-                            <div class="tb-card-title">{row["tactic_name"]}</div>
-                            <div class="tb-card-sub">{row["map"]} • {row["side"]}</div>
-                            <div class="tb-card-meta">{row["confidence_badge"]} • Δ {row["delta_vs_baseline"]:+.1f}pp • WR {row["win_pct"]:.1f}%</div>
-                            <div class="tb-card-reason">{row["reason"]}</div>
+
+    if filtered_tactic_perf.empty:
+        st.markdown(
+            "<div class='tb-empty'>No tactics match this map + side selection yet. Try <strong>All Maps</strong> or <strong>Both Sides</strong> to widen the context.</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        board_cols = st.columns(len(action_order))
+        for i, action_name in enumerate(action_order):
+            with board_cols[i]:
+                cls_name, accent = action_class[action_name]
+                st.markdown(
+                    f"""
+                    <div class="tb-action-col {cls_name}">
+                        <div class="tb-action-head">
+                            <span>{action_name}</span>
+                            <span class="tb-action-pill" style="color:{accent};">{action_counts.get(action_name, 0)}</span>
                         </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            st.markdown("</div>", unsafe_allow_html=True)
+                    """,
+                    unsafe_allow_html=True,
+                )
+                action_df = filtered_tactic_perf[filtered_tactic_perf["recommended_action"] == action_name].sort_values(
+                    ["delta_vs_baseline", "times_used"],
+                    ascending=[False, False],
+                )
+                if action_df.empty:
+                    st.markdown("<div class='tb-empty'>No tactics in this bucket.</div>", unsafe_allow_html=True)
+                else:
+                    for _, row in action_df.head(6).iterrows():
+                        st.markdown(
+                            f"""
+                            <div class="tb-decision-card" style="--accent:{accent};">
+                                <div class="tb-card-title">{row["tactic_name"]}</div>
+                                <div class="tb-card-sub">{row["map"]} • {row["side"]}</div>
+                                <div class="tb-card-meta">{row["confidence_badge"]} • Δ {row["delta_vs_baseline"]:+.1f}pp • WR {row["win_pct"]:.1f}%</div>
+                                <div class="tb-card-reason">{row["reason"]}</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='tb-section-title'>Main tactic table</div>", unsafe_allow_html=True)
     perf_table = tactic_perf.rename(
