@@ -899,15 +899,20 @@ def _inject_styles() -> None:
             line-height: 1.45;
         }
 
+        :root {
+            --dashboard-max-width: 1720px;
+            --dashboard-max-width-xl: 1840px;
+        }
+
         .stApp [data-testid="stMainBlockContainer"] {
             width: 100%;
-            max-width: 1420px;
+            max-width: var(--dashboard-max-width);
             margin-left: auto;
             margin-right: auto;
             padding-top: 1.1rem;
             padding-bottom: 1.6rem;
-            padding-left: clamp(1.5rem, 4vw, 3.4rem);
-            padding-right: clamp(1.5rem, 4vw, 3.4rem);
+            padding-left: clamp(1.45rem, 3.3vw, 2.8rem);
+            padding-right: clamp(1.45rem, 3.3vw, 2.8rem);
         }
         .cpl-hero {
             border: 1px solid rgba(156, 182, 236, 0.34);
@@ -997,7 +1002,7 @@ def _inject_styles() -> None:
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
         }
         .panel-card {
-            max-width: 1320px;
+            max-width: var(--dashboard-max-width);
             margin-left: auto;
             margin-right: auto;
             padding: 14px;
@@ -1190,7 +1195,7 @@ def _inject_styles() -> None:
         .glow-c { box-shadow: 0 0 13px rgba(78, 208, 131, 0.2); }
         .core-grid {
             margin-top: 6px;
-            max-width: 1320px;
+            max-width: var(--dashboard-max-width);
             margin-left: auto;
             margin-right: auto;
         }
@@ -1316,12 +1321,12 @@ def _inject_styles() -> None:
             margin-top: 3px;
         }
         .block-container {
-            max-width: 1320px;
+            max-width: var(--dashboard-max-width);
             margin-left: auto;
             margin-right: auto;
         }
         .cpl-hero {
-            max-width: 1320px;
+            max-width: var(--dashboard-max-width);
             margin: 0 auto 8px;
             padding: 10px 12px;
             border-radius: 18px;
@@ -1386,7 +1391,7 @@ def _inject_styles() -> None:
         .cpl-top-grid {
             display: grid;
             grid-template-columns: minmax(0, 1.45fr) minmax(0, 1.02fr) minmax(0, 0.86fr);
-            gap: 22px;
+            gap: 24px;
             align-items: stretch;
         }
         .player-card,
@@ -1557,10 +1562,10 @@ def _inject_styles() -> None:
             font-size:1rem;
             font-weight:800;
             letter-spacing:0.02em;
-            max-width: 1320px;
+            max-width: var(--dashboard-max-width);
         }
         .form-card, .impact-card, .support-table, .chart-panel {
-            max-width: 1320px;
+            max-width: var(--dashboard-max-width);
             margin-left: auto;
             margin-right: auto;
         }
@@ -1571,7 +1576,7 @@ def _inject_styles() -> None:
             .section-block-title,
             .form-card, .impact-card, .support-table, .chart-panel,
             .panel-card {
-                max-width: 1440px;
+                max-width: var(--dashboard-max-width-xl);
             }
         }
         @media (max-width: 1280px) {
