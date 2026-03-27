@@ -899,12 +899,17 @@ def _inject_styles() -> None:
             line-height: 1.45;
         }
 
+        .stApp [data-testid="stMainBlockContainer"] {
+            max-width: 1460px;
+            padding-top: 1.15rem;
+            padding-bottom: 1.6rem;
+        }
         .profile-hero-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.72fr) minmax(0, 0.93fr);
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 0.9fr);
             gap: 10px;
             align-items: stretch;
-            max-width: 1240px;
+            max-width: 1360px;
             margin: 0 auto;
         }
         .hero-identity-card,
@@ -917,13 +922,26 @@ def _inject_styles() -> None:
             border: 1px solid rgba(151, 166, 195, 0.24);
             border-radius: 16px;
             background: linear-gradient(180deg, rgba(13, 20, 32, 0.92), rgba(8, 12, 20, 0.94));
-            padding: 12px;
+            padding: 11px;
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        }
+        .panel-card {
+            max-width: 1360px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 14px;
+            margin-bottom: 12px;
         }
         .identity-header {
             display: grid;
-            grid-template-columns: 172px 1fr;
-            gap: 14px;
+            grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
+            gap: 12px;
+            height: 100%;
+        }
+        .identity-left {
+            display: grid;
+            grid-template-columns: 164px minmax(0, 1fr);
+            gap: 12px;
         }
         .portrait-shell {
             border: 1px solid rgba(122, 164, 240, 0.62);
@@ -931,7 +949,7 @@ def _inject_styles() -> None:
             background:
                 radial-gradient(circle at 50% 0%, rgba(95, 173, 255, 0.35), transparent 58%),
                 linear-gradient(180deg, rgba(30, 47, 78, 0.72), rgba(11, 17, 28, 0.92));
-            min-height: 220px;
+            min-height: 218px;
             overflow: hidden;
             display: grid;
             place-items: center;
@@ -967,21 +985,63 @@ def _inject_styles() -> None:
             border: 1px solid rgba(165, 197, 255, 0.55);
             background: linear-gradient(180deg, rgba(94, 151, 245, 0.42), rgba(28, 40, 64, 0.9));
         }
+        .identity-right {
+            border: 1px solid rgba(151, 166, 195, 0.2);
+            border-radius: 12px;
+            background: rgba(11, 17, 28, 0.66);
+            padding: 10px;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 8px;
+        }
+        .identity-right .section-label {
+            margin: 0;
+            font-size: 0.72rem;
+        }
+        .quick-profile-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .quick-profile-tile {
+            border: 1px solid rgba(151, 166, 195, 0.24);
+            border-radius: 10px;
+            background: rgba(9, 14, 24, 0.78);
+            padding: 7px 8px;
+            min-height: 54px;
+        }
+        .quick-profile-tile .label {
+            color: #8fa0c2;
+            font-size: 0.62rem;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+        }
+        .quick-profile-tile .value {
+            color: #f1f6ff;
+            font-size: 0.84rem;
+            font-weight: 760;
+            margin-top: 3px;
+            line-height: 1.18;
+        }
         .headline-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
         .headline-card {
             border: 1px solid rgba(151, 166, 195, 0.22);
             border-radius: 12px;
-            padding: 10px;
+            padding: 10px 11px;
             background: rgba(11, 17, 28, 0.78);
+            min-height: 90px;
+            display: grid;
+            align-content: center;
         }
         .headline-label { color: #97a7c7; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; }
-        .headline-value { color: #f5f8ff; font-size: 1.25rem; font-weight: 850; margin-top: 2px; }
+        .headline-value { color: #f5f8ff; font-size: 1.52rem; font-weight: 900; margin-top: 4px; line-height: 1.05; }
         .headline-sub { color: #c8d5f0; font-size: 0.7rem; margin-top: 2px; }
         .achievement-row {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
-            margin-top: 10px;
+            margin-top: 6px;
             align-items: flex-start;
         }
         .achievement-premium {
@@ -1005,8 +1065,8 @@ def _inject_styles() -> None:
         }
         .achievement-inline-cabinet {
             border-top: 1px solid rgba(140, 159, 191, 0.24);
-            padding-top: 10px;
-            min-height: 64px;
+            padding-top: 8px;
+            min-height: 54px;
         }
         .achievement-inline-empty {
             margin-top: 10px;
@@ -1032,8 +1092,8 @@ def _inject_styles() -> None:
         .glow-b { box-shadow: 0 0 14px rgba(94, 169, 255, 0.24); }
         .glow-c { box-shadow: 0 0 13px rgba(78, 208, 131, 0.2); }
         .core-grid {
-            margin-top: 8px;
-            max-width: 1240px;
+            margin-top: 7px;
+            max-width: 1360px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -1050,30 +1110,100 @@ def _inject_styles() -> None:
         .hero-score-card {
             display: grid;
             align-content: start;
-            gap: 4px;
+            gap: 8px;
         }
-        .hero-score-card .gauge-wrap {
-            height: 118px;
-            margin-top: 4px;
+        .hero-score-heading {
+            color: #b8caf0;
+            font-size: 0.76rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            font-weight: 700;
         }
-        .hero-score-card .gauge-score {
-            font-size: 1.8rem;
+        .hero-score-main {
+            text-align: center;
+            border: 1px solid rgba(120, 160, 238, 0.28);
+            border-radius: 14px;
+            padding: 10px 10px 6px;
+            background: radial-gradient(circle at 50% 10%, rgba(66, 111, 203, 0.36), rgba(16, 25, 40, 0.9) 70%);
+            box-shadow: inset 0 0 0 1px rgba(167, 198, 255, 0.08), 0 10px 24px rgba(6, 12, 24, 0.44);
+        }
+        .hero-score-main .gauge-wrap {
+            height: 190px;
+            margin-top: 6px;
+            position: relative;
+        }
+        .hero-score-main .gauge-score {
+            font-size: clamp(2.25rem, 2.5vw, 2.85rem);
             margin-bottom: 2px;
+            font-weight: 900;
         }
-        .hero-score-card .gauge-arc {
-            top: 54px;
-            width: 154px;
-            height: 74px;
-            border-radius: 154px 154px 0 0;
+        .hero-score-main .gauge-arc {
+            top: 84px;
+            width: 226px;
+            height: 112px;
+            border-radius: 226px 226px 0 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: conic-gradient(from 180deg, #ff6f7d 0deg, #f0be4f 78deg, #56e29b 148deg, #45d6a2 180deg);
+            clip-path: inset(0 0 50% 0);
+            opacity: 0.95;
         }
-        .hero-score-card .gauge-needle {
-            top: 67px;
-            height: 56px;
+        .hero-score-main .gauge-arc::after {
+            content: "";
+            position: absolute;
+            inset: 14px 14px 0 14px;
+            border-radius: inherit;
+            background: rgba(8, 13, 22, 0.95);
+            clip-path: inset(0 0 52% 0);
         }
-        .hero-score-card .gauge-hub {
-            top: 116px;
-            width: 12px;
-            height: 12px;
+        .hero-score-main .gauge-needle {
+            top: 96px;
+            height: 82px;
+            width: 4px;
+        }
+        .hero-score-main .gauge-hub {
+            top: 178px;
+            width: 16px;
+            height: 16px;
+        }
+        .hero-status-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 4px;
+            border-radius: 999px;
+            border: 1px solid rgba(151, 166, 195, 0.4);
+            padding: 5px 10px;
+            background: rgba(13, 20, 33, 0.76);
+            color: #eef3ff;
+            font-size: 0.74rem;
+            font-weight: 700;
+        }
+        .hero-score-micro {
+            margin-top: 2px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 7px;
+        }
+        .hero-score-micro-item {
+            border: 1px solid rgba(151, 166, 195, 0.22);
+            border-radius: 10px;
+            background: rgba(10, 16, 27, 0.7);
+            padding: 7px 8px;
+            text-align: center;
+        }
+        .hero-score-micro-item .label {
+            color: #96a8ca;
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+        .hero-score-micro-item .value {
+            color: #f2f6ff;
+            font-size: 0.82rem;
+            font-weight: 820;
+            margin-top: 3px;
         }
         .chart-section-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
         .section-block-title {
@@ -1082,21 +1212,170 @@ def _inject_styles() -> None:
             font-size:1rem;
             font-weight:800;
             letter-spacing:0.02em;
-            max-width: 1240px;
+            max-width: 1360px;
         }
         .form-card, .impact-card, .support-table, .chart-panel {
-            max-width: 1240px;
+            max-width: 1360px;
             margin-left: auto;
             margin-right: auto;
         }
+        .hero-shell {
+            max-width: 1360px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 24px 26px 20px;
+            border-radius: 20px;
+        }
+        .hero-row {
+            grid-template-columns: minmax(104px, 138px) minmax(0, 1fr) minmax(82px, 104px);
+            gap: 14px;
+        }
+        .hero-logo-badge {
+            min-height: 90px;
+            padding: 10px;
+        }
+        .hero-title-block {
+            min-width: 0;
+        }
+        .hero-title-block h1 {
+            font-size: clamp(1.85rem, 2.55vw, 2.5rem);
+            line-height: 1.05;
+            max-width: 18ch;
+            text-wrap: balance;
+            margin-right: 0;
+        }
+        .hero-subtitle {
+            font-size: clamp(0.88rem, 1.1vw, 1rem);
+            line-height: 1.35;
+            max-width: 62ch;
+            margin-top: 7px;
+        }
+        .hero-pill-row {
+            margin-top: 10px;
+            gap: 6px;
+        }
+        .hero-shell-divider {
+            margin-top: 14px;
+        }
+        @media (min-width: 1600px) {
+            .profile-hero-grid,
+            .hero-shell,
+            .core-grid,
+            .section-block-title,
+            .form-card, .impact-card, .support-table, .chart-panel,
+            .panel-card {
+                max-width: 1420px;
+            }
+        }
         @media (max-width: 1280px) {
-            .profile-hero-grid { grid-template-columns: 1fr; }
+            .profile-hero-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+            .hero-headline-card { grid-column: 1 / -1; }
+            .identity-header { grid-template-columns: 1fr; }
+            .identity-left { grid-template-columns: 144px minmax(0, 1fr); }
             .chart-section-grid { grid-template-columns: 1fr; }
             .performance-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        }
+        @media (max-width: 1024px) {
+            .profile-hero-grid { grid-template-columns: 1fr; }
+            .hero-score-main .gauge-wrap { height: 168px; }
+            .hero-score-main .gauge-arc { width: 206px; height: 102px; top: 74px; }
+            .hero-score-main .gauge-needle { top: 86px; height: 78px; }
+            .hero-score-main .gauge-hub { top: 160px; }
+            .hero-row {
+                grid-template-columns: 112px minmax(0, 1fr) 84px;
+                gap: 12px;
+            }
         }
         @media (max-width: 1200px) {
             .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .status-strip { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .stApp [data-testid="stMainBlockContainer"] {
+                padding-left: 0.62rem;
+                padding-right: 0.62rem;
+                padding-top: 0.78rem;
+            }
+            .hero-shell {
+                padding: 15px 14px 12px;
+                border-radius: 14px;
+                margin-bottom: 8px;
+            }
+            .hero-row {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 8px;
+            }
+            .hero-logo-badge {
+                min-height: auto;
+                width: 110px;
+                margin: 0 auto;
+                padding: 7px;
+                border-radius: 10px;
+            }
+            .hero-logo-badge-right {
+                display: none;
+            }
+            .hero-title-block h1 {
+                font-size: clamp(1.45rem, 7vw, 1.95rem);
+                line-height: 1.08;
+                max-width: 11ch;
+                margin: 0 auto;
+                overflow-wrap: normal;
+            }
+            .hero-subtitle {
+                margin-top: 5px;
+                font-size: clamp(0.78rem, 3.2vw, 0.92rem);
+                line-height: 1.3;
+                max-width: 34ch;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .hero-pill-row {
+                margin-top: 7px;
+                justify-content: center;
+            }
+            .hero-pill {
+                font-size: 0.66rem;
+                padding: 5px 8px;
+            }
+            .hero-shell-divider {
+                margin-top: 10px;
+            }
+            .panel-card,
+            .hero-identity-card,
+            .hero-score-card,
+            .hero-headline-card {
+                padding: 9px;
+                border-radius: 12px;
+            }
+            .identity-left {
+                grid-template-columns: 1fr;
+            }
+            .portrait-shell,
+            .portrait-shell img.player-headshot {
+                min-height: 190px;
+            }
+            .profile-name { font-size: clamp(1.52rem, 6.2vw, 1.95rem); }
+            .quick-profile-grid,
+            .hero-score-micro {
+                grid-template-columns: 1fr;
+            }
+            .achievement-row {
+                gap: 6px;
+            }
+            .achievement-premium {
+                width: 94px;
+                height: 132px;
+                flex-basis: 94px;
+            }
+            .headline-grid { gap: 7px; }
+            .headline-card { min-height: 82px; }
+            .headline-value { font-size: 1.36rem; }
+            .hero-score-main .gauge-wrap { height: 152px; }
+            .hero-score-main .gauge-arc { width: 188px; height: 94px; top: 65px; }
+            .hero-score-main .gauge-needle { top: 76px; height: 68px; }
+            .hero-score-main .gauge-hub { top: 145px; width: 14px; height: 14px; }
         }
         </style>
         """,
@@ -2251,6 +2530,11 @@ def _hltv_profile_view(
             current = results[0]
             streak = sum(1 for r in results if r == current)
         streak = streak if results and results[0] else -streak
+    recent10_delta = 0.0
+    if len(recent10) >= 10:
+        first5 = float(recent10["kpd"].head(5).mean())
+        last5 = float(recent10["kpd"].tail(5).mean())
+        recent10_delta = last5 - first5
 
     profile_name = html.escape(profile_data.get("player", selected_player))
     fallback_initial = html.escape(profile_data.get("player", selected_player).strip()[:1].upper() or "P")
@@ -2295,31 +2579,44 @@ def _hltv_profile_view(
             <div class="profile-hero-grid">
                 <div class="hero-identity-card">
                     <div class="identity-header">
-                        <div class="portrait-shell">{player_img_html}</div>
-                        <div>
-                            <div class="profile-label">Player Identity</div>
-                            <div class="profile-name" style="font-size:2rem;">{profile_name}</div>
-                            <div class="team-line">{team_logo_html}<strong>{html.escape(str(profile_data.get('team', '-')))}</strong></div>
-                            <div class="identity-meta-line">Role: {html.escape(player_role)}</div>
-                            <div class="identity-meta-line">Best Map: {html.escape(str(best_map))}</div>
-                            <div class="identity-meta-line">Best Side: {html.escape(side_split)}</div>
-                            <div class="identity-meta-line">Team Rank: #{team_rank}/{rank_total}</div>
+                        <div class="identity-left">
+                            <div class="portrait-shell">{player_img_html}</div>
+                            <div>
+                                <div class="profile-label">Player Identity</div>
+                                <div class="profile-name" style="font-size:2rem;">{profile_name}</div>
+                                <div class="team-line">{team_logo_html}<strong>{html.escape(str(profile_data.get('team', '-')))}</strong></div>
+                                <div class="quick-profile-grid">
+                                    <div class="quick-profile-tile"><div class="label">Role</div><div class="value">{html.escape(player_role)}</div></div>
+                                    <div class="quick-profile-tile"><div class="label">Best Map</div><div class="value">{html.escape(str(best_map))}</div></div>
+                                    <div class="quick-profile-tile"><div class="label">Best Side</div><div class="value">{html.escape(side_split)}</div></div>
+                                    <div class="quick-profile-tile"><div class="label">Team Rank</div><div class="value">#{team_rank}/{rank_total}</div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="identity-right">
+                            <div class="section-label">Achievements & Form Context</div>
+                            <div>{achievements_inline_html}</div>
+                            <div class="panel-muted">Current streak: {streak:+d} · Record: {record_text}</div>
                         </div>
                     </div>
-                    {achievements_inline_html}
                 </div>
                 <div class="hero-score-card">
-                    <div class="hero-grevscore-label">Grevscore Feature</div>
-                    <div class="hero-grevscore-tier">{percentile:.0f}th percentile · {score_tier}</div>
-                    <div class="gauge-wrap">
+                    <div class="hero-score-heading">Grevscore</div>
+                    <div class="hero-score-main">
                         <div class="gauge-score">{metrics['grevscore']:.2f}</div>
-                        <div class="gauge-arc"></div>
-                        <div class="gauge-needle" style="transform: translateX(-50%) rotate({gauge_angle:.1f}deg);"></div>
-                        <div class="gauge-hub"></div>
+                        <div class="hero-status-pill">{score_tier} · {percentile:.0f}th percentile</div>
+                        <div class="gauge-wrap">
+                            <div class="gauge-arc"></div>
+                            <div class="gauge-needle" style="transform: translateX(-50%) rotate({gauge_angle:.1f}deg);"></div>
+                            <div class="gauge-hub"></div>
+                        </div>
+                        <div class="grev-meter-labels"><span>Poor</span><span>Average</span><span>Strong</span><span>Elite</span></div>
                     </div>
-                    <div class="grev-meter-labels"><span>Poor</span><span>Average</span><span>Good</span><span>Star</span></div>
-                    <div class="panel-muted" style="margin-top:6px;">Team placement #{team_rank}/{rank_total}</div>
-                    <div class="panel-muted">Trend vs recent 10: {trend_direction}</div>
+                    <div class="hero-score-micro">
+                        <div class="hero-score-micro-item"><div class="label">Team Rank</div><div class="value">#{team_rank}/{rank_total}</div></div>
+                        <div class="hero-score-micro-item"><div class="label">Trend</div><div class="value">{trend_direction}</div></div>
+                        <div class="hero-score-micro-item"><div class="label">Last 10 Δ</div><div class="value">{recent10_delta:+.2f}</div></div>
+                    </div>
                 </div>
                 <div class="hero-headline-card">
                     <div class="section-label" style="margin-top:0;">Headline Stats</div>
