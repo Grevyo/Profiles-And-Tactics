@@ -822,6 +822,84 @@ def _inject_styles() -> None:
             font-size: 0.76rem;
             color: #d4e1fb;
         }
+        .compact-toolbar {
+            border: 1px solid rgba(151, 166, 195, 0.28);
+            border-radius: 14px;
+            padding: 12px 14px 8px 14px;
+            margin-bottom: 8px;
+            background: linear-gradient(180deg, rgba(14, 21, 34, 0.88), rgba(10, 15, 24, 0.82));
+        }
+        .status-strip {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .status-chip {
+            border: 1px solid rgba(151, 166, 195, 0.2);
+            border-radius: 10px;
+            background: rgba(11, 17, 28, 0.75);
+            padding: 8px 10px;
+        }
+        .status-chip .label {
+            color: #94a4c3;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+        .status-chip .value {
+            color: #edf3ff;
+            font-size: 0.88rem;
+            font-weight: 750;
+            margin-top: 2px;
+            line-height: 1.2;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .kpi-card {
+            border: 1px solid rgba(151, 166, 195, 0.24);
+            border-radius: 12px;
+            background: rgba(12, 18, 29, 0.76);
+            padding: 10px 12px;
+        }
+        .kpi-value { color: #f5f8ff; font-size: 1.36rem; font-weight: 850; line-height: 1.08; }
+        .kpi-label {
+            color: #9da7bd;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 4px;
+        }
+        .kpi-sub { color: #c8d4ed; font-size: 0.72rem; margin-top: 3px; }
+        .insight-panel {
+            border: 1px solid rgba(255, 194, 88, 0.45);
+            border-left: 4px solid rgba(255, 194, 88, 0.9);
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(56, 45, 24, 0.42), rgba(22, 18, 12, 0.44));
+            padding: 12px 14px;
+        }
+        .insight-title {
+            color: #ffe0a2;
+            font-size: 0.88rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+        .insight-list {
+            margin: 0;
+            padding-left: 18px;
+            color: #f5ddb2;
+            font-size: 0.8rem;
+            line-height: 1.45;
+        }
+        @media (max-width: 1200px) {
+            .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .status-strip { grid-template-columns: 1fr; }
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -2827,18 +2905,31 @@ def _medisports_vs_breakdown(
         return
 
     st.markdown("### Overall team health")
-    c1, c2, c3, c4 = st.columns([1.0, 1.2, 1.6, 1.0])
-    with c1:
+    global_latest_season = detect_latest_season(match_results, "competition")
+    default_season_option = f"S{global_latest_season}" if global_latest_season is not None else "Lifetime"
+    all_seasons = sorted(
+        match_results["competition"].apply(extract_season_number).dropna().astype(int).unique().tolist(),
+        reverse=True,
+    )
+
+    current_grouped_mode = bool(st.session_state.get("medisports_grouped_competitions", False))
+    competition_for_controls = match_results.copy()
+    if current_grouped_mode:
+        competition_for_controls["competition"] = competition_for_controls["competition"].apply(normalize_competition_name)
+
+    st.markdown("<div class='compact-toolbar'>", unsafe_allow_html=True)
+    t1, t2, t3, t4, t5 = st.columns([0.9, 1.0, 1.7, 1.0, 1.0])
+    with t1:
         min_matches = int(st.slider("Minimum matches", 1, 8, 2, key="medisports_min_matches"))
-    with c2:
+    with t2:
         form_window = st.selectbox(
             "Form window",
             ["All time", "Last 10", "Last 20", "Last 30"],
             index=0,
             key="medisports_form_window",
         )
-    with c3:
-        comp_options = sorted(match_results["competition"].dropna().astype(str).unique().tolist())
+    with t3:
+        comp_options = sorted(competition_for_controls["competition"].dropna().astype(str).unique().tolist())
         selected_comp = st.multiselect(
             "Tournament filter",
             comp_options,
@@ -2846,25 +2937,8 @@ def _medisports_vs_breakdown(
             placeholder="All tournaments",
             key="medisports_comp_filter",
         )
-
-    season_pool = match_results.copy()
-    if selected_comp:
-        season_pool = season_pool[season_pool["competition"].isin(selected_comp)]
-    season_pool["_season_number"] = season_pool["competition"].apply(extract_season_number)
-    available_seasons = sorted(
-        season_pool["_season_number"].dropna().astype(int).unique().tolist(),
-        reverse=True,
-    )
-    latest_season = detect_latest_season(season_pool, "competition")
-    default_season_option = f"S{latest_season}" if latest_season is not None else "Lifetime"
-
-    st.markdown(
-        f"<div class='panel-muted'>Active season: {html.escape(default_season_option)}</div>",
-        unsafe_allow_html=True,
-    )
-
-    with c4:
-        season_options = ["Lifetime"] + [f"S{season}" for season in available_seasons]
+    with t4:
+        season_options = ["Lifetime"] + [f"S{season}" for season in all_seasons]
         default_season_index = season_options.index(default_season_option) if default_season_option in season_options else 0
         selected_season = st.selectbox(
             "Season",
@@ -2872,8 +2946,13 @@ def _medisports_vs_breakdown(
             index=default_season_index,
             key="medisports_season_filter",
         )
+    with t5:
+        grouped_competitions = st.toggle("Grouped competitions", value=False, key="medisports_grouped_competitions")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     filtered = match_results.copy()
+    if grouped_competitions:
+        filtered["competition"] = filtered["competition"].apply(normalize_competition_name)
     if selected_comp:
         filtered = filtered[filtered["competition"].isin(selected_comp)]
     filtered = apply_season_filter(filtered, selected_season, "competition")
@@ -2883,6 +2962,16 @@ def _medisports_vs_breakdown(
     if filtered.empty:
         st.info("No matches left after filters.")
         return
+    scope = "Lifetime" if form_window == "All time" else form_window
+    selected_scope = "All tournaments" if not selected_comp else f"{len(selected_comp)} tournament(s)"
+    status_html = (
+        "<div class='status-strip'>"
+        f"<div class='status-chip'><div class='label'>Current view scope</div><div class='value'>{html.escape(scope)} · {html.escape(selected_scope)}</div></div>"
+        f"<div class='status-chip'><div class='label'>Active season</div><div class='value'>{html.escape(selected_season)} (latest in data: {html.escape(default_season_option)})</div></div>"
+        f"<div class='status-chip'><div class='label'>Filtered match count</div><div class='value'>{int(filtered['match_id'].nunique())} matches</div></div>"
+        "</div>"
+    )
+    st.markdown(status_html, unsafe_allow_html=True)
     image_index = _build_image_index()
     vs_summary = (
         filtered.groupby("opponent_team", as_index=False)
@@ -3011,29 +3100,48 @@ def _medisports_vs_breakdown(
     best_seg = reliable.head(1)
     worst_seg = reliable.sort_values(["round_diff", "win_rate_pct"], ascending=[True, True]).head(1)
 
-    cards = [
-        ("Matches", str(overall_matches)),
-        ("Win rate", f"{overall_win_rate:.1f}%"),
-        ("Round diff", f"{overall_round_diff:+d}"),
-        ("Round win %", f"{overall_round_win_pct:.1f}%"),
-        ("Best map", f'{best_map.iloc[0]["map"]} ({best_map.iloc[0]["win_rate_pct"]:.1f}%)' if not best_map.empty else "n/a"),
-        ("Worst map", f'{worst_map.iloc[0]["map"]} ({worst_map.iloc[0]["win_rate_pct"]:.1f}%)' if not worst_map.empty else "n/a"),
-        ("Best tier", f'{best_tier.iloc[0]["tier"]} ({best_tier.iloc[0]["win_rate_pct"]:.1f}%)' if not best_tier.empty else "n/a"),
-        ("Worst tier", f'{worst_tier.iloc[0]["tier"]} ({worst_tier.iloc[0]["win_rate_pct"]:.1f}%)' if not worst_tier.empty else "n/a"),
-        ("Best opponent segment", f'{best_seg.iloc[0]["opponent_team"]} ({int(best_seg.iloc[0]["round_diff"]):+d})' if not best_seg.empty else "n/a"),
-        ("Worst opponent segment", f'{worst_seg.iloc[0]["opponent_team"]} ({int(worst_seg.iloc[0]["round_diff"]):+d})' if not worst_seg.empty else "n/a"),
+    performance_cards = [
+        ("Matches", str(overall_matches), "After filters"),
+        ("Win rate", f"{overall_win_rate:.1f}%", f"{overall_wins}W-{overall_losses}L"),
+        ("Round diff", f"{overall_round_diff:+d}", "Total net rounds"),
+        ("Round win %", f"{overall_round_win_pct:.1f}%", "Round-level conversion"),
     ]
-    cards_html = "".join(
-        f'<div class="stat-chip"><div class="stat-label">{label}</div><div class="stat-value">{value}</div></div>'
-        for label, value in cards
+    perf_html = "".join(
+        f"<div class='kpi-card'><div class='kpi-value'>{html.escape(v)}</div><div class='kpi-label'>{html.escape(l)}</div><div class='kpi-sub'>{html.escape(s)}</div></div>"
+        for l, v, s in performance_cards
+    )
+    segment_cards = [
+        (
+            "Best map",
+            f'{best_map.iloc[0]["map"]}' if not best_map.empty else "n/a",
+            f'WR {best_map.iloc[0]["win_rate_pct"]:.1f}% · RD {int(best_map.iloc[0]["round_diff"]):+d}' if not best_map.empty else "No data",
+        ),
+        (
+            "Worst map",
+            f'{worst_map.iloc[0]["map"]}' if not worst_map.empty else "n/a",
+            f'WR {worst_map.iloc[0]["win_rate_pct"]:.1f}% · RD {int(worst_map.iloc[0]["round_diff"]):+d}' if not worst_map.empty else "No data",
+        ),
+        (
+            "Best tier",
+            f'Tier {best_tier.iloc[0]["tier"]}' if not best_tier.empty else "n/a",
+            f'WR {best_tier.iloc[0]["win_rate_pct"]:.1f}% · RD {int(best_tier.iloc[0]["round_diff"]):+d}' if not best_tier.empty else "No data",
+        ),
+        (
+            "Opponent segment",
+            f'{best_seg.iloc[0]["opponent_team"]}' if not best_seg.empty else "n/a",
+            f'Best RD {int(best_seg.iloc[0]["round_diff"]):+d} · Worst {worst_seg.iloc[0]["opponent_team"] if not worst_seg.empty else "n/a"} ({int(worst_seg.iloc[0]["round_diff"]):+d})' if not best_seg.empty else "Low sample",
+        ),
+    ]
+    segment_html = "".join(
+        f"<div class='kpi-card'><div class='kpi-value'>{html.escape(v)}</div><div class='kpi-label'>{html.escape(l)}</div><div class='kpi-sub'>{html.escape(s)}</div></div>"
+        for l, v, s in segment_cards
     )
     st.markdown(
-        f"""
-        <div class="panel-card">
-            <div class="panel-muted">At-a-glance layer</div>
-            <div class="stats-grid" style="grid-template-columns: repeat(5, minmax(0, 1fr));">{cards_html}</div>
-        </div>
-        """,
+        f"<div class='panel-card'><div class='panel-muted'>Performance KPIs</div><div class='kpi-grid'>{perf_html}</div></div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"<div class='panel-card'><div class='panel-muted'>Best / worst segments</div><div class='kpi-grid'>{segment_html}</div></div>",
         unsafe_allow_html=True,
     )
 
@@ -3056,48 +3164,63 @@ def _medisports_vs_breakdown(
     if not insights:
         insights.append("No major red flags triggered for the current filter setup.")
     st.markdown(
-        "<div class='panel-card'>" + "".join(f"<div class='stat-label'>• {html.escape(i)}</div>" for i in insights[:6]) + "</div>",
+        "<div class='insight-panel'><div class='insight-title'>Priority fixes</div><ul class='insight-list'>"
+        + "".join(f"<li>{html.escape(i)}</li>" for i in insights[:5])
+        + "</ul></div>",
         unsafe_allow_html=True,
     )
 
     st.markdown("### Who do we beat / lose to?")
     leaderboard = vs_summary[vs_summary["matches"] >= min_matches].copy()
     if leaderboard.empty:
-        demo_rows = [
-            {"rank": 2, "team": "Kellerkinder", "matches": 2, "record": "2-0-0", "wr": 100.0, "rd": 20, "map": "Train", "status": "Strong"},
-            {"rank": 3, "team": "Møjborgs Elite", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": 0, "map": "Castle", "status": "Even"},
-            {"rank": 4, "team": "Team.BB", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": -2, "map": "Train", "status": "Even"},
-            {"rank": 5, "team": "#cohiba", "matches": 4, "record": "2-2-0", "wr": 50.0, "rd": -3, "map": "Castle", "status": "Even"},
-            {"rank": 6, "team": "Inglourious Basterds", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": -5, "map": "Train", "status": "Even"},
-            {"rank": 7, "team": "Isaiah 1:18", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": -5, "map": "Castle", "status": "Even"},
-            {"rank": 8, "team": "zeroDown", "matches": 2, "record": "1-1-0", "wr": 50.0, "rd": -6, "map": "Castle", "status": "Even"},
-            {"rank": 9, "team": "ɢɪɴᴋɢᴏ", "matches": 3, "record": "1-2-0", "wr": 33.3, "rd": -8, "map": "Train", "status": "Weak"},
-            {"rank": 10, "team": "ⲓⲛⲛⲉꞅⲥⲓⲁ", "matches": 6, "record": "2-4-0", "wr": 33.3, "rd": -28, "map": "Castle", "status": "Weak"},
-            {"rank": 11, "team": "pihaTNT", "matches": 2, "record": "0-2-0", "wr": 0.0, "rd": -11, "map": "Castle", "status": "Weak"},
-            {"rank": 12, "team": "Black NirvanaAFK", "matches": 2, "record": "0-2-0", "wr": 0.0, "rd": -12, "map": "Castle", "status": "Weak"},
-        ]
-        status_class = {"Strong": "vs-pill-good", "Even": "vs-pill-mid", "Weak": "vs-pill-bad", "Low Sample": "vs-pill-mid"}
-        demo_html = []
-        for row in demo_rows:
-            wr_class = "vs-pill-good" if row["wr"] >= 55 else ("vs-pill-mid" if row["wr"] >= 45 else "vs-pill-bad")
-            rd_class = "vs-pill-good" if row["rd"] >= 0 else "vs-pill-bad"
-            demo_html.append(
-                f'<div class="ranked-row"><div class="vs-pill">#{int(row["rank"])}</div><div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["team"]))}</span></div><div class="stat-label">Matches <b>{int(row["matches"])}</b></div><div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div><div><span class="vs-pill {wr_class}">WR {float(row["wr"]):.1f}%</span></div><div><span class="vs-pill {rd_class}">RD {int(row["rd"]):+d}</span></div><div><span class="vs-pill">Map {html.escape(str(row["map"]))}</span></div><div><span class="vs-pill {status_class.get(str(row["status"]), "vs-pill-mid")}">{html.escape(str(row["status"]))}</span></div></div>'
-            )
-        st.markdown("<div class='panel-card'><div class='ranked-list'>" + "".join(demo_html) + "</div></div>", unsafe_allow_html=True)
-        st.caption("Demo matchup rows are shown because no opponents meet the minimum-match filter.")
+        st.info("No opponents meet the minimum-match threshold for this filter set.")
     else:
-        leaderboard["rank"] = range(1, len(leaderboard) + 1)
-        status_class = {"Strong": "vs-pill-good", "Even": "vs-pill-mid", "Weak": "vs-pill-bad", "Low Sample": "vs-pill-mid"}
-        rows_html = []
-        for _, row in leaderboard.head(12).iterrows():
-            round_class = "vs-pill-good" if float(row["round_diff"]) >= 0 else "vs-pill-bad"
-            wr_class = "vs-pill-good" if float(row["win_rate_pct"]) >= 55 else ("vs-pill-mid" if float(row["win_rate_pct"]) >= 45 else "vs-pill-bad")
-            status = str(row["status"])
-            rows_html.append(
-                f'<div class="ranked-row"><div class="vs-pill">#{int(row["rank"])}</div><div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["opponent_team"]))}</span></div><div class="stat-label">Matches <b>{int(row["matches"])}</b></div><div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div><div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div><div><span class="vs-pill {round_class}">RD {int(row["round_diff"]):+d}</span></div><div><span class="vs-pill">Map {html.escape(str(row["most_played_map"]))}</span></div><div><span class="vs-pill {status_class.get(status, "vs-pill-mid")}">{html.escape(status)}</span></div></div>'
+        chart_frame = leaderboard.sort_values("round_diff", ascending=True).head(16).copy()
+        if go is None:
+            _render_plotly_unavailable()
+        else:
+            rd_bar = go.Figure(
+                go.Bar(
+                    x=chart_frame["round_diff"],
+                    y=chart_frame["opponent_team"],
+                    orientation="h",
+                    marker=dict(
+                        color=chart_frame["round_diff"],
+                        colorscale=[[0.0, "#ff6c7a"], [0.5, "#f0be4f"], [1.0, "#31d17b"]],
+                        cmin=float(chart_frame["round_diff"].min()),
+                        cmax=float(chart_frame["round_diff"].max()),
+                    ),
+                    customdata=chart_frame[["matches", "record", "win_rate_pct"]],
+                    hovertemplate="%{y}<br>Round diff: %{x:+.0f}<br>Matches: %{customdata[0]}<br>Record: %{customdata[1]}<br>WR: %{customdata[2]:.1f}%<extra></extra>",
+                    showlegend=False,
+                )
             )
-        st.markdown("<div class='panel-card'><div class='ranked-list'>" + "".join(rows_html) + "</div></div>", unsafe_allow_html=True)
+            rd_bar.update_layout(title="Round differential by opponent")
+            rd_bar.update_xaxes(title_text="Round differential")
+            rd_bar.update_yaxes(title_text="", automargin=True)
+            _apply_plotly_dark_style(rd_bar, height=430, margin=dict(l=210, r=24, t=48, b=44))
+            st.plotly_chart(rd_bar, use_container_width=True)
+
+        status_class = {"Strong": "vs-pill-good", "Even": "vs-pill-mid", "Weak": "vs-pill-bad", "Low Sample": "vs-pill-mid"}
+
+        def _rank_rows(frame: pd.DataFrame, heading: str) -> str:
+            rows_html = []
+            for idx, (_, row) in enumerate(frame.iterrows(), start=1):
+                round_class = "vs-pill-good" if float(row["round_diff"]) >= 0 else "vs-pill-bad"
+                wr_class = "vs-pill-good" if float(row["win_rate_pct"]) >= 55 else ("vs-pill-mid" if float(row["win_rate_pct"]) >= 45 else "vs-pill-bad")
+                status = str(row["status"])
+                rows_html.append(
+                    f'<div class="ranked-row"><div class="vs-pill">#{idx}</div><div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["opponent_team"]))}</span></div><div class="stat-label">Matches <b>{int(row["matches"])}</b></div><div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div><div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div><div><span class="vs-pill {round_class}">RD {int(row["round_diff"]):+d}</span></div><div><span class="vs-pill">Map {html.escape(str(row["most_played_map"]))}</span></div><div><span class="vs-pill {status_class.get(status, "vs-pill-mid")}">{html.escape(status)}</span></div></div>'
+                )
+            return f"<div class='panel-card'><div class='panel-muted'>{html.escape(heading)}</div><div class='ranked-list'>{''.join(rows_html)}</div></div>"
+
+        strongest = leaderboard.sort_values(["round_diff", "win_rate_pct"], ascending=[False, False]).head(6)
+        weakest = leaderboard.sort_values(["round_diff", "win_rate_pct"], ascending=[True, True]).head(6)
+        left_col, right_col = st.columns(2)
+        with left_col:
+            st.markdown(_rank_rows(strongest, "Strongest matchups"), unsafe_allow_html=True)
+        with right_col:
+            st.markdown(_rank_rows(weakest, "Weakest matchups"), unsafe_allow_html=True)
 
     st.markdown("### Spotlight")
     if not leaderboard.empty:
