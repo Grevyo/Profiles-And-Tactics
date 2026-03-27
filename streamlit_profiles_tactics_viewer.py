@@ -2090,6 +2090,8 @@ def _find_achievement_image(
     achievement_link: str | None,
     achievement_name: str | None,
 ) -> Path | None:
+    # Keep this helper for backward compatibility only.
+    # IMPORTANT: do not use absolute local paths from CSV directly.
     if achievement_link:
         link_path = Path(str(achievement_link))
         if link_path.suffix.lower() in IMAGE_EXTENSIONS:
@@ -2113,6 +2115,123 @@ def _parse_placement_to_int(value: object) -> int | None:
         return None
     match = re.search(r"(\d+)", text)
     return int(match.group(1)) if match else None
+
+
+ACHIEVEMENT_REQUIRED_COLUMNS = [
+    "player",
+    "achievement_name",
+    "achievement_link",
+    "achievement_tier",
+    "season_name",
+    "position",
+]
+KNOWN_ACHIEVEMENT_FILENAMES = {
+    "league-emerald-gold.png",
+    "league-emerald-silver.png",
+    "cpl_gold.png",
+    "cpl_silver.png",
+    "cpl_bronze.png",
+    "cpl_4th-10th.png",
+    "31-40th_Ladder.png",
+}
+ACHIEVEMENT_FILENAME_ALIASES = {
+    "30-40th_ladder.png": "31-40th_Ladder.png",
+}
+
+
+def _achievement_asset_path(filename: str | None) -> Path | None:
+    if not filename:
+        return None
+    assets_dir = APP_ROOT / IMAGE_FOLDERS["achievement"]
+    alias = ACHIEVEMENT_FILENAME_ALIASES.get(filename.casefold(), filename)
+    direct = assets_dir / alias
+    if direct.exists() and direct.is_file():
+        return direct
+    # Fallback for repositories still containing old filename.
+    if alias == "31-40th_Ladder.png":
+        legacy = assets_dir / "30-40th_Ladder.png"
+        if legacy.exists() and legacy.is_file():
+            return legacy
+    return None
+
+
+def _resolve_cpl_ladder_filename(position_num: int | None) -> str | None:
+    if position_num is None:
+        return None
+    if position_num == 1:
+        return "cpl_gold.png"
+    if position_num == 2:
+        return "cpl_silver.png"
+    if position_num == 3:
+        return "cpl_bronze.png"
+    if 4 <= position_num <= 10:
+        return "cpl_4th-10th.png"
+    if 31 <= position_num <= 40:
+        return "31-40th_Ladder.png"
+    return None
+
+
+def resolve_achievement_image_details(
+    image_index: dict[str, dict[str, Path]],
+    achievement_row: pd.Series,
+) -> tuple[Path | None, str | None]:
+    achievement_name = str(achievement_row.get("achievement_name", "")).strip()
+    achievement_tier = str(achievement_row.get("achievement_tier", "")).strip()
+    season_name = str(achievement_row.get("season_name", "")).strip()
+    position_text = str(achievement_row.get("position", "")).strip()
+    position_num = _parse_placement_to_int(position_text)
+    basename = Path(str(achievement_row.get("achievement_link", "") or "")).name
+    normalized_basename = ACHIEVEMENT_FILENAME_ALIASES.get(basename.casefold(), basename)
+
+    resolved_filename: str | None = None
+    normalized_name = _normalize_achievement_text(achievement_name)
+
+    # League Emerald mapping.
+    if normalized_name == "league emerald":
+        if position_text.casefold() == "1st":
+            resolved_filename = "league-emerald-gold.png"
+        elif position_text.casefold() == "2nd":
+            resolved_filename = "league-emerald-silver.png"
+        elif position_text.casefold() == "3rd":
+            bronze_candidate = _achievement_asset_path("league-emerald-bronze.png")
+            if bronze_candidate:
+                return bronze_candidate, "league-emerald-bronze.png"
+            resolved_filename = "league-emerald-silver.png"
+        else:
+            resolved_filename = "league-emerald-silver.png"
+
+    # CPL ladder numeric range logic.
+    elif "cpl ladder season" in str(achievement_name).casefold():
+        resolved_filename = _resolve_cpl_ladder_filename(position_num)
+
+    # Optional fallback: basename only (never absolute path) if useful.
+    if (
+        not resolved_filename
+        and normalized_basename
+        and (
+            normalized_basename in KNOWN_ACHIEVEMENT_FILENAMES
+            or _achievement_asset_path(normalized_basename) is not None
+        )
+    ):
+        resolved_filename = normalized_basename
+
+    # Last fallback via metadata-driven lookup keys.
+    if not resolved_filename:
+        for key in (
+            achievement_name,
+            achievement_tier,
+            season_name,
+            position_text,
+            f"{achievement_name} {achievement_tier}",
+            f"{achievement_name} {season_name}",
+            f"{achievement_name} {position_text}",
+        ):
+            found = _find_image(image_index, "achievement", key)
+            if found:
+                return found, found.name
+
+    resolved_path = _achievement_asset_path(resolved_filename)
+    return resolved_path, resolved_filename
 
 
 def _normalize_achievement_text(value: object) -> str:
@@ -2184,51 +2303,8 @@ def resolve_achievement_image(
     image_index: dict[str, dict[str, Path]],
     achievement_row: pd.Series,
 ) -> Path | None:
-    achievement_name = str(achievement_row.get("achievement_name", "")).strip()
-    competition = str(achievement_row.get("competition", achievement_name)).strip()
-    achievement_link = achievement_row.get("achievement_link")
-    position = _parse_placement_to_int(achievement_row.get("position"))
-
-    is_ladder = "ladder" in _normalize_achievement_text(achievement_name) or "ladder" in _normalize_achievement_text(competition)
-    if is_ladder:
-        ladder_image = resolve_ladder_achievement_image(
-            image_index,
-            position,
-            competition=competition,
-            achievement_name=achievement_name,
-        )
-        if ladder_image:
-            return ladder_image
-
-    # Try direct filename from source link first.
-    linked = _find_achievement_image(image_index, achievement_link, None)
-    if linked:
-        return linked
-
-    # Exact + alias-driven matching to avoid loose partial trophy mismatches.
-    normalized_name = _normalize_achievement_text(achievement_name)
-    normalized_comp = _normalize_achievement_text(competition)
-    exact_candidates = [
-        achievement_name,
-        competition,
-        normalized_name,
-        normalized_comp,
-        format_achievement_title(competition, achievement_name),
-    ]
-
-    if "emerald" in normalized_name or "emerald" in normalized_comp:
-        if position == 1:
-            exact_candidates.append("league-emerald-gold")
-        elif position == 2:
-            exact_candidates.append("league-emerald-silver")
-
-    for candidate in exact_candidates:
-        if not candidate:
-            continue
-        found = _find_image(image_index, "achievement", candidate)
-        if found:
-            return found
-    return None
+    resolved_path, _ = resolve_achievement_image_details(image_index, achievement_row)
+    return resolved_path
 
 
 PLAYER_PHOTO_ALIAS_MAP = {
@@ -2402,6 +2478,10 @@ def _load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     )
     achievements.columns = achievements.columns.astype(str).str.strip()
     achievements = achievements.apply(lambda s: s.str.strip() if s.dtype == object else s)
+    for col in ACHIEVEMENT_REQUIRED_COLUMNS:
+        if col not in achievements.columns:
+            achievements[col] = ""
+    achievements = achievements[ACHIEVEMENT_REQUIRED_COLUMNS].copy()
 
     players["date"] = pd.to_datetime(players["date"], errors="coerce")
     tactics["date"] = pd.to_datetime(tactics["date"], errors="coerce")
@@ -2867,7 +2947,9 @@ def build_player_achievements(
         return pd.DataFrame()
 
     player_key = str(selected_player).strip().casefold()
-    scoped = achievements_df[achievements_df["player"].astype(str).str.strip().str.casefold() == player_key].copy()
+    scoped = achievements_df[
+        achievements_df["player"].astype(str).apply(lambda value: str(value).strip().casefold()) == player_key
+    ].copy()
     if scoped.empty:
         return scoped
 
@@ -2881,23 +2963,17 @@ def build_player_achievements(
 
     if "competition" not in scoped.columns:
         scoped["competition"] = scoped["achievement_name"]
-    if not filtered_players.empty and "competition" in filtered_players.columns:
-        context_competitions = {
-            _normalize_achievement_text(value)
-            for value in filtered_players["competition"].dropna().unique().tolist()
-            if str(value).strip()
-        }
-        if context_competitions:
-            scoped_comp = scoped["competition"].apply(_normalize_achievement_text)
-            scoped_name = scoped["achievement_name"].apply(_normalize_achievement_text)
-            context_mask = scoped_comp.isin(context_competitions) | scoped_name.isin(context_competitions)
-            if context_mask.any():
-                scoped = scoped[context_mask]
     scoped["achievement_title"] = scoped.apply(
         lambda row: format_achievement_title(row.get("competition"), row.get("achievement_name")),
         axis=1,
     )
-    scoped["achievement_image"] = scoped.apply(lambda row: resolve_achievement_image(image_index, row), axis=1)
+    resolved_details = scoped.apply(
+        lambda row: resolve_achievement_image_details(image_index, row),
+        axis=1,
+    )
+    scoped["achievement_image"] = resolved_details.apply(lambda details: details[0])
+    scoped["resolved_filename"] = resolved_details.apply(lambda details: details[1] or "")
+    scoped["image_missing"] = scoped["achievement_image"].isna()
     scoped["season_display"] = scoped["season_num"].apply(lambda v: f"SEASON {int(v)}" if pd.notna(v) else "SEASON ?")
     scoped["top_badge"] = scoped.apply(
         lambda row: (str(row.get("achievement_tier", "")).strip().upper()[:1] or str(row.get("position", "")).strip() or "?"),
@@ -3063,6 +3139,42 @@ def render_player_achievements_inline(player_achievements: pd.DataFrame) -> str:
         )
     cards = "".join(_achievement_premium_card_html(row) for _, row in player_achievements.iterrows())
     return f"<div class='achievement-row achievement-inline-cabinet'>{cards}</div>"
+
+
+def render_achievement_debug_section(
+    achievements_df: pd.DataFrame,
+    player_achievements: pd.DataFrame,
+    selected_player: str,
+) -> None:
+    parsed_columns = achievements_df.columns.astype(str).tolist()
+    resolved_filenames = []
+    missing_filenames = []
+    if not player_achievements.empty:
+        resolved_filenames = sorted(
+            {
+                str(value).strip()
+                for value in player_achievements.get("resolved_filename", pd.Series(dtype=str)).tolist()
+                if str(value).strip()
+            }
+        )
+        missing_mask = (
+            player_achievements["image_missing"]
+            if "image_missing" in player_achievements.columns
+            else pd.Series([False] * len(player_achievements), index=player_achievements.index)
+        )
+        missing_filenames = sorted(
+            {
+                str(row.get("resolved_filename", "")).strip() or "(unresolved)"
+                for _, row in player_achievements[missing_mask].iterrows()
+            }
+        )
+    with st.expander("Achievement Debug (temporary)", expanded=False):
+        st.write(f"Total achievement rows loaded: {len(achievements_df)}")
+        st.write(f"Parsed columns: {parsed_columns}")
+        st.write(f"Selected player: {selected_player}")
+        st.write(f"Matched achievement rows count: {len(player_achievements)}")
+        st.write(f"Resolved filenames: {resolved_filenames}")
+        st.write(f"Missing filenames: {missing_filenames}")
 
 
 def _trend_icon_and_class(trend_direction: str) -> tuple[str, str]:
@@ -3387,6 +3499,11 @@ def _hltv_profile_view(
         </section>
         """,
         unsafe_allow_html=True,
+    )
+    render_achievement_debug_section(
+        achievements_df=achievements_df,
+        player_achievements=player_ach,
+        selected_player=selected_player,
     )
 
     st.markdown("<div class='section-block-title'>Core Performance</div>", unsafe_allow_html=True)
