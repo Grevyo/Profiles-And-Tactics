@@ -22,6 +22,7 @@ PLAYER_META_CSV_CANDIDATES = [
 ]
 ACHIEVEMENTS_CSV = DATA_DIR / "Achievements.csv"
 PLAYER_PHOTO_DIR = ROOT_DIR / "player_photos"
+ACHIEVEMENT_IMG_DIR = ROOT_DIR / "Achievement_png"
 
 
 @dataclass
@@ -44,6 +45,16 @@ class PlayerSnapshot:
     form_delta: float
     grevscore: float
     percentile: float
+
+
+@dataclass
+class AchievementCard:
+    season_label: str
+    badge_label: str
+    title_label: str
+    image_uri: str
+    missing_image: bool
+    sort_score: float
 
 
 @st.cache_data(show_spinner=False)
@@ -139,7 +150,10 @@ def load_achievements() -> pd.DataFrame:
     else:
         ach = split.iloc[:, :6].copy()
         ach.columns = ["player", "achievement_name", "achievement_link", "achievement_tier", "season_name", "position"]
-    return ach.fillna("")
+    ach = ach.fillna("")
+    for col in ach.columns:
+        ach[col] = ach[col].astype(str).str.strip().str.strip('"')
+    return ach
 
 
 def clean_player_key(name: str) -> str:
@@ -166,6 +180,159 @@ def image_to_data_uri(path: Path | None) -> str:
     suffix = path.suffix.lower().replace(".", "") or "png"
     data = base64.b64encode(path.read_bytes()).decode("utf-8")
     return f"data:image/{suffix};base64,{data}"
+
+
+def normalize_achievement_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").lower())
+
+
+@st.cache_data(show_spinner=False)
+def build_achievement_asset_index() -> dict[str, Path]:
+    if not ACHIEVEMENT_IMG_DIR.exists():
+        return {}
+    return {
+        normalize_achievement_key(file.stem): file
+        for file in ACHIEVEMENT_IMG_DIR.iterdir()
+        if file.is_file()
+    }
+
+
+def parse_position_value(position_text: str) -> int | None:
+    match = re.search(r"\d+", str(position_text or ""))
+    if not match:
+        return None
+    return int(match.group())
+
+
+def extract_season_label(season_text: str) -> str:
+    season_text = str(season_text or "").strip()
+    match = re.search(r"(\d+)", season_text)
+    if match:
+        return f"SEASON {match.group(1)}"
+    return season_text.upper() if season_text else "SEASON ?"
+
+
+def resolve_ladder_achievement_image(position: int | None, achievement_name: str, asset_index: dict[str, Path]) -> Path | None:
+    if position is None:
+        return None
+
+    ladder_name = str(achievement_name or "").lower()
+    is_cpl = "cpl" in ladder_name
+    exact_candidates = [
+        f"{position}st_ladder",
+        f"{position}nd_ladder",
+        f"{position}rd_ladder",
+        f"{position}th_ladder",
+        f"cpl_{position}st",
+        f"cpl_{position}nd",
+        f"cpl_{position}rd",
+        f"cpl_{position}th",
+    ]
+
+    ladder_ranges: list[tuple[int, int, list[str]]] = [
+        (1, 1, ["1st_ladder", "cpl_1st"]),
+        (2, 2, ["2nd_ladder", "cpl_2nd"]),
+        (3, 3, ["3rd_ladder", "cpl_3rd"]),
+        (4, 10, ["4th-10th_ladder", "cpl_4th-10th"]),
+        (11, 20, ["11th-20th_ladder", "cpl_11th-20th"]),
+        (21, 30, ["21st-30th_ladder", "cpl_21st-30th"]),
+        (31, 40, ["31-40th_ladder", "31st-40th_ladder", "cpl_31st-40th", "30-40th_ladder", "30-39th_ladder"]),
+        (41, 50, ["41st-50th_ladder", "cpl_41st-50th"]),
+        (51, 60, ["51st-60th_ladder", "cpl_51st-60th"]),
+    ]
+
+    for key in exact_candidates:
+        normalized = normalize_achievement_key(key)
+        if normalized in asset_index:
+            return asset_index[normalized]
+
+    for start, end, keys in ladder_ranges:
+        if start <= position <= end:
+            prefixed_keys = [f"cpl_{k}" for k in keys] + keys if is_cpl else keys + [f"cpl_{k}" for k in keys]
+            for key in prefixed_keys:
+                normalized = normalize_achievement_key(key)
+                if normalized in asset_index:
+                    return asset_index[normalized]
+    return None
+
+
+def resolve_achievement_image(row: pd.Series, asset_index: dict[str, Path]) -> Path | None:
+    achievement_name = str(row.get("achievement_name", "")).strip()
+    position = parse_position_value(str(row.get("position", "")))
+    name_key = normalize_achievement_key(achievement_name)
+    link_key = normalize_achievement_key(Path(str(row.get("achievement_link", "")).strip()).stem)
+    tier_key = normalize_achievement_key(str(row.get("achievement_tier", "")))
+
+    if "ladder" in name_key:
+        ladder_asset = resolve_ladder_achievement_image(position, achievement_name, asset_index)
+        if ladder_asset:
+            return ladder_asset
+
+    if link_key and link_key in asset_index:
+        return asset_index[link_key]
+
+    alias_candidates: list[str] = []
+    if "league" in name_key and "emerald" in name_key:
+        if tier_key in {"a", "s", "gold"} or (position is not None and position == 1):
+            alias_candidates.append("league-emerald-gold")
+        alias_candidates.append("league-emerald-silver")
+    alias_candidates.append(achievement_name)
+
+    for candidate in alias_candidates:
+        normalized = normalize_achievement_key(candidate)
+        if normalized in asset_index:
+            return asset_index[normalized]
+    return None
+
+
+def format_achievement_title(row: pd.Series) -> str:
+    name = str(row.get("achievement_name", "")).strip()
+    season_text = str(row.get("season_name", "")).strip()
+    if not name:
+        return "UNTITLED ACHIEVEMENT"
+    season_match = re.search(r"(\d+)", season_text)
+    if season_match:
+        name = re.sub(rf"season\s*{season_match.group(1)}", "", name, flags=re.IGNORECASE).strip(" -")
+    title = re.sub(r"\s+", " ", name).upper()
+    return title[:38]
+
+
+def build_player_achievements(achievements: pd.DataFrame, player_name: str) -> list[AchievementCard]:
+    if achievements.empty:
+        return []
+
+    asset_index = build_achievement_asset_index()
+    rows = achievements[achievements["player"] == player_name].copy()
+    cards: list[AchievementCard] = []
+    tier_priority = {"S": 6, "A": 5, "B": 4, "C": 3, "D": 2}
+
+    for _, row in rows.iterrows():
+        image_path = resolve_achievement_image(row, asset_index)
+        position = parse_position_value(str(row.get("position", "")))
+        tier = str(row.get("achievement_tier", "")).strip().upper()
+        badge_label = tier if tier else (str(row.get("position", "")).strip().upper() or "—")
+        season_label = extract_season_label(str(row.get("season_name", "")))
+        title_label = format_achievement_title(row)
+        is_ladder = "ladder" in normalize_achievement_key(str(row.get("achievement_name", "")))
+        position_weight = (1000 - position) if position is not None else 0
+        sort_score = (
+            (1200 if is_ladder else 700)
+            + position_weight
+            + (tier_priority.get(tier, 0) * 15)
+        )
+        cards.append(
+            AchievementCard(
+                season_label=season_label,
+                badge_label=badge_label[:8],
+                title_label=title_label,
+                image_uri=image_to_data_uri(image_path),
+                missing_image=image_path is None,
+                sort_score=sort_score,
+            )
+        )
+
+    cards.sort(key=lambda card: card.sort_score, reverse=True)
+    return cards
 
 
 def build_player_snapshot(player_name: str, player_frame: pd.DataFrame, base_frame: pd.DataFrame, meta: pd.DataFrame) -> PlayerSnapshot:
@@ -351,14 +518,16 @@ def inject_styles() -> None:
         .ach-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
         .ach-title { color:#f3c679; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; font-weight:800; }
         .ach-sub { color:#9db4de; font-size:.68rem; }
-        .ach-strip { display:flex; gap:9px; overflow-x:auto; padding-bottom:3px; scrollbar-width:thin; scrollbar-color: rgba(143,163,198,.55) rgba(7,13,24,.3); }
-        .ach-item { flex:0 0 200px; border:1px solid rgba(129,154,199,.34); border-radius:12px; background:linear-gradient(165deg, rgba(15,28,45,.92), rgba(9,17,30,.92)); padding:9px; }
-        .ach-season { color:#8ec8ff; font-size:.62rem; text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; }
-        .ach-name { color:#f3f7ff; font-size:.74rem; font-weight:760; line-height:1.2; min-height:34px; }
-        .ach-foot { display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:.66rem; }
-        .ach-tier { color:#ffd39a; }
-        .ach-pos { color:#9df5e1; font-weight:700; }
-        .ach-empty { color:#a3b6de; font-size:.75rem; padding:8px 0 2px; }
+        .ach-strip { display:flex; gap:10px; overflow-x:auto; padding:2px 2px 6px; scrollbar-width:thin; scrollbar-color: rgba(143,163,198,.55) rgba(7,13,24,.3); }
+        .ach-ribbon-card { flex:0 0 168px; height:224px; border:1px solid rgba(129,154,199,.36); border-radius:14px; overflow:hidden; background:linear-gradient(180deg, rgba(11,20,35,.98), rgba(9,16,28,.98)); position:relative; box-shadow:0 12px 22px rgba(0,0,0,.35); }
+        .ach-badge-wrap { position:relative; height:100%; display:flex; flex-direction:column; }
+        .ach-badge-image { width:100%; height:100%; object-fit:contain; object-position:center; background:radial-gradient(circle at 50% 32%, rgba(255,255,255,.07), transparent 60%), rgba(7,13,24,.7); padding:9px 8px 42px; }
+        .ach-overlay-header { position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center; padding:7px 8px; background:linear-gradient(180deg, rgba(4,9,17,.84), rgba(4,9,17,.28)); }
+        .ach-overlay-season { color:#d7e9ff; font-size:.58rem; font-weight:760; letter-spacing:.09em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:68%; }
+        .ach-overlay-badge { color:#ffe4b9; border:1px solid rgba(255,211,154,.48); background:rgba(31,20,8,.58); border-radius:999px; padding:1px 7px; font-size:.56rem; font-weight:760; letter-spacing:.06em; text-transform:uppercase; max-width:46px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .ach-overlay-footer { position:absolute; left:0; right:0; bottom:0; min-height:42px; display:flex; align-items:center; justify-content:center; text-align:center; padding:7px 8px; color:#f4f8ff; font-size:.62rem; font-weight:760; letter-spacing:.06em; text-transform:uppercase; line-height:1.2; background:linear-gradient(0deg, rgba(4,9,17,.92), rgba(4,9,17,.42)); overflow:hidden; }
+        .ach-placeholder { width:100%; height:100%; padding:10px 8px 42px; display:flex; align-items:center; justify-content:center; text-align:center; font-size:.67rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#aec3ea; background:repeating-linear-gradient(135deg, rgba(18,29,50,.8), rgba(18,29,50,.8) 8px, rgba(9,15,27,.92) 8px, rgba(9,15,27,.92) 16px); }
+        .ach-empty { color:#a3b6de; font-size:.75rem; border:1px dashed rgba(128,153,197,.44); border-radius:12px; padding:10px; min-height:90px; display:flex; align-items:center; justify-content:center; text-align:center; background:rgba(9,17,30,.45); }
         .big-score { font-size:2.4rem; font-weight:900; line-height:1; letter-spacing:.01em; }
         .score-chip { font-size:.73rem; font-weight:700; letter-spacing:.03em; padding:4px 8px; border-radius:999px; width:fit-content; border:1px solid transparent; text-transform:uppercase; }
         .status { font-size:.9rem; font-weight:800; }
@@ -410,19 +579,27 @@ def build_recent_form_series(player_df: pd.DataFrame) -> pd.DataFrame:
 
 def render_top_cards(snapshot: PlayerSnapshot, achievements: pd.DataFrame, player_name: str) -> None:
     photo_uri = image_to_data_uri(find_player_photo(player_name))
-    ach_rows = achievements[achievements["player"] == player_name].head(8)
-    ach_html = "".join(
-        (
-            "<article class='ach-item'>"
-            f"<div class='ach-season'>{html.escape(r['season_name'])}</div>"
-            f"<div class='ach-name'>{html.escape(r['achievement_name'])}</div>"
-            "<div class='ach-foot'>"
-            f"<span class='ach-tier'>{html.escape(r['achievement_tier'])}</span>"
-            f"<span class='ach-pos'>#{html.escape(str(r['position']))}</span>"
-            "</div></article>"
+    player_achievements = build_player_achievements(achievements, player_name)
+    ach_items: list[str] = []
+    for card in player_achievements:
+        badge_image = (
+            f"<img class='ach-badge-image' src='{card.image_uri}' alt='achievement badge' />"
+            if not card.missing_image
+            else "<div class='ach-placeholder'>Achievement image missing</div>"
         )
-        for _, r in ach_rows.iterrows()
-    ) or "<div class='ach-empty'>No achievements recorded in source data.</div>"
+        ach_items.append(
+            "<article class='ach-ribbon-card'>"
+            "<div class='ach-badge-wrap'>"
+            f"{badge_image}"
+            "<div class='ach-overlay-header'>"
+            f"<span class='ach-overlay-season'>{html.escape(card.season_label)}</span>"
+            f"<span class='ach-overlay-badge'>{html.escape(card.badge_label)}</span>"
+            "</div>"
+            f"<div class='ach-overlay-footer'>{html.escape(card.title_label)}</div>"
+            "</div>"
+            "</article>"
+        )
+    ach_html = "".join(ach_items) or "<div class='ach-empty'>No achievements earned for this player in the current filter context.</div>"
 
     if snapshot.grevscore >= 75:
         status = "Elite Impact"
@@ -470,7 +647,7 @@ def render_top_cards(snapshot: PlayerSnapshot, achievements: pd.DataFrame, playe
             </div>
             <div class="achievements">
               <div class="ach-head">
-                <div class="ach-title">Achievement Strip</div>
+                <div class="ach-title">Achievement Ribbon</div>
                 <div class="ach-sub">Swipe →</div>
               </div>
               <div class="ach-strip">
