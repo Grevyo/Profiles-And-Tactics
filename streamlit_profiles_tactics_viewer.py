@@ -2050,21 +2050,37 @@ def _parse_placement_to_int(value: object) -> int | None:
 
 
 ACHIEVEMENT_REQUIRED_COLUMNS = ["player", "achievement_name", "achievement_link", "achievement_tier", "season_name", "position"]
+ACHIEVEMENT_ALLOWED_FILENAMES = {
+    "cpl_gold.png",
+    "cpl_silver.png",
+    "cpl_bronze.png",
+    "4-10th_Ladder.png",
+    "31-40th_Ladder.png",
+    "league-emerald-gold.png",
+    "league-emerald-silver.png",
+    "cpl_4th-10th.png",
+}
 ACHIEVEMENT_FILENAME_ALIASES = {"30-40th_ladder.png": "31-40th_Ladder.png"}
 
 
 def _achievement_asset_path(filename: str | None) -> Path | None:
     if not filename:
         return None
-    assets_dir = APP_ROOT / IMAGE_FOLDERS["achievement"]
+    assets_dirs = (
+        APP_ROOT / IMAGE_FOLDERS["achievement"],
+        APP_ROOT / "achievement_png",
+    )
     alias = ACHIEVEMENT_FILENAME_ALIASES.get(filename.casefold(), filename)
-    direct = assets_dir / alias
-    if direct.exists() and direct.is_file():
-        return direct
-    if alias == "31-40th_Ladder.png":
-        legacy = assets_dir / "30-40th_Ladder.png"
-        if legacy.exists() and legacy.is_file():
-            return legacy
+    if alias not in ACHIEVEMENT_ALLOWED_FILENAMES:
+        return None
+    for assets_dir in assets_dirs:
+        direct = assets_dir / alias
+        if direct.exists() and direct.is_file():
+            return direct
+        if alias == "31-40th_Ladder.png":
+            legacy = assets_dir / "30-40th_Ladder.png"
+            if legacy.exists() and legacy.is_file():
+                return legacy
     return None
 
 
@@ -2087,6 +2103,8 @@ def load_achievements_data(achievements_csv: Path) -> pd.DataFrame:
             achievements[col] = ""
     achievements = achievements[ACHIEVEMENT_REQUIRED_COLUMNS].copy()
     achievements["player_core"] = achievements["player"].astype(str).apply(extract_core_player_name)
+    achievements["season_num"] = achievements["season_name"].apply(extract_season_number)
+    achievements["position_num"] = achievements["position"].apply(_parse_placement_to_int)
     return achievements
 
 
@@ -2114,8 +2132,6 @@ def resolve_achievement_image_details(
         filename = "league-emerald-silver.png"
         if position_text.casefold() == "1st":
             filename = "league-emerald-gold.png"
-        elif position_text.casefold() == "3rd" and _achievement_asset_path("league-emerald-bronze.png"):
-            filename = "league-emerald-bronze.png"
         resolved_path = _achievement_asset_path(filename)
         return resolved_path, filename, "mapped:league_emerald"
 
@@ -2128,7 +2144,7 @@ def resolve_achievement_image_details(
         elif position_num == 3:
             filename = "cpl_bronze.png"
         elif position_num is not None and 4 <= position_num <= 10:
-            filename = "cpl_4th-10th.png"
+            filename = "4-10th_Ladder.png"
         elif position_num is not None and 31 <= position_num <= 40:
             filename = "31-40th_Ladder.png"
         resolved_path = _achievement_asset_path(filename)
@@ -2773,30 +2789,25 @@ def build_player_achievements(
     achievements_df: pd.DataFrame,
     image_index: dict[str, dict[str, Path]],
     selected_player: str,
-    filtered_players: pd.DataFrame,
     selected_season: str,
 ) -> pd.DataFrame:
     if achievements_df.empty:
         return pd.DataFrame()
 
     selected_player_core = extract_core_player_name(selected_player)
-    scoped = achievements_df.copy()
-    scoped["achievement_player_core"] = scoped["player"].astype(str).apply(extract_core_player_name)
-    scoped["drop_reason"] = ""
-    scoped.loc[scoped["achievement_player_core"] != selected_player_core, "drop_reason"] = "player_mismatch"
-    scoped["season_num"] = scoped["season_name"].apply(extract_season_number)
+    matched = achievements_df[achievements_df["player_core"] == selected_player_core].copy()
+    if matched.empty:
+        return pd.DataFrame()
 
     if selected_season != "Lifetime":
         season_match = re.match(r"^S(\d+)$", str(selected_season), flags=re.IGNORECASE)
         if season_match:
-            target = int(season_match.group(1))
-            scoped.loc[(scoped["drop_reason"] == "") & (scoped["season_num"] != target), "drop_reason"] = "season_mismatch"
+            target_season = int(season_match.group(1))
+            season_matched = matched[matched["season_num"] == target_season].copy()
+            # Fail-open for reliability: keep the player's achievements if a season parse mismatch would otherwise wipe all medals.
+            if not season_matched.empty:
+                matched = season_matched
 
-    matched = scoped[scoped["drop_reason"] == ""].copy()
-    if matched.empty:
-        return scoped.assign(match_status="dropped")
-
-    matched["position_num"] = matched["position"].apply(_parse_placement_to_int)
     matched["achievement_title"] = matched["achievement_name"].apply(
         lambda value: (_normalize_achievement_text(value) or "unnamed achievement").upper()
     )
@@ -2814,13 +2825,7 @@ def build_player_achievements(
     matched["_tier_score"] = matched["achievement_tier"].astype(str).str.strip().str.upper().map(tier_weight).fillna(0)
     matched["_position_score"] = matched["position_num"].fillna(999)
     matched = matched.sort_values(["_tier_score", "_position_score", "season_num"], ascending=[False, True, False])
-    matched["match_status"] = "matched"
-    matched = matched.drop(columns=["_tier_score", "_position_score"])
-
-    dropped = scoped[scoped["drop_reason"] != ""].copy()
-    if not dropped.empty:
-        dropped["match_status"] = "dropped"
-    return pd.concat([matched, dropped], ignore_index=True, sort=False)
+    return matched.drop(columns=["_tier_score", "_position_score"])
 
 
 def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame) -> tuple[float, pd.DataFrame]:
@@ -2967,100 +2972,14 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
 def render_player_achievements_inline(player_achievements: pd.DataFrame) -> str:
     """Render a compact inline achievements cabinet for the profile hero left card."""
     if player_achievements.empty:
-        matched = player_achievements
-    elif "match_status" in player_achievements.columns:
-        matched = player_achievements[player_achievements["match_status"] == "matched"]
-    else:
-        matched = player_achievements
-    if matched.empty:
         return (
             "<div class='achievement-inline-empty'>"
             "<div class='achievement-empty-title'>Achievement Cabinet</div>"
             "<div class='achievement-empty-sub'>No achievements found for the current player/filter context.</div>"
             "</div>"
         )
-    cards = "".join(_achievement_premium_card_html(row) for _, row in matched.iterrows())
+    cards = "".join(_achievement_premium_card_html(row) for _, row in player_achievements.iterrows())
     return f"<div class='achievement-row achievement-inline-cabinet'>{cards}</div>"
-
-
-def render_achievement_debug_section(
-    achievements_df: pd.DataFrame,
-    player_achievements: pd.DataFrame,
-    selected_player: str,
-) -> None:
-    selected_player_raw = str(selected_player)
-    selected_player_core = extract_core_player_name(selected_player_raw)
-    parsed_columns = achievements_df.columns.astype(str).tolist()
-    achievement_players_raw = achievements_df.get("player", pd.Series(dtype=str)).astype(str).tolist()
-    achievement_players_core = [extract_core_player_name(value) for value in achievement_players_raw]
-    matched_rows = (
-        player_achievements[player_achievements["match_status"] == "matched"]
-        if "match_status" in player_achievements.columns
-        else player_achievements
-    )
-    dropped_rows = (
-        player_achievements[player_achievements["match_status"] == "dropped"]
-        if "match_status" in player_achievements.columns
-        else pd.DataFrame()
-    )
-
-    matched_preview_cols = [
-        col
-        for col in [
-            "player",
-            "achievement_player_core",
-            "achievement_name",
-            "season_name",
-            "position",
-            "resolved_filename",
-            "image_resolution_source",
-            "image_missing",
-        ]
-        if col in matched_rows.columns
-    ]
-    matched_preview = matched_rows[matched_preview_cols].head(25) if matched_preview_cols else pd.DataFrame()
-    dropped_preview_cols = [col for col in ["player", "achievement_name", "season_name", "drop_reason"] if col in dropped_rows.columns]
-    dropped_preview = dropped_rows[dropped_preview_cols].head(25) if dropped_preview_cols else pd.DataFrame()
-    resolved_filenames = []
-    missing_filenames = []
-    if not matched_rows.empty:
-        resolved_filenames = sorted(
-            {
-                str(value).strip()
-                for value in matched_rows.get("resolved_filename", pd.Series(dtype=str)).tolist()
-                if str(value).strip()
-            }
-        )
-        missing_mask = (
-            matched_rows["image_missing"]
-            if "image_missing" in matched_rows.columns
-            else pd.Series([False] * len(matched_rows), index=matched_rows.index)
-        )
-        missing_filenames = sorted(
-            {
-                str(row.get("resolved_filename", "")).strip() or "(unresolved)"
-                for _, row in matched_rows[missing_mask].iterrows()
-            }
-        )
-    drop_counts = dropped_rows["drop_reason"].value_counts().to_dict() if "drop_reason" in dropped_rows.columns else {}
-    with st.expander("Achievement Debug (temporary)", expanded=False):
-        st.write(f"Total achievement rows loaded: {len(achievements_df)}")
-        st.write(f"Parsed columns: {parsed_columns}")
-        st.write(f"Selected player (raw): {selected_player_raw}")
-        st.write(f"Selected player (core): {selected_player_core}")
-        st.write("Achievement players (raw):")
-        st.write(achievement_players_raw)
-        st.write("Achievement players (core):")
-        st.write(achievement_players_core)
-        st.write(f"Matched rows: {len(matched_rows)}")
-        st.write(f"Dropped rows: {len(dropped_rows)}")
-        st.write(f"Drop reasons: {drop_counts}")
-        st.write("Matched rows preview:")
-        st.dataframe(matched_preview, use_container_width=True)
-        st.write("Dropped rows preview:")
-        st.dataframe(dropped_preview, use_container_width=True)
-        st.write(f"Resolved filenames: {resolved_filenames}")
-        st.write(f"Missing filenames: {missing_filenames}")
 
 
 def _trend_icon_and_class(trend_direction: str) -> tuple[str, str]:
@@ -3257,7 +3176,6 @@ def _hltv_profile_view(
         achievements_df=achievements_df,
         image_index=image_index,
         selected_player=selected_player,
-        filtered_players=filtered_players,
         selected_season=st.session_state.get("profile_season", "Lifetime"),
     )
     achievements_inline_html = render_player_achievements_inline(player_ach)
@@ -3386,12 +3304,6 @@ def _hltv_profile_view(
         """,
         unsafe_allow_html=True,
     )
-    render_achievement_debug_section(
-        achievements_df=achievements_df,
-        player_achievements=player_ach,
-        selected_player=selected_player,
-    )
-
     st.markdown("<div class='section-block-title'>Core Performance</div>", unsafe_allow_html=True)
     st.markdown(
         f"<div class='core-grid'><div class='performance-grid'>{''.join(core_cards)}</div></div>",
