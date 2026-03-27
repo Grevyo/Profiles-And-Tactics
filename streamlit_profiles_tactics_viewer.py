@@ -2243,13 +2243,13 @@ def _normalize_achievement_text(value: object) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def extract_core_player_name(name: object) -> str:
-    raw = "" if name is None else str(name)
-    normalized = unicodedata.normalize("NFKC", raw)
-    normalized = re.sub(r"\s+", " ", normalized).strip().casefold()
-    if "|" in normalized:
-        normalized = normalized.split("|")[-1].strip()
-    return re.sub(r"\s+", " ", normalized).strip()
+def extract_core_player_name(name: str) -> str:
+    text = str(name or "").strip().lower()
+    text = unicodedata.normalize("NFKD", text)
+    text = " ".join(text.split())
+    if "|" in text:
+        text = text.split("|")[-1].strip()
+    return text
 
 
 def format_achievement_title(competition: object, achievement_name: object) -> str:
@@ -2956,11 +2956,9 @@ def build_player_achievements(
     if achievements_df.empty:
         return pd.DataFrame()
 
+    achievements_df = achievements_df.copy()
+    achievements_df["player_core"] = achievements_df["player"].astype(str).apply(extract_core_player_name)
     selected_player_core = extract_core_player_name(selected_player)
-    if "player_core" not in achievements_df.columns:
-        achievements_df = achievements_df.copy()
-        achievements_df["player_core"] = achievements_df["player"].astype(str).apply(extract_core_player_name)
-
     scoped = achievements_df[achievements_df["player_core"] == selected_player_core].copy()
     scoped["selected_player_raw"] = str(selected_player)
     scoped["selected_player_core"] = selected_player_core
