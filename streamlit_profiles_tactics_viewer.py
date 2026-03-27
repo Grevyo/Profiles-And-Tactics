@@ -1204,11 +1204,30 @@ def _inject_styles() -> None:
             grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 8px;
         }
-        .metric-card { border: 1px solid rgba(151,166,195,0.24); border-radius: 12px; padding: 7px 9px; background: rgba(11,17,28,0.76); }
-        .metric-card.priority { min-height: 66px; }
-        .metric-title { color:#97a7c7; font-size:0.6rem; text-transform:uppercase; letter-spacing:0.09em; }
-        .metric-value { color:#f5f8ff; font-size:1.32rem; font-weight:860; line-height:1.02; }
-        .metric-state { font-size:0.68rem; font-weight:700; margin-top:2px; }
+        .metric-card {
+            --tier-color: #f0be4f;
+            --accent-1: #5ec7ff;
+            border: 1px solid rgba(151,166,195,0.24);
+            border-top: 2px solid color-mix(in srgb, var(--tier-color) 62%, #7ea9ff 38%);
+            border-radius: 12px;
+            padding: 8px 10px;
+            background: linear-gradient(180deg, rgba(11,17,28,0.9), rgba(9,14,24,0.82));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.02), 0 8px 18px rgba(0,0,0,0.18);
+        }
+        .metric-card.priority { min-height: 74px; }
+        .metric-title { color: color-mix(in srgb, var(--accent-1) 62%, #d4def3 38%); font-size:0.58rem; text-transform:uppercase; letter-spacing:0.11em; font-weight:780; }
+        .metric-value { color: color-mix(in srgb, var(--tier-color) 72%, #f8fbff 28%); font-size:1.46rem; font-weight:900; line-height:1.01; margin-top:3px; }
+        .metric-state { font-size:0.67rem; font-weight:780; margin-top:3px; text-transform:uppercase; letter-spacing:0.07em; color: color-mix(in srgb, var(--tier-color) 82%, #ffffff 18%); }
+        .metric-delta { margin-top:2px; font-size:0.62rem; color:#b5c6e7; letter-spacing:0.03em; }
+        .metric-card.group-fragging { --accent-1: #ff8b6d; }
+        .metric-card.group-accuracy { --accent-1: #66d3ff; }
+        .metric-card.group-form { --accent-1: #56e1a8; }
+        .metric-card.group-utility { --accent-1: #9f8dff; }
+        .metric-card.tier-excellent { --tier-color: #31d17b; }
+        .metric-card.tier-good { --tier-color: #5cb8ff; }
+        .metric-card.tier-average { --tier-color: #f0be4f; }
+        .metric-card.tier-poor { --tier-color: #ff9b48; }
+        .metric-card.tier-very-poor { --tier-color: #ff5f6d; }
         .form-card .stat-chip {
             background: rgba(16, 23, 36, 0.68);
             border-color: rgba(151, 166, 195, 0.18);
@@ -1552,9 +1571,10 @@ def _inject_styles() -> None:
             display: grid;
             align-content: center;
         }
-        .stats-tile .label { color: #97a7c7; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; }
-        .stats-tile .value { color: #f5f8ff; font-size: 2.15rem; font-weight: 900; margin-top: 2px; line-height: 1.01; }
+        .stats-tile .label { color: #87bbff; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 760; }
+        .stats-tile .value { color: #f5f8ff; text-shadow: 0 0 14px rgba(92,184,255,0.16); font-size: 2.15rem; font-weight: 900; margin-top: 2px; line-height: 1.01; }
         .stats-tile .sub { color: #c8d5f0; font-size: 0.66rem; margin-top: 2px; }
+        .stat-help { color:#9ce4c0; font-size:0.73em; margin-left:4px; cursor: help; }
         .chart-section-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:10px; }
         .pv-shell {
             max-width: var(--dashboard-max-width);
@@ -2356,14 +2376,27 @@ def get_player_profile_from_play_csv(selected_player: str) -> dict[str, str]:
     return profile
 
 
-def _nation_flag_emoji(value: str | None) -> str:
+def _resolve_country_alpha2(value: str | None) -> str:
     nation = str(value or "").strip()
     if not nation:
         return ""
-    normalized = nation.casefold()
-    alpha2 = nation.upper() if len(nation) == 2 and nation.isalpha() else COUNTRY_TO_ALPHA2.get(normalized, "")
+
+    normalized = unicodedata.normalize("NFKD", nation)
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    normalized = re.sub(r"[^A-Za-z ]+", " ", normalized).strip().casefold()
+    normalized = re.sub(r"\s+", " ", normalized)
+
+    if len(nation) == 2 and nation.isalpha():
+        return nation.upper()
+    if len(normalized) == 2 and normalized.isalpha():
+        return normalized.upper()
+    return COUNTRY_TO_ALPHA2.get(normalized, "")
+
+
+def _nation_flag_emoji(value: str | None, fallback: str = "🌍") -> str:
+    alpha2 = _resolve_country_alpha2(value)
     if len(alpha2) != 2 or not alpha2.isalpha():
-        return ""
+        return fallback
     return "".join(chr(127397 + ord(ch)) for ch in alpha2.upper())
 
 
@@ -2474,25 +2507,59 @@ def _expand_tactics_by_round_type(df: pd.DataFrame) -> pd.DataFrame:
     return expanded
 
 
+def _match_record_from_tactics(filtered_tactics: pd.DataFrame) -> dict[str, float]:
+    if filtered_tactics.empty or "match_id" not in filtered_tactics.columns:
+        return {"matches": 0.0, "wins": 0.0, "losses": 0.0, "draws": 0.0}
+    per_match = (
+        filtered_tactics.groupby("match_id", as_index=False)[["wins", "losses"]]
+        .sum()
+        .rename(columns={"wins": "team_score", "losses": "opp_score"})
+    )
+    if per_match.empty:
+        return {"matches": 0.0, "wins": 0.0, "losses": 0.0, "draws": 0.0}
+    wins = float((per_match["team_score"] > per_match["opp_score"]).sum())
+    losses = float((per_match["team_score"] < per_match["opp_score"]).sum())
+    draws = float((per_match["team_score"] == per_match["opp_score"]).sum())
+    return {"matches": float(len(per_match)), "wins": wins, "losses": losses, "draws": draws}
+
+
+def _impact_score_from_totals(
+    *,
+    kd: float,
+    kpr: float,
+    dpr: float,
+    mvp_per_match: float,
+    win_rate: float,
+) -> tuple[float, str]:
+    kd_score = min(max(((kd - 0.7) / 0.9) * 100.0, 0.0), 100.0)
+    kpr_score = min(max(((kpr - 0.45) / 0.5) * 100.0, 0.0), 100.0)
+    dpr_score = min(max(((dpr - 90.0) / 90.0) * 100.0, 0.0), 100.0)
+    mvp_score = min(max(((mvp_per_match - 0.2) / 1.0) * 100.0, 0.0), 100.0)
+    win_score = min(max(win_rate, 0.0), 100.0)
+    impact = (kd_score * 0.3) + (kpr_score * 0.25) + (dpr_score * 0.2) + (win_score * 0.15) + (mvp_score * 0.1)
+    explain = "Impact = 30% K/D, 25% KPR, 20% damage/round, 15% match win rate, 10% MVPs per match."
+    return float(min(max(impact, 0.0), 100.0)), explain
+
+
 def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: pd.DataFrame) -> dict[str, float]:
-    matches = max(int(filtered_players["match_id"].nunique()), 1)
+    match_record = _match_record_from_tactics(filtered_tactics)
+    matches = max(int(match_record["matches"]), 1)
     kills = float(filtered_players["kills"].sum())
     deaths = float(filtered_players["deaths"].sum())
     assists = float(filtered_players["mvps"].sum())
     damage = float(filtered_players["damage"].sum())
+    rounds = float(filtered_players["rounds_played"].sum())
     acc = float(filtered_players["accuracy_pct"].mean()) if not filtered_players.empty else 0.0
 
     kda = (kills + assists) / deaths if deaths else kills + assists
     kd = kills / deaths if deaths else kills
     dpm = damage / matches
-    kpm = kills / matches
+    kpr = kills / rounds if rounds else 0.0
+    dpr = damage / rounds if rounds else 0.0
+    mvp_per_match = assists / matches if matches else 0.0
 
-    win_rate = 0.0
-    if not filtered_tactics.empty and {"wins", "losses"}.issubset(filtered_tactics.columns):
-        wins = float(filtered_tactics["wins"].sum())
-        losses = float(filtered_tactics["losses"].sum())
-        total = wins + losses
-        win_rate = (wins / total * 100) if total else 0.0
+    total_results = match_record["wins"] + match_record["losses"] + match_record["draws"]
+    win_rate = (match_record["wins"] / total_results * 100.0) if total_results else 0.0
 
     hs = float(filtered_players["hs_pct"].mean()) if "hs_pct" in filtered_players.columns else 0.0
     avg_kpd = float(filtered_players["kpd"].mean()) if "kpd" in filtered_players.columns else 0.0
@@ -2501,24 +2568,30 @@ def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: 
         kpd_std = float(filtered_players["kpd"].std(ddof=0))
         kpd_consistency = max(0.0, min(1.0, 1.0 - (kpd_std / 1.25)))
 
-    impact = (kd * 28.0) + (kda * 14.0) + (kpm * 22.0) + (acc * 0.14) + (win_rate * 0.22)
+    impact, impact_formula = _impact_score_from_totals(
+        kd=kd,
+        kpr=kpr,
+        dpr=dpr,
+        mvp_per_match=mvp_per_match,
+        win_rate=win_rate,
+    )
 
     score_components = {
         "kd": min(max((kd / 1.25) * 100.0, 0.0), 100.0),
         "kda": min(max((kda / 2.0) * 100.0, 0.0), 100.0),
-        "kpm": min(max((kpm / 1.0) * 100.0, 0.0), 100.0),
+        "kpr": min(max((kpr / 0.9) * 100.0, 0.0), 100.0),
         "dpm": min(max((dpm / 3600.0) * 100.0, 0.0), 100.0),
         "acc": min(max(acc, 0.0), 100.0),
         "hs": min(max((hs / 55.0) * 100.0, 0.0), 100.0),
         "win_rate": min(max(win_rate, 0.0), 100.0),
-        "impact": min(max((impact / 100.0) * 100.0, 0.0), 100.0),
+        "impact": impact,
         "consistency": min(max(kpd_consistency * 100.0, 0.0), 100.0),
         "avg_kpd": min(max((avg_kpd / 1.5) * 100.0, 0.0), 100.0),
     }
     grevscore = (
         (score_components["kd"] * 0.14)
         + (score_components["kda"] * 0.11)
-        + (score_components["kpm"] * 0.11)
+        + (score_components["kpr"] * 0.11)
         + (score_components["dpm"] * 0.1)
         + (score_components["acc"] * 0.08)
         + (score_components["hs"] * 0.06)
@@ -2529,16 +2602,22 @@ def _calc_player_card_metrics(filtered_players: pd.DataFrame, filtered_tactics: 
     )
     grevscore_raw = min(max(grevscore, 0.0), 100.0)
     return {
-        "matches": float(matches),
+        "matches": float(match_record["matches"]),
+        "wins": float(match_record["wins"]),
+        "losses": float(match_record["losses"]),
+        "draws": float(match_record["draws"]),
         "kills": kills,
         "deaths": deaths,
         "assists": assists,
+        "rounds": rounds,
         "kda": kda,
         "kd": kd,
         "dpm": dpm,
+        "dpr": dpr,
         "acc": acc,
-        "kpm": kpm,
+        "kpr": kpr,
         "impact": impact,
+        "impact_formula": impact_formula,
         "grevscore_raw": grevscore_raw,
         "grevscore": grevscore_raw / 100.0,
     }
@@ -2662,21 +2741,57 @@ def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame)
 
 
 def _metric_state(value: float, low: float, high: float) -> tuple[str, str]:
-    if value >= high:
-        return "Excellent", "trend-good"
-    if value >= low:
-        return "Average", "trend-mid"
-    return "Below par", "trend-bad"
+    if high <= low:
+        return "Average", "tier-average"
+    ratio = (value - low) / (high - low)
+    if ratio >= 1.0:
+        return "Excellent", "tier-excellent"
+    if ratio >= 0.55:
+        return "Good", "tier-good"
+    if ratio >= 0.2:
+        return "Average", "tier-average"
+    if ratio >= -0.2:
+        return "Poor", "tier-poor"
+    return "Very poor", "tier-very-poor"
 
 
-def _metric_card_html(label: str, value_text: str, value: float, low: float, high: float, *, priority: bool = False) -> str:
-    state, cls = _metric_state(value, low, high)
+def _metric_group(label: str) -> str:
+    fragging = {"kills", "k/d", "kpr", "dpm"}
+    accuracy = {"accuracy%", "hs%"}
+    form = {"rating", "grevscore", "form"}
+    utility = {"impact"}
+    norm = label.strip().casefold()
+    if norm in fragging:
+        return "group-fragging"
+    if norm in accuracy:
+        return "group-accuracy"
+    if norm in form:
+        return "group-form"
+    if norm in utility:
+        return "group-utility"
+    return "group-form"
+
+
+def _metric_card_html(
+    label: str,
+    value_text: str,
+    value: float,
+    low: float,
+    high: float,
+    *,
+    priority: bool = False,
+    delta_note: str = "",
+) -> str:
+    state, tier_class = _metric_state(value, low, high)
+    metric_group = _metric_group(label)
     priority_cls = " priority" if priority else ""
+    delta_html = f"<div class='metric-delta'>{html.escape(delta_note)}</div>" if delta_note else ""
     return (
-        f"<div class='metric-card{priority_cls}'>"
+        f"<div class='metric-card {metric_group} {tier_class}{priority_cls}'>"
         f"<div class='metric-title'>{html.escape(label)}</div>"
         f"<div class='metric-value'>{html.escape(value_text)}</div>"
-        f"<div class='metric-state {cls}'>{state}</div>"
+        f"<div class='metric-state'>{state}</div>"
+        f"{delta_html}"
         "</div>"
     )
 
@@ -2734,7 +2849,7 @@ def _trend_icon_and_class(trend_direction: str) -> tuple[str, str]:
 
 
 def _build_performance_summary(metrics: dict[str, float], trend_direction: str, form_score: float) -> str:
-    fragger_state = "elite fragger" if metrics["kpm"] >= 0.74 else ("stable fragger" if metrics["kpm"] >= 0.62 else "below-average fragger")
+    fragger_state = "elite fragger" if metrics["kpr"] >= 0.74 else ("stable fragger" if metrics["kpr"] >= 0.62 else "below-average fragger")
     utility_state = "high utility impact" if metrics["impact"] >= 76 else ("solid utility impact" if metrics["impact"] >= 66 else "light utility impact")
     form_state = "form currently rising" if trend_direction == "Rising" and form_score >= 65 else (
         "form unstable recently" if trend_direction == "Rising" else "form currently dropping"
@@ -2912,7 +3027,10 @@ def _hltv_profile_view(
         side_chart_data = filtered_players.dropna(subset=["side"]).groupby("side", as_index=False)["kpd"].mean().rename(columns={"kpd": "rating"}).sort_values("rating", ascending=False)
 
     best_map = filtered_players.groupby("map")["kills"].sum().sort_values(ascending=False).index[0] if "map" in filtered_players.columns and not filtered_players.empty else "-"
-    record_text = f"{int(filtered_tactics['wins'].sum())}W-{int(filtered_tactics['losses'].sum())}L" if not filtered_tactics.empty else "-"
+    record_text = f"{int(metrics['wins'])}W-{int(metrics['losses'])}L"
+    nation_value = str(profile_data.get("nation", "")).strip()
+    nation_flag = _nation_flag_emoji(nation_value, fallback="🌍")
+    nation_badge = f"{nation_flag} {nation_value}" if nation_value else nation_flag
 
     player_ach = achievements_df[achievements_df["player"].astype(str).str.strip().str.casefold() == str(selected_player).strip().casefold()].copy()
     if not player_ach.empty:
@@ -2959,7 +3077,7 @@ def _hltv_profile_view(
     performance_summary = _build_performance_summary(metrics, trend_direction, form_score)
     stats_tiles = [
         f"<div class='stats-tile'><div class='label'>Rating</div><div class='value'>{metrics['grevscore']:.2f}</div><div class='sub'>Tier: {score_tier}</div></div>",
-        f"<div class='stats-tile'><div class='label'>Impact</div><div class='value'>{metrics['impact']:.1f}</div><div class='sub'>{percentile:.0f}th percentile</div></div>",
+        f"<div class='stats-tile'><div class='label'>Impact <span class='stat-help' title='{html.escape(metrics['impact_formula'])}'>ⓘ</span></div><div class='value'>{metrics['impact']:.1f}</div><div class='sub'>{percentile:.0f}th percentile</div></div>",
         f"<div class='stats-tile'><div class='label'>Form</div><div class='value'>{form_score:.1f}</div><div class='sub trend-{trend_class}'> {trend_icon} {trend_direction}</div></div>",
         f"<div class='stats-tile'><div class='label'>Matches</div><div class='value'>{int(metrics['matches'])}</div><div class='sub'>{record_text}</div></div>",
     ]
@@ -2967,15 +3085,15 @@ def _hltv_profile_view(
     grev_band_class = "good" if metrics["grevscore"] >= 1.02 else ("mid" if metrics["grevscore"] >= 0.85 else "bad")
 
     priority_cards = [
-        _metric_card_html("Grevscore", f"{metrics['grevscore']:.2f}", metrics["grevscore"], 0.95, 1.18, priority=True),
-        _metric_card_html("Impact", f"{metrics['impact']:.1f}", metrics["impact"], 62, 78, priority=True),
-        _metric_card_html("Form", f"{form_score:.1f}", form_score, 55, 74, priority=True),
-        _metric_card_html("Rating", f"{avg_kpd:.2f}", avg_kpd, 0.9, 1.18, priority=True),
+        _metric_card_html("Grevscore", f"{metrics['grevscore']:.2f}", metrics["grevscore"], 0.95, 1.18, priority=True, delta_note=f"Team #{team_rank}/{rank_total}"),
+        _metric_card_html("Impact", f"{metrics['impact']:.1f}", metrics["impact"], 62, 78, priority=True, delta_note="Weighted impact index"),
+        _metric_card_html("Form", f"{form_score:.1f}", form_score, 55, 74, priority=True, delta_note=f"{trend_icon} {trend_direction}"),
+        _metric_card_html("Rating", f"{avg_kpd:.2f}", avg_kpd, 0.9, 1.18, priority=True, delta_note=f"Last 10 Δ {recent10_delta:+.2f}"),
     ]
     support_cards = [
-        _metric_card_html("K/D", f"{metrics['kd']:.2f}", metrics["kd"], 0.9, 1.2),
-        _metric_card_html("KPR", f"{metrics['kpm']:.2f}", metrics["kpm"], 0.58, 0.76),
-        _metric_card_html("DPM", f"{metrics['dpm']:.0f}", metrics["dpm"], 2200, 2800),
+        _metric_card_html("K/D", f"{metrics['kd']:.2f}", metrics["kd"], 0.9, 1.2, delta_note=f"{int(metrics['kills'])}K / {int(metrics['deaths'])}D"),
+        _metric_card_html("KPR", f"{metrics['kpr']:.2f}", metrics["kpr"], 0.58, 0.76, delta_note=f"{int(metrics['kills'])} / {int(metrics['rounds'])} rounds"),
+        _metric_card_html("DPM", f"{metrics['dpm']:.0f}", metrics["dpm"], 2200, 2800, delta_note=f"DPR {metrics['dpr']:.1f}"),
         _metric_card_html("HS%", f"{avg_hs:.1f}%", avg_hs, 27, 39),
         _metric_card_html("Accuracy%", f"{avg_acc:.1f}%", avg_acc, 50, 66),
         _metric_card_html("Kills", f"{int(metrics['kills'])}", float(metrics["kills"]), 120, 220),
@@ -2997,7 +3115,7 @@ def _hltv_profile_view(
                         <div class="pv-teamline">{team_logo_html}<strong>{html.escape(str(profile_data.get('team', '-')))}</strong></div>
                         <div class="pv-meta-row">
                             <span class="pv-meta-chip">🎯 {html.escape(player_role)}</span>
-                            <span class="pv-meta-chip">🌍 {html.escape(str(profile_data.get('nation', '-')))}</span>
+                            <span class="pv-meta-chip">{html.escape(nation_badge)}</span>
                             <span class="pv-meta-chip">🗺️ Best map: {html.escape(str(best_map))}</span>
                             <span class="pv-meta-chip">🧭 Best side: {html.escape(side_split)}</span>
                         </div>
@@ -3021,7 +3139,7 @@ def _hltv_profile_view(
                         <div class="grevscore-label">Signature Stat · GREVSCORE</div>
                         <div class="grevscore-value">{metrics['grevscore']:.2f}</div>
                         <div class="grevscore-band {grev_band_class}">{score_tier}</div>
-                        <div class="grevscore-status">{percentile:.0f}th percentile in current filter set</div>
+                        <div class="grevscore-status">{percentile:.0f}th percentile in current filter set · Impact {metrics['impact']:.1f}</div>
                         <div class="grevscore-meter">
                             <div class="grevscore-meter-track">
                                 <div class="grevscore-meter-fill" style="width:{grev_meter_pct:.1f}%;"></div>
@@ -3069,11 +3187,17 @@ def _hltv_profile_view(
     form_avg_10 = float(recent20["kpd"].tail(10).mean()) if not recent20.empty else 0.0
 
     impact_chart = None
-    impact_map = filtered_players.groupby("map", as_index=False)["kpd"].mean().rename(columns={"kpd": "impact"}).sort_values("impact", ascending=False)
+    impact_rows: list[dict[str, float | str]] = []
+    if "map" in filtered_players.columns:
+        for map_name, map_rows in filtered_players.groupby("map"):
+            map_tactics = filtered_tactics[filtered_tactics["match_id"].isin(map_rows["match_id"].unique())]
+            map_metrics = _calc_player_card_metrics(map_rows, map_tactics)
+            impact_rows.append({"map": map_name, "impact": map_metrics["impact"]})
+    impact_map = pd.DataFrame(impact_rows).sort_values("impact", ascending=False) if impact_rows else pd.DataFrame(columns=["map", "impact"])
     if not impact_map.empty and go is not None:
         impact_chart = go.Figure(go.Bar(x=impact_map["impact"], y=impact_map["map"], orientation="h", marker=dict(color="#f0be4f"), showlegend=False))
         impact_chart.update_layout(title="Impact by Map")
-        impact_chart.update_xaxes(title_text="Impact proxy")
+        impact_chart.update_xaxes(title_text="Impact index")
         impact_chart.update_yaxes(title_text=None, autorange="reversed")
         _apply_plotly_dark_style(impact_chart, height=290)
 
@@ -3086,11 +3210,16 @@ def _hltv_profile_view(
         map_chart.update_yaxes(title_text=None, autorange="reversed")
         _apply_plotly_dark_style(map_chart, height=290)
 
+    team_scope_filtered = team_scope[team_scope["match_id"].isin(filtered_players["match_id"].unique())].copy()
+    team_scope_metrics = _calc_player_card_metrics(
+        team_scope_filtered,
+        tactics_df[tactics_df["match_id"].isin(team_scope_filtered["match_id"].unique())],
+    )
     comparison_metrics = pd.DataFrame([
-        {"metric": "Rating", "player": metrics["grevscore"], "team_avg": _safe_mean(team_scope, "kpd")},
-        {"metric": "K/D", "player": metrics["kd"], "team_avg": _safe_mean(team_scope, "kpd")},
-        {"metric": "Impact", "player": metrics["impact"], "team_avg": _safe_mean(team_scope, "impact_score", _safe_mean(team_scope, "impact"))},
-        {"metric": "HS%", "player": avg_hs, "team_avg": _safe_mean(team_scope, "hs_pct")},
+        {"metric": "Rating", "player": metrics["grevscore"], "team_avg": team_scope_metrics["grevscore"]},
+        {"metric": "K/D", "player": metrics["kd"], "team_avg": team_scope_metrics["kd"]},
+        {"metric": "Impact", "player": metrics["impact"], "team_avg": team_scope_metrics["impact"]},
+        {"metric": "HS%", "player": avg_hs, "team_avg": _safe_mean(team_scope_filtered, "hs_pct")},
     ]).melt("metric", var_name="group", value_name="value")
     comparison_metrics["group"] = comparison_metrics["group"].map({"player": selected_player, "team_avg": "Team Avg"})
 
@@ -3140,7 +3269,7 @@ def _hltv_profile_view(
         st.plotly_chart(trend_chart, use_container_width=True)
 
     st.markdown("<div class='section-block-title'>Impact</div>", unsafe_allow_html=True)
-    team_impact = _safe_mean(team_scope, "impact_score", _safe_mean(team_scope, "impact"))
+    team_impact = team_scope_metrics["impact"]
     impact_delta = metrics["impact"] - team_impact
     impact_stats_html = (
         _build_stat_chip("Impact", f"{metrics['impact']:.1f}", metrics["impact"], 62, 78)
@@ -3149,7 +3278,7 @@ def _hltv_profile_view(
         + _build_stat_chip("Recent trend", trend_direction, 1 if trend_direction == "Rising" else 0, 0.5, 1.0)
     )
     st.markdown(
-        f"<div class='impact-card'><div class='stats-grid overview-grid'>{impact_stats_html}</div></div>",
+        f"<div class='impact-card'><div class='stats-grid overview-grid'>{impact_stats_html}</div><div class='panel-muted' style='margin-top:8px;'>{html.escape(metrics['impact_formula'])}</div></div>",
         unsafe_allow_html=True,
     )
 
@@ -3171,6 +3300,27 @@ def _hltv_profile_view(
     else:
         top_tactics = filtered_tactics.groupby("tactic_name", as_index=False)[["wins", "losses"]].sum().assign(win_rate=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1)).sort_values(["wins", "win_rate"], ascending=False).head(10)
         st.dataframe(top_tactics, use_container_width=True, hide_index=True)
+
+    with st.expander("Debug / Validation", expanded=False):
+        selected_filters = {
+            "season": st.session_state.get("profile_season", "Lifetime"),
+            "tiers": st.session_state.get("profile_tier", []),
+            "events": st.session_state.get("profile_event", []),
+            "opponents": st.session_state.get("profile_opp", []),
+            "sides": st.session_state.get("profile_side", []),
+        }
+        debug_payload = {
+            "selected_player": selected_player,
+            "selected_filters": selected_filters,
+            "total_matches": int(metrics["matches"]),
+            "wins": int(metrics["wins"]),
+            "losses": int(metrics["losses"]),
+            "total_kills": int(metrics["kills"]),
+            "total_rounds": int(metrics["rounds"]),
+            "computed_kpr": round(float(metrics["kpr"]), 4),
+            "computed_impact": round(float(metrics["impact"]), 4),
+        }
+        st.json(debug_payload)
 
     st.markdown("<div class='section-block-title'>Full Player Match Stats</div>", unsafe_allow_html=True)
     show_cols = ["date", competition_source_col, "map", "opponent_team", "tier", "kills", "deaths", "kpd", "accuracy_pct", "hs_pct", "mvps", "damage", "rounds_played"]
