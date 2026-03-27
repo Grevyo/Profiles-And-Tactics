@@ -2585,67 +2585,6 @@ def _build_match_level_results(tactics_df: pd.DataFrame, competition_source_col:
     merged = merged.rename(columns={competition_source_col: "competition"})
     return merged
 
-
-
-
-def _load_profile_viewer_v2_module():
-    v2_path = APP_ROOT / "pages" / "99_Profile_Viewer_V2.py"
-    if not v2_path.exists():
-        return None
-    try:
-        spec = importlib.util.spec_from_file_location("profile_viewer_v2_page", v2_path)
-        if spec is None or spec.loader is None:
-            return None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
-    except Exception:
-        return None
-
-
-def _render_profile_viewer_v2_inline() -> bool:
-    module = _load_profile_viewer_v2_module()
-    if module is None:
-        return False
-    try:
-        module.inject_styles()
-        matches = module.load_player_matches()
-        player_meta = module.load_player_meta()
-        achievements = module.load_achievements()
-
-        st.markdown("<div class='v2-title'>Player Profile Viewer V2</div>", unsafe_allow_html=True)
-        st.markdown(
-            "<div class='v2-sub'>Fresh rebuild using direct CSV sources only (PlayerDataMatser.csv, players/play metadata, Achievements.csv).</div>",
-            unsafe_allow_html=True,
-        )
-
-        left, mid, right = st.columns([1.4, 1, 1])
-        with left:
-            player_options = sorted(matches["player"].dropna().unique().tolist())
-            chosen_player = st.selectbox("Player", player_options, key="profiles_v2_player")
-        with mid:
-            maps = ["All"] + sorted(matches["map"].dropna().unique().tolist())
-            chosen_map = st.selectbox("Map Filter", maps, key="profiles_v2_map")
-        with right:
-            competitions = ["All"] + sorted(matches["competition"].dropna().unique().tolist())
-            chosen_comp = st.selectbox("Competition Filter", competitions, key="profiles_v2_comp")
-
-        filtered = matches[matches["player"] == chosen_player].copy()
-        if chosen_map != "All":
-            filtered = filtered[filtered["map"] == chosen_map]
-        if chosen_comp != "All":
-            filtered = filtered[filtered["competition"] == chosen_comp]
-
-        if filtered.empty:
-            st.warning("No rows match your filter combination.")
-            return True
-
-        snapshot = module.build_player_snapshot(chosen_player, filtered, matches, player_meta)
-        module.render_top_cards(snapshot, achievements, chosen_player)
-        module.render_bottom_sections(filtered)
-        return True
-    except Exception:
-        return False
 def _apply_shared_filters(
     player_df: pd.DataFrame,
     tactics_df: pd.DataFrame,
@@ -2727,16 +2666,6 @@ def _hltv_profile_view(
         active_page="profiles",
         subtitle="Medicart analytics, player profiles, tactics, and event breakdowns.",
     )
-    st.markdown("### Profile Viewer (Current)")
-    nav_col, text_col = st.columns([1, 2.2], vertical_alignment="center")
-    with nav_col:
-        try:
-            st.page_link("pages/99_Profile_Viewer_V2.py", label="Open Profile Viewer V2", icon="🆕")
-        except KeyError:
-            st.caption("Profile Viewer V2 link unavailable in this runtime.")
-    with text_col:
-        st.caption("Use this page for the current/legacy view. Open V2 for the rebuilt standalone page.")
-    st.divider()
 
     players = sorted(
         player_df[
