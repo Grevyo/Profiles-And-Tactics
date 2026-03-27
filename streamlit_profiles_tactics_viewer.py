@@ -921,6 +921,7 @@ SMALLCAPS_MAP = str.maketrans(
         "ᴊ": "j",
         "ᴋ": "k",
         "ʟ": "l",
+        "ᴍ": "m",
         "ɴ": "n",
         "ᴏ": "o",
         "ᴘ": "p",
@@ -938,7 +939,7 @@ SMALLCAPS_MAP = str.maketrans(
 )
 
 
-def normalize_logo_key(name: str | None) -> str:
+def normalize_logo_key(name: str) -> str:
     text = str(name or "").strip().lower()
     text = text.translate(SMALLCAPS_MAP)
     text = unicodedata.normalize("NFKD", text)
@@ -946,6 +947,34 @@ def normalize_logo_key(name: str | None) -> str:
     text = re.sub(r"[^a-z0-9\s]+", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
+
+
+def resolve_competition_logo_filename(name: str) -> str | None:
+    key = normalize_logo_key(name)
+
+    alias_map = {
+        "madmen": "madmen.png",
+        "madmen invitational": "madmen.png",
+        "madmen inhouse cup": "madmen.png",
+        "madmen castle bootcamp": "madmen.png",
+    }
+
+    if key in alias_map:
+        return alias_map[key]
+
+    if "madmen" in key:
+        return "madmen.png"
+
+    competition_logo_overrides = {
+        "nova": "nova-prime.png",
+        "cyberathletes": "cyberathletes.png",
+        "diamond": "diamond.png",
+    }
+    for needle, filename in competition_logo_overrides.items():
+        if needle in key:
+            return filename
+
+    return None
 
 
 @st.cache_data(show_spinner=False)
@@ -965,49 +994,27 @@ def _build_image_index() -> dict[str, dict[str, Path]]:
 def _find_image(image_index: dict[str, dict[str, Path]], image_type: str, value: str | None) -> Path | None:
     if not value:
         return None
+
+    normalized_key = normalize_logo_key(value)
+
     if image_type == "competition":
-        normalized_logo_key = normalize_logo_key(value)
-        resolved_logo: Path | None = None
-        competition_logo_aliases = {
-            "madmen": "madmen.png",
-            "madmen invitational": "madmen.png",
-            "madmen inhouse cup": "madmen.png",
-            "madmen castle bootcamp": "madmen.png",
-        }
-        alias_filename = competition_logo_aliases.get(normalized_logo_key)
-        if alias_filename:
-            alias_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / alias_filename
-            if alias_logo.exists():
-                resolved_logo = alias_logo
-        if "madmen" in normalized_logo_key:
-            madmen_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / "madmen.png"
-            if madmen_logo.exists():
-                resolved_logo = madmen_logo
-        competition_logo_overrides = {
-            "nova": "nova-prime.png",
-            "cyberathletes": "cyberathletes.png",
-            "diamond": "diamond.png",
-        }
-        if resolved_logo is None:
-            for needle, filename in competition_logo_overrides.items():
-                if needle in normalized_logo_key:
-                    override_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / filename
-                    if override_logo.exists():
-                        resolved_logo = override_logo
-                        break
-        if resolved_logo is not None:
-            print(
-                "[logo_resolver] competition=%r normalized=%r resolved=%r"
-                % (value, normalized_logo_key, resolved_logo.name)
-            )
-            return resolved_logo
-    normalized = _normalize_key(normalize_logo_key(value))
+        resolved_filename = resolve_competition_logo_filename(value)
+        if resolved_filename:
+            resolved_logo = APP_ROOT / IMAGE_FOLDERS["competition"] / resolved_filename
+            if resolved_logo.exists():
+                print(
+                    "[logo_resolver] competition=%r normalized=%r resolved=%r"
+                    % (value, normalized_key, resolved_logo.name)
+                )
+                return resolved_logo
+
+    normalized = _normalize_key(normalized_key)
     entries = image_index.get(image_type, {})
     resolved_logo = entries.get(normalized)
     if image_type == "competition":
         print(
             "[logo_resolver] competition=%r normalized=%r resolved=%r"
-            % (value, normalize_logo_key(value), resolved_logo.name if resolved_logo else None)
+            % (value, normalized_key, resolved_logo.name if resolved_logo else None)
         )
     return resolved_logo
 
