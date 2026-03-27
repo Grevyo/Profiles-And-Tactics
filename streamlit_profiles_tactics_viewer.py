@@ -5741,7 +5741,15 @@ def _medisports_vs_breakdown(
     with t2:
         form_window = st.selectbox(
             "Form window",
-            ["All time", "Last 10", "Last 20", "Last 30"],
+            [
+                "All time",
+                "Last 10 days",
+                "Last 20 days",
+                "Last 30 days",
+                "Last 10 matches",
+                "Last 20 matches",
+                "Last 30 matches",
+            ],
             index=0,
             key="medisports_form_window",
         )
@@ -5838,8 +5846,18 @@ def _medisports_vs_breakdown(
                     hide_index=True,
                 )
     if form_window != "All time":
-        n_recent = int(form_window.split(" ")[1])
-        filtered = filtered.sort_values("date", ascending=False).head(n_recent)
+        window_match = re.match(r"^Last\s+(\d+)\s+(days|matches)$", str(form_window), flags=re.IGNORECASE)
+        if window_match is not None:
+            window_size = int(window_match.group(1))
+            window_unit = str(window_match.group(2)).lower()
+            filtered = filtered.sort_values("date", ascending=False).copy()
+            if window_unit == "days":
+                latest_date = pd.to_datetime(filtered["date"], errors="coerce").max()
+                if pd.notna(latest_date):
+                    start_date = latest_date - pd.Timedelta(days=window_size - 1)
+                    filtered = filtered[pd.to_datetime(filtered["date"], errors="coerce") >= start_date].copy()
+            else:
+                filtered = filtered.head(window_size)
     if filtered.empty:
         st.info("No matches left after filters.")
         return
