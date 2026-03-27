@@ -352,11 +352,12 @@ def _inject_styles() -> None:
             right: 7px;
             min-width: 18px;
             height: 18px;
+            padding: 0 6px;
             border-radius: 999px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.6rem;
+            font-size: 0.56rem;
             font-weight: 900;
             letter-spacing: 0.02em;
             border: none;
@@ -1146,23 +1147,78 @@ def _inject_styles() -> None:
             align-items: flex-start;
         }
         .achievement-premium {
-            width: 104px;
+            width: 108px;
             height: 140px;
             border-radius: 12px;
             position: relative;
             overflow: hidden;
             border: 1px solid rgba(151, 166, 195, 0.32);
             background: linear-gradient(180deg, rgba(19, 28, 43, 0.95), rgba(9, 14, 24, 0.96));
-            flex: 0 0 104px;
+            flex: 0 0 108px;
+            display: flex;
+            align-items: stretch;
+            justify-content: stretch;
+        }
+        .achievement-premium .achievement-image-wrap {
+            width: 100%;
+            height: 100%;
+            padding: 16px 8px 30px;
+            box-sizing: border-box;
+            background: linear-gradient(180deg, rgba(18, 27, 41, 0.55), rgba(9, 13, 22, 0.72));
         }
         .achievement-premium img {
             width: 100%;
-            height: 86px;
+            height: 100%;
             object-fit: contain;
             object-position: center;
-            margin-top: 20px;
-            padding: 0 6px;
-            box-sizing: border-box;
+            display: block;
+        }
+        .achievement-header-gradient {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 34px;
+            background: linear-gradient(180deg, rgba(4, 7, 12, 0.78), rgba(4, 7, 12, 0));
+            z-index: 1;
+            pointer-events: none;
+        }
+        .achievement-footer-gradient {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 40px;
+            background: linear-gradient(180deg, rgba(4, 7, 12, 0), rgba(4, 7, 12, 0.86));
+            z-index: 1;
+            pointer-events: none;
+        }
+        .achievement-missing {
+            color: #dce7ff;
+            font-size: 0.58rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            text-align: center;
+            border: 1px dashed rgba(151, 166, 195, 0.34);
+            border-radius: 8px;
+            padding: 8px 6px;
+            background: rgba(9, 14, 24, 0.62);
+            width: 100%;
+        }
+        .achievement-finish {
+            position: absolute;
+            left: 6px;
+            right: 6px;
+            bottom: 4px;
+            z-index: 2;
+            text-align: center;
+            font-size: 0.57rem;
+            letter-spacing: 0.05em;
+            color: #d2dff7;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .achievement-inline-cabinet {
             border-top: none;
@@ -1673,7 +1729,7 @@ def _inject_styles() -> None:
             overflow-x: auto;
             padding-bottom: 2px;
         }
-        .pv-achievement-scroll .achievement-premium { width: 108px; height: 138px; flex: 0 0 108px; }
+        .pv-achievement-scroll .achievement-premium { width: 108px; height: 140px; flex: 0 0 108px; }
         .pv-score-grid {
             display: grid;
             grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
@@ -2041,6 +2097,138 @@ def _find_achievement_image(
             if by_name:
                 return by_name
     return _find_image(image_index, "achievement", achievement_name)
+
+
+def _ordinal_suffix(value: int) -> str:
+    if 10 <= value % 100 <= 20:
+        return "th"
+    return {1: "st", 2: "nd", 3: "rd"}.get(value % 10, "th")
+
+
+def _parse_placement_to_int(value: object) -> int | None:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    text = str(value).strip().lower()
+    if not text:
+        return None
+    match = re.search(r"(\d+)", text)
+    return int(match.group(1)) if match else None
+
+
+def _normalize_achievement_text(value: object) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    text = normalize_logo_key(str(value))
+    text = text.replace("world ladder", "ladder").replace("global ladder", "ladder")
+    text = re.sub(r"\bseason\s+\d+\b", "", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def format_achievement_title(competition: object, achievement_name: object) -> str:
+    raw = _normalize_achievement_text(competition) or _normalize_achievement_text(achievement_name)
+    if not raw:
+        return "UNNAMED ACHIEVEMENT"
+    title = raw.upper()
+    title = title.replace("CPL ", "CPL ")
+    return re.sub(r"\s+", " ", title).strip()
+
+
+def resolve_ladder_achievement_image(
+    image_index: dict[str, dict[str, Path]],
+    position: int | None,
+    *,
+    competition: str = "",
+    achievement_name: str = "",
+) -> Path | None:
+    if position is None:
+        return None
+    entries = image_index.get("achievement", {})
+    if not entries:
+        return None
+
+    ladder_context = f"{competition} {achievement_name}".casefold()
+    is_cpl_context = "cpl" in ladder_context
+    candidates: list[tuple[int, Path]] = []
+
+    for path in entries.values():
+        stem = path.stem.casefold()
+        numbers = [int(num) for num in re.findall(r"(\d+)", stem)]
+        if not numbers:
+            continue
+        start = numbers[0]
+        end = numbers[1] if len(numbers) > 1 else start
+        if not (start <= position <= end):
+            continue
+
+        includes_ladder = "ladder" in stem
+        includes_cpl = "cpl" in stem
+        range_size = end - start
+        specificity_score = 500 - (range_size * 3)
+        if start == end:
+            specificity_score += 120
+        if includes_ladder:
+            specificity_score += 20
+        if is_cpl_context and includes_cpl:
+            specificity_score += 35
+        if not is_cpl_context and includes_cpl:
+            specificity_score -= 20
+        candidates.append((specificity_score, path))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (-item[0], item[1].name))
+    return candidates[0][1]
+
+
+def resolve_achievement_image(
+    image_index: dict[str, dict[str, Path]],
+    achievement_row: pd.Series,
+) -> Path | None:
+    achievement_name = str(achievement_row.get("achievement_name", "")).strip()
+    competition = str(achievement_row.get("competition", achievement_name)).strip()
+    achievement_link = achievement_row.get("achievement_link")
+    position = _parse_placement_to_int(achievement_row.get("position"))
+
+    is_ladder = "ladder" in _normalize_achievement_text(achievement_name) or "ladder" in _normalize_achievement_text(competition)
+    if is_ladder:
+        ladder_image = resolve_ladder_achievement_image(
+            image_index,
+            position,
+            competition=competition,
+            achievement_name=achievement_name,
+        )
+        if ladder_image:
+            return ladder_image
+
+    # Try direct filename from source link first.
+    linked = _find_achievement_image(image_index, achievement_link, None)
+    if linked:
+        return linked
+
+    # Exact + alias-driven matching to avoid loose partial trophy mismatches.
+    normalized_name = _normalize_achievement_text(achievement_name)
+    normalized_comp = _normalize_achievement_text(competition)
+    exact_candidates = [
+        achievement_name,
+        competition,
+        normalized_name,
+        normalized_comp,
+        format_achievement_title(competition, achievement_name),
+    ]
+
+    if "emerald" in normalized_name or "emerald" in normalized_comp:
+        if position == 1:
+            exact_candidates.append("league-emerald-gold")
+        elif position == 2:
+            exact_candidates.append("league-emerald-silver")
+
+    for candidate in exact_candidates:
+        if not candidate:
+            continue
+        found = _find_image(image_index, "achievement", candidate)
+        if found:
+            return found
+    return None
 
 
 PLAYER_PHOTO_ALIAS_MAP = {
@@ -2668,25 +2856,59 @@ def _achievement_tier_class(tier: str | None) -> str:
     return "tier-unknown"
 
 
-def _achievement_card_html(ach_row: pd.Series) -> str:
-    ach_tier = str(ach_row.get("achievement_tier", "")).strip().upper() or "?"
-    ach_tier_class = _achievement_tier_class(ach_tier)
-    ach_image = ach_row.get("achievement_image")
-    season = html.escape(str(ach_row.get("season_name", "-")))
-    name = html.escape(str(ach_row.get("achievement_name", "-")))
-    image_html = "<div class='panel-muted' style='font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;'>No image</div>"
-    if ach_image:
-        image_html = f"<img src='data:image/png;base64,{base64.b64encode(ach_image.read_bytes()).decode('utf-8')}'>"
-    return (
-        "<div class='achievement-inline-item'>"
-        "<div class='achievement-image-wrap'>"
-        f"<div class='achievement-season'>{season}</div>"
-        f"{image_html}"
-        f"<span class='achievement-tier achievement-tier-icon {ach_tier_class}'>{html.escape(ach_tier[:1])}</span>"
-        f"<span class='achievement-inline-name'>{name}</span>"
-        "</div>"
-        "</div>"
+def build_player_achievements(
+    achievements_df: pd.DataFrame,
+    image_index: dict[str, dict[str, Path]],
+    selected_player: str,
+    filtered_players: pd.DataFrame,
+    selected_season: str,
+) -> pd.DataFrame:
+    if achievements_df.empty:
+        return pd.DataFrame()
+
+    player_key = str(selected_player).strip().casefold()
+    scoped = achievements_df[achievements_df["player"].astype(str).str.strip().str.casefold() == player_key].copy()
+    if scoped.empty:
+        return scoped
+
+    scoped["position_num"] = scoped["position"].apply(_parse_placement_to_int)
+    scoped["season_num"] = scoped["season_name"].apply(extract_season_number)
+    if selected_season != "Lifetime":
+        season_match = re.match(r"^S(\d+)$", str(selected_season), flags=re.IGNORECASE)
+        if season_match:
+            target = int(season_match.group(1))
+            scoped = scoped[scoped["season_num"] == target]
+
+    if "competition" not in scoped.columns:
+        scoped["competition"] = scoped["achievement_name"]
+    if not filtered_players.empty and "competition" in filtered_players.columns:
+        context_competitions = {
+            _normalize_achievement_text(value)
+            for value in filtered_players["competition"].dropna().unique().tolist()
+            if str(value).strip()
+        }
+        if context_competitions:
+            scoped_comp = scoped["competition"].apply(_normalize_achievement_text)
+            scoped_name = scoped["achievement_name"].apply(_normalize_achievement_text)
+            context_mask = scoped_comp.isin(context_competitions) | scoped_name.isin(context_competitions)
+            if context_mask.any():
+                scoped = scoped[context_mask]
+    scoped["achievement_title"] = scoped.apply(
+        lambda row: format_achievement_title(row.get("competition"), row.get("achievement_name")),
+        axis=1,
     )
+    scoped["achievement_image"] = scoped.apply(lambda row: resolve_achievement_image(image_index, row), axis=1)
+    scoped["season_display"] = scoped["season_num"].apply(lambda v: f"SEASON {int(v)}" if pd.notna(v) else "SEASON ?")
+    scoped["top_badge"] = scoped.apply(
+        lambda row: (str(row.get("achievement_tier", "")).strip().upper()[:1] or str(row.get("position", "")).strip() or "?"),
+        axis=1,
+    )
+    tier_weight = {"S": 4, "A": 3, "B": 2, "C": 1}
+    scoped["_tier_score"] = scoped["achievement_tier"].astype(str).str.strip().str.upper().map(tier_weight).fillna(0)
+    scoped["_position_score"] = scoped["position_num"].fillna(999)
+    scoped = scoped.sort_values(["_tier_score", "_position_score", "season_num"], ascending=[False, True, False])
+    scoped = scoped.drop(columns=["_tier_score", "_position_score"])
+    return scoped.reset_index(drop=True)
 
 
 def _calculate_form_section(player_rows: pd.DataFrame, tactics_df: pd.DataFrame) -> tuple[float, pd.DataFrame]:
@@ -2810,21 +3032,22 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
     ach_tier = str(ach_row.get("achievement_tier", "")).strip().upper()[:1] or "?"
     tier_class = _achievement_tier_class(ach_tier).replace("tier-", "")
     ach_image = ach_row.get("achievement_image")
-    season = html.escape(str(ach_row.get("season_name", "-")))
-    name = html.escape(str(ach_row.get("achievement_name", "-")))
+    season = html.escape(str(ach_row.get("season_display", ach_row.get("season_name", "SEASON ?"))))
+    label = html.escape(str(ach_row.get("achievement_title", ach_row.get("achievement_name", "-"))))
     finish = html.escape(str(ach_row.get("position", "-")))
-    league = html.escape(str(ach_row.get("competition", ach_row.get("league", "-"))))
-    image_html = ""
+    top_badge = html.escape(str(ach_row.get("top_badge", ach_tier)))
+    image_html = "<div class='achievement-missing'>Achievement image missing</div>"
     if isinstance(ach_image, Path) and ach_image.exists():
-        image_html = f'<img src="{_image_to_data_uri(ach_image)}" alt="{name}">'
+        image_html = f'<img src="{_image_to_data_uri(ach_image)}" alt="{label}">'
     return (
         f"<div class='achievement-premium glow-{tier_class}'>"
+        "<div class='achievement-header-gradient'></div>"
+        "<div class='achievement-footer-gradient'></div>"
+        f"<div class='achievement-image-wrap'>{image_html}</div>"
         f"<div class='achievement-season'>{season}</div>"
-        f"{image_html}"
-        f"<span class='achievement-tier achievement-tier-icon tier-{tier_class}'>{html.escape(ach_tier)}</span>"
-        f"<span class='achievement-inline-name'>{name}</span>"
-        f"<div style='position:absolute;left:6px;right:6px;bottom:20px;font-size:0.56rem;color:#c8d5ef;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{league}</div>"
-        f"<div style='position:absolute;left:6px;right:6px;bottom:6px;font-size:0.6rem;color:#edf3ff;text-align:center;font-weight:700;'>{finish}</div>"
+        f"<span class='achievement-tier achievement-tier-icon tier-{tier_class}'>{top_badge}</span>"
+        f"<div class='achievement-inline-name'>{label}</div>"
+        f"<div class='achievement-finish'>{finish}</div>"
         "</div>"
     )
 
@@ -2835,7 +3058,7 @@ def render_player_achievements_inline(player_achievements: pd.DataFrame) -> str:
         return (
             "<div class='achievement-inline-empty'>"
             "<div class='achievement-empty-title'>Achievement Cabinet</div>"
-            "<div class='achievement-empty-sub'>No trophies registered for this filter set.</div>"
+            "<div class='achievement-empty-sub'>No achievements found for the current player/filter context.</div>"
             "</div>"
         )
     cards = "".join(_achievement_premium_card_html(row) for _, row in player_achievements.iterrows())
@@ -3032,10 +3255,13 @@ def _hltv_profile_view(
     nation_flag = _nation_flag_emoji(nation_value, fallback="🌍")
     nation_badge = f"{nation_flag} {nation_value}" if nation_value else nation_flag
 
-    player_ach = achievements_df[achievements_df["player"].astype(str).str.strip().str.casefold() == str(selected_player).strip().casefold()].copy()
-    if not player_ach.empty:
-        player_ach = player_ach.sort_values(["season_name", "position"], ascending=[False, True])
-        player_ach["achievement_image"] = player_ach.apply(lambda row: _find_achievement_image(image_index, row.get("achievement_link"), row.get("achievement_name")), axis=1)
+    player_ach = build_player_achievements(
+        achievements_df=achievements_df,
+        image_index=image_index,
+        selected_player=selected_player,
+        filtered_players=filtered_players,
+        selected_season=st.session_state.get("profile_season", "Lifetime"),
+    )
     achievements_inline_html = render_player_achievements_inline(player_ach)
 
     form_score, recent_form = _calculate_form_section(filtered_players, tactics_df)
