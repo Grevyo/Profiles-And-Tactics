@@ -251,6 +251,51 @@ def gauge_html(score: float) -> str:
     """
 
 
+def role_icon(role: str) -> str:
+    role_lower = (role or "").strip().lower()
+    if "snip" in role_lower:
+        return "🎯"
+    if "entry" in role_lower:
+        return "🚀"
+    if "support" in role_lower:
+        return "🛡️"
+    if "igl" in role_lower or "lead" in role_lower:
+        return "🧠"
+    if "lurker" in role_lower:
+        return "🥷"
+    return "🎮"
+
+
+def country_flag(country: str) -> str:
+    normalized = (country or "").strip().lower()
+    known = {
+        "greece": "🇬🇷",
+        "poland": "🇵🇱",
+        "france": "🇫🇷",
+        "germany": "🇩🇪",
+        "spain": "🇪🇸",
+        "italy": "🇮🇹",
+        "sweden": "🇸🇪",
+        "denmark": "🇩🇰",
+        "norway": "🇳🇴",
+        "finland": "🇫🇮",
+        "united kingdom": "🇬🇧",
+        "uk": "🇬🇧",
+        "usa": "🇺🇸",
+        "united states": "🇺🇸",
+        "canada": "🇨🇦",
+        "brazil": "🇧🇷",
+        "argentina": "🇦🇷",
+        "turkey": "🇹🇷",
+        "serbia": "🇷🇸",
+        "romania": "🇷🇴",
+        "portugal": "🇵🇹",
+        "netherlands": "🇳🇱",
+        "belgium": "🇧🇪",
+    }
+    return known.get(normalized, "🌍")
+
+
 def inject_styles() -> None:
     st.markdown(
         """
@@ -269,38 +314,51 @@ def inject_styles() -> None:
         .block-container { max-width: 1480px; margin: 0 auto; padding-top: 1.35rem; padding-left: 2rem; padding-right: 2rem; }
         .v2-title { font-size: 1.65rem; font-weight: 800; margin-bottom: .2rem; }
         .v2-sub { color: #9fb0d3; margin-bottom: 1rem; font-size: .92rem; }
-        .card-grid { display:grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 14px; margin: 10px 0 18px 0; align-items: stretch; }
-        .v2-card { background: linear-gradient(155deg, rgba(18,29,50,.96), rgba(10,16,29,.96)); border:1px solid var(--border); border-radius:16px; padding:15px; box-shadow: 0 12px 30px rgba(0,0,0,.38); min-height: 236px; }
+        .card-grid { display:grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 14px; margin: 10px 0 18px 0; align-items: stretch; }
+        .v2-card { background: linear-gradient(155deg, rgba(18,29,50,.96), rgba(10,16,29,.96)); border:1px solid var(--border); border-radius:18px; padding:16px; box-shadow: 0 14px 34px rgba(0,0,0,.42); min-height: 236px; }
         .player-card { background:
-            radial-gradient(90% 60% at 0% 0%, rgba(45,225,190,.12), transparent 65%),
-            linear-gradient(165deg, rgba(17,33,54,.98), rgba(10,17,29,.98));
+            radial-gradient(70% 80% at 0% 0%, rgba(45,225,190,.18), transparent 68%),
+            radial-gradient(65% 65% at 100% 100%, rgba(255,184,92,.12), transparent 68%),
+            linear-gradient(165deg, rgba(18,31,52,.98), rgba(10,17,30,.98));
         }
         .grev-card { background:
-            radial-gradient(90% 90% at 90% 10%, rgba(45,225,190,.16), transparent 66%),
+            radial-gradient(90% 90% at 90% 10%, rgba(45,225,190,.18), transparent 66%),
+            radial-gradient(90% 90% at 0% 100%, rgba(255,184,92,.12), transparent 70%),
             linear-gradient(165deg, rgba(16,31,53,.98), rgba(10,17,29,.98));
         }
         .stats-card { background:
             radial-gradient(65% 65% at 10% 0%, rgba(255,184,92,.11), transparent 60%),
             linear-gradient(165deg, rgba(24,33,53,.98), rgba(10,17,29,.98));
         }
-        .player-card { display:flex; flex-direction:column; }
-        .player-wrap { display:grid; grid-template-columns: 92px minmax(0, 1fr); gap:13px; align-items: start; height:100%; }
-        .headshot { width:92px; height:92px; object-fit:cover; border-radius:12px; border:1px solid rgba(153,188,255,.35); box-shadow:0 0 0 4px rgba(45,225,190,.08); }
+        .player-card { display:flex; flex-direction:column; gap:12px; }
+        .player-top { display:grid; grid-template-columns: minmax(0, 1.35fr) minmax(170px, 1fr); gap:12px; align-items:stretch; }
+        .player-main { display:grid; grid-template-columns: 112px minmax(0,1fr); gap:12px; align-items:start; }
+        .headshot { width:112px; height:112px; object-fit:cover; border-radius:14px; border:1px solid rgba(153,188,255,.35); box-shadow:0 0 0 4px rgba(45,225,190,.09); }
         .player-core { display:flex; flex-direction:column; gap:8px; min-width:0; }
-        .p-name { font-size:1.25rem; font-weight:800; color:#f6f9ff; margin:0; }
-        .p-meta { color:var(--text-soft); font-size:.8rem; margin:.08rem 0 .12rem; line-height:1.25; }
-        .identity-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:2px; }
-        .nation-pill { border:1px solid rgba(45,225,190,.45); background:rgba(14,42,45,.5); color:#8ef6de; font-size:.68rem; font-weight:700; border-radius:999px; padding:3px 9px; letter-spacing:.02em; }
+        .p-name { font-size:1.34rem; font-weight:850; color:#f6f9ff; margin:0; letter-spacing:.01em; }
+        .team-label { color:#c3d3f2; font-size:.82rem; margin-top:-2px; margin-bottom:2px; }
+        .identity-stack { display:flex; flex-direction:column; gap:6px; }
+        .icon-line { display:flex; align-items:center; gap:7px; color:#d9e6ff; font-size:.79rem; }
+        .icon-line .subtle { color:#95add6; min-width:67px; font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; }
         .fame-row { display:flex; gap:5px; align-items:center; }
         .fame-dot { width:8px; height:8px; border-radius:999px; background:rgba(157,180,219,.28); box-shadow:0 0 0 1px rgba(110,140,180,.45); }
         .fame-dot.on { background:linear-gradient(180deg, #ffe29b, #ffb85c); box-shadow:0 0 10px rgba(255,184,92,.45); }
-        .mini-facts { display:grid; grid-template-columns: repeat(2, minmax(96px, 1fr)); gap:8px; margin-top:1px; }
-        .fact { border:1px solid rgba(133,170,219,.3); border-radius:10px; padding:7px 9px; background:rgba(11,20,35,.75); min-width:0; }
-        .fact-k { color:#96b0e0; font-size:.66rem; line-height:1.05; margin-bottom:2px; white-space:nowrap; }
-        .fact-v { color:#f2f7ff; font-size:.84rem; font-weight:700; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .achievements { margin-top:12px; padding-top:10px; border-top:1px solid rgba(130,153,193,.2); display:flex; flex-direction:column; gap:6px; }
-        .ach-title { color:#f3c679; font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; font-weight:700; }
-        .ach-line { font-size:.74rem; color:#c4d2ef; line-height:1.2; }
+        .quick-facts { display:grid; grid-template-columns:repeat(2,minmax(80px,1fr)); gap:8px; }
+        .fact { border:1px solid rgba(133,170,219,.32); border-radius:12px; padding:8px 7px; background:rgba(11,20,35,.75); min-width:0; text-align:center; }
+        .fact-k { color:#96b0e0; font-size:.64rem; line-height:1.08; margin-bottom:2px; text-transform:uppercase; letter-spacing:.06em; }
+        .fact-v { color:#f2f7ff; font-size:.9rem; font-weight:780; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .achievements { border-top:1px solid rgba(130,153,193,.23); padding-top:10px; }
+        .ach-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+        .ach-title { color:#f3c679; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; font-weight:800; }
+        .ach-sub { color:#9db4de; font-size:.68rem; }
+        .ach-strip { display:flex; gap:9px; overflow-x:auto; padding-bottom:3px; scrollbar-width:thin; scrollbar-color: rgba(143,163,198,.55) rgba(7,13,24,.3); }
+        .ach-item { flex:0 0 200px; border:1px solid rgba(129,154,199,.34); border-radius:12px; background:linear-gradient(165deg, rgba(15,28,45,.92), rgba(9,17,30,.92)); padding:9px; }
+        .ach-season { color:#8ec8ff; font-size:.62rem; text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; }
+        .ach-name { color:#f3f7ff; font-size:.74rem; font-weight:760; line-height:1.2; min-height:34px; }
+        .ach-foot { display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:.66rem; }
+        .ach-tier { color:#ffd39a; }
+        .ach-pos { color:#9df5e1; font-weight:700; }
+        .ach-empty { color:#a3b6de; font-size:.75rem; padding:8px 0 2px; }
         .big-score { font-size:2.4rem; font-weight:900; line-height:1; letter-spacing:.01em; }
         .score-chip { font-size:.73rem; font-weight:700; letter-spacing:.03em; padding:4px 8px; border-radius:999px; width:fit-content; border:1px solid transparent; text-transform:uppercase; }
         .status { font-size:.9rem; font-weight:800; }
@@ -311,18 +369,23 @@ def inject_styles() -> None:
         .grev-poor .big-score, .grev-poor .status { color:var(--rose); text-shadow:0 0 12px rgba(255,111,159,.22); }
         .grev-poor .score-chip { color:#ffc3d8; border-color:rgba(255,111,159,.5); background:rgba(76,25,46,.42); }
         .muted { color:#9eb2dc; font-size:.78rem; }
-        .score-card { display:flex; flex-direction:column; align-items:flex-start; height:100%; }
+        .score-card { display:flex; flex-direction:column; align-items:stretch; height:100%; gap:8px; }
         .score-top { display:flex; flex-direction:column; gap:5px; }
         .score-meta { margin-top:4px; line-height:1.25; }
-        .quality-track { width:100%; height:8px; border-radius:999px; background:linear-gradient(90deg, rgba(255,111,159,.4) 0%, rgba(255,184,92,.45) 50%, rgba(45,225,190,.5) 100%); border:1px solid rgba(158,181,219,.28); overflow:hidden; margin:4px 0 8px; position:relative; }
-        .quality-fill { height:100%; background:linear-gradient(90deg, rgba(255,255,255,.14), rgba(255,255,255,.62)); }
-        .gauge-wrap { width:100%; margin-top:2px; margin-bottom:2px; }
+        .quality-track { width:100%; height:11px; border-radius:999px; background:linear-gradient(90deg, rgba(255,111,159,.45) 0%, rgba(255,184,92,.5) 42%, rgba(45,225,190,.56) 100%); border:1px solid rgba(158,181,219,.31); overflow:hidden; margin:4px 0 6px; position:relative; }
+        .quality-fill { height:100%; background:linear-gradient(90deg, rgba(255,255,255,.08), rgba(255,255,255,.6)); }
+        .quality-marker { position:absolute; top:-2px; width:2px; height:14px; background:#f4fbff; box-shadow:0 0 10px rgba(255,255,255,.45); }
+        .gauge-wrap { width:100%; margin-top:0; margin-bottom:0; }
         .gauge { width:100%; height:68px; }
+        .grev-meta-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:3px; }
+        .meta-pill { border:1px solid rgba(138,166,206,.32); border-radius:10px; background:rgba(9,19,33,.68); padding:8px 6px; text-align:center; }
+        .meta-k { color:#9db5de; font-size:.62rem; text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
+        .meta-v { color:#f5f9ff; font-size:.83rem; font-weight:760; }
         .headline-title { margin-bottom:10px; }
         .headline { display:grid; grid-template-columns:1fr 1fr; gap:10px; align-content:start; }
-        .stat { border:1px solid rgba(133,170,219,.26); border-radius:10px; padding:9px 10px; background:rgba(11,20,35,.76); min-height:64px; display:flex; flex-direction:column; justify-content:space-between; }
-        .stat-k { color:#9eb4df; font-size:.72rem; }
-        .stat-v { color:#f6f9ff; font-size:1.05rem; font-weight:800; }
+        .stat { border:1px solid rgba(133,170,219,.26); border-radius:12px; padding:9px 10px; background:rgba(11,20,35,.76); min-height:64px; display:flex; flex-direction:column; justify-content:center; text-align:center; }
+        .stat-k { color:#9eb4df; font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; }
+        .stat-v { color:#f6f9ff; font-size:1.03rem; font-weight:800; }
         .tone-pos .stat-k { color:#8ff6dc; } .tone-pos .stat-v { color:#b4ffe9; }
         .tone-mid .stat-k { color:#ffd08c; } .tone-mid .stat-v { color:#ffe2b5; }
         .tone-neg .stat-k { color:#ff9dc2; } .tone-neg .stat-v { color:#ffc0d7; }
@@ -332,7 +395,7 @@ def inject_styles() -> None:
         .table-caption { color:#8fcce0; font-size:.76rem; margin:-2px 0 10px 0; }
         .section-accent { color:#88d8ff; }
         .section-accent.warm { color:#ffcc85; }
-        @media (max-width:1000px) { .card-grid,.split2{grid-template-columns:1fr;} .player-wrap{grid-template-columns:86px 1fr;} .headshot{width:86px;height:86px;} .v2-card{min-height:unset;} }
+        @media (max-width:1100px) { .card-grid,.split2{grid-template-columns:1fr;} .player-top{grid-template-columns:1fr;} .player-main{grid-template-columns:94px 1fr;} .headshot{width:94px;height:94px;} .v2-card{min-height:unset;} }
         </style>
         """,
         unsafe_allow_html=True,
@@ -347,11 +410,19 @@ def build_recent_form_series(player_df: pd.DataFrame) -> pd.DataFrame:
 
 def render_top_cards(snapshot: PlayerSnapshot, achievements: pd.DataFrame, player_name: str) -> None:
     photo_uri = image_to_data_uri(find_player_photo(player_name))
-    ach_rows = achievements[achievements["player"] == player_name].head(3)
+    ach_rows = achievements[achievements["player"] == player_name].head(8)
     ach_html = "".join(
-        f"<div class='ach-line'>🏆 {html.escape(r['season_name'])}: {html.escape(r['achievement_name'])} ({html.escape(r['position'])})</div>"
+        (
+            "<article class='ach-item'>"
+            f"<div class='ach-season'>{html.escape(r['season_name'])}</div>"
+            f"<div class='ach-name'>{html.escape(r['achievement_name'])}</div>"
+            "<div class='ach-foot'>"
+            f"<span class='ach-tier'>{html.escape(r['achievement_tier'])}</span>"
+            f"<span class='ach-pos'>#{html.escape(str(r['position']))}</span>"
+            "</div></article>"
+        )
         for _, r in ach_rows.iterrows()
-    ) or "<div class='ach-line muted'>No achievements recorded in source data.</div>"
+    ) or "<div class='ach-empty'>No achievements recorded in source data.</div>"
 
     if snapshot.grevscore >= 75:
         status = "Elite Impact"
@@ -365,6 +436,9 @@ def render_top_cards(snapshot: PlayerSnapshot, achievements: pd.DataFrame, playe
 
     fame_level = max(0, min(5, int(snapshot.fame)))
     fame_html = "".join(f"<span class='fame-dot {'on' if i < fame_level else ''}'></span>" for i in range(5))
+    role_with_icon = f"{role_icon(snapshot.role)} {html.escape(snapshot.role)}"
+    country_with_icon = f"{country_flag(snapshot.country)} {html.escape(snapshot.country)}"
+    top_band = max(1, round(100 - snapshot.percentile))
 
     kpd_tone = "tone-pos" if snapshot.kpd >= 1.02 else "tone-mid" if snapshot.kpd >= 0.9 else "tone-neg"
     acc_tone = "tone-pos" if snapshot.accuracy_pct >= 42 else "tone-mid" if snapshot.accuracy_pct >= 35 else "tone-neg"
@@ -372,52 +446,68 @@ def render_top_cards(snapshot: PlayerSnapshot, achievements: pd.DataFrame, playe
 
     st.markdown(
         f"""
-        <div class=\"card-grid\">
-          <section class=\"v2-card player-card\">
-            <div class=\"player-wrap\">
-              <img class=\"headshot\" src=\"{photo_uri}\" alt=\"player photo\" />
-              <div class=\"player-core\">
-                <p class=\"p-name\">{html.escape(snapshot.name)}</p>
-                <div class=\"p-meta\">{html.escape(snapshot.team)} · {html.escape(snapshot.role)}</div>
-                <div class=\"identity-row\">
-                  <span class=\"nation-pill\">Nation: {html.escape(snapshot.country)}</span>
-                  <span class=\"fame-row\" title=\"Fame {fame_level}/5\">{fame_html}</span>
+        <div class="card-grid">
+          <section class="v2-card player-card">
+            <div class="player-top">
+              <div class="player-main">
+                <img class="headshot" src="{photo_uri}" alt="player photo" />
+                <div class="player-core">
+                  <p class="p-name">{html.escape(snapshot.name)}</p>
+                  <div class="team-label">{html.escape(snapshot.team)}</div>
+                  <div class="identity-stack">
+                    <div class="icon-line"><span class="subtle">Role</span><span>{role_with_icon}</span></div>
+                    <div class="icon-line"><span class="subtle">Nation</span><span>{country_with_icon}</span></div>
+                    <div class="icon-line"><span class="subtle">Fame</span><span class="fame-row" title="Fame {fame_level}/5">{fame_html}</span><span>{fame_level}/5</span></div>
+                  </div>
                 </div>
-                <div class=\"mini-facts\">
-                  <div class=\"fact\"><div class=\"fact-k\">Fame Rating</div><div class=\"fact-v\">{fame_level}/5</div></div>
-                  <div class=\"fact\"><div class=\"fact-k\">Matches</div><div class=\"fact-v\">{snapshot.matches}</div></div>
-                  <div class=\"fact\"><div class=\"fact-k\">Maps</div><div class=\"fact-v\">{snapshot.maps}</div></div>
-                  <div class=\"fact\"><div class=\"fact-k\">Competitions</div><div class=\"fact-v\">{snapshot.competitions}</div></div>
-                </div>
-                <div class=\"achievements\">
-                  <div class=\"ach-title\">Achievement Cabinet</div>
-                  {ach_html}
-                </div>
+              </div>
+              <div class="quick-facts">
+                <div class="fact"><div class="fact-k">Matches</div><div class="fact-v">{snapshot.matches}</div></div>
+                <div class="fact"><div class="fact-k">Maps</div><div class="fact-v">{snapshot.maps}</div></div>
+                <div class="fact"><div class="fact-k">Events</div><div class="fact-v">{snapshot.competitions}</div></div>
+                <div class="fact"><div class="fact-k">MVP Rate</div><div class="fact-v">{snapshot.mvp_rate:.0f}%</div></div>
+              </div>
+            </div>
+            <div class="achievements">
+              <div class="ach-head">
+                <div class="ach-title">Achievement Strip</div>
+                <div class="ach-sub">Swipe →</div>
+              </div>
+              <div class="ach-strip">
+                {ach_html}
               </div>
             </div>
           </section>
 
-          <section class=\"v2-card grev-card\">
-            <div class=\"score-card {grev_class}\">
-              <div class=\"score-top\">
-                <div class=\"muted\">GREVScore Feature</div>
-                <div class=\"score-chip\">Quality Index</div>
-                <div class=\"big-score\">{snapshot.grevscore:.1f}</div>
-                <div class=\"status\">{status}</div>
+          <section class="v2-card grev-card">
+            <div class="score-card {grev_class}">
+              <div class="score-top">
+                <div class="muted">GREVScore Feature</div>
+                <div class="score-chip">Quality Index</div>
+                <div class="big-score">{snapshot.grevscore:.1f}</div>
+                <div class="status">{status}</div>
               </div>
-              <div class=\"quality-track\"><div class=\"quality-fill\" style=\"width:{snapshot.grevscore:.1f}%\"></div></div>
-              <div class=\"gauge-wrap\">{gauge_html(snapshot.grevscore)}</div>
-              <div class=\"muted score-meta\">Top {max(1, 100 - snapshot.percentile):.0f}% percentile band · Form Δ {snapshot.form_delta:+.2f} KPD</div>
+              <div class="quality-track">
+                <div class="quality-fill" style="width:{snapshot.grevscore:.1f}%"></div>
+                <div class="quality-marker" style="left: calc({snapshot.grevscore:.1f}% - 1px);"></div>
+              </div>
+              <div class="gauge-wrap">{gauge_html(snapshot.grevscore)}</div>
+              <div class="grev-meta-grid">
+                <div class="meta-pill"><div class="meta-k">Percentile</div><div class="meta-v">Top {top_band}%</div></div>
+                <div class="meta-pill"><div class="meta-k">Form Delta</div><div class="meta-v">{snapshot.form_delta:+.2f} KPD</div></div>
+                <div class="meta-pill"><div class="meta-k">Avg Damage</div><div class="meta-v">{snapshot.avg_damage:.0f}</div></div>
+              </div>
+              <div class="muted score-meta">Polished rating scale calibrated across KPD, accuracy, headshot share, and MVP consistency.</div>
             </div>
           </section>
 
-          <section class=\"v2-card stats-card\">
-            <div class=\"muted headline-title\">Headline Stats</div>
-            <div class=\"headline\">
-              <div class=\"stat {kpd_tone}\"><div class=\"stat-k\">KPD</div><div class=\"stat-v\">{snapshot.kpd:.2f}</div></div>
-              <div class=\"stat tone-mid\"><div class=\"stat-k\">Avg K / D</div><div class=\"stat-v\">{snapshot.avg_kills:.1f} / {snapshot.avg_deaths:.1f}</div></div>
-              <div class=\"stat {acc_tone}\"><div class=\"stat-k\">Accuracy</div><div class=\"stat-v\">{snapshot.accuracy_pct:.1f}%</div></div>
-              <div class=\"stat {hs_tone}\"><div class=\"stat-k\">Headshot</div><div class=\"stat-v\">{snapshot.hs_pct:.1f}%</div></div>
+          <section class="v2-card stats-card">
+            <div class="muted headline-title">Headline Stats</div>
+            <div class="headline">
+              <div class="stat {kpd_tone}"><div class="stat-k">KPD</div><div class="stat-v">{snapshot.kpd:.2f}</div></div>
+              <div class="stat tone-mid"><div class="stat-k">Avg K / D</div><div class="stat-v">{snapshot.avg_kills:.1f} / {snapshot.avg_deaths:.1f}</div></div>
+              <div class="stat {acc_tone}"><div class="stat-k">Accuracy</div><div class="stat-v">{snapshot.accuracy_pct:.1f}%</div></div>
+              <div class="stat {hs_tone}"><div class="stat-k">Headshot</div><div class="stat-v">{snapshot.hs_pct:.1f}%</div></div>
             </div>
           </section>
         </div>
