@@ -16,6 +16,7 @@ import unicodedata
 
 import pandas as pd
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 
 
 def _load_plotly_modules():
@@ -2669,11 +2670,19 @@ def _hltv_profile_view(
     )
     st.markdown("### Current Profile Viewer (Legacy)")
     st.caption("Use this stable legacy view for now, or open the rebuilt page below.")
-    st.page_link(
-        "pages/99_Profile_Viewer_V2.py",
-        label="Open Profile Viewer V2 (Rebuilt)",
-        icon="🆕",
-    )
+    v2_page_path = "pages/99_Profile_Viewer_V2.py"
+    try:
+        st.page_link(
+            v2_page_path,
+            label="Open Profile Viewer V2 (Rebuilt)",
+            icon="🆕",
+        )
+    except (KeyError, StreamlitAPIException):
+        st.link_button("Open Profile Viewer V2 (Rebuilt)", v2_page_path, icon="🆕")
+        st.caption(
+            "V2 page-link integration is unavailable in this Streamlit runtime, "
+            "so an in-app file link is shown instead."
+        )
     st.divider()
 
     players = sorted(
