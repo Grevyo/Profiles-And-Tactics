@@ -2038,6 +2038,206 @@ def _inject_styles() -> None:
             margin-left: auto;
             margin-right: auto;
         }
+        .insight-shell {
+            max-width: var(--dashboard-max-width);
+            margin: 0 auto 14px;
+            display: grid;
+            gap: 12px;
+        }
+        .snapshot-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.15fr) minmax(0, 0.85fr) minmax(0, 0.85fr);
+            gap: 10px;
+        }
+        .snapshot-card {
+            border-radius: 14px;
+            border: 1px solid rgba(148, 172, 214, 0.28);
+            background: linear-gradient(180deg, rgba(18, 27, 44, 0.86), rgba(8, 13, 24, 0.94));
+            min-height: 112px;
+            display: grid;
+            align-content: center;
+            justify-items: center;
+            text-align: center;
+            gap: 5px;
+            padding: 12px 10px;
+        }
+        .snapshot-card.feature {
+            min-height: 126px;
+            border-color: rgba(130, 176, 245, 0.46);
+            box-shadow: inset 0 0 0 1px rgba(189, 211, 248, 0.06);
+        }
+        .snapshot-card.feature.impact { border-color: rgba(243, 191, 95, 0.5); }
+        .snapshot-card .label {
+            color: #a8bfdc;
+            font-size: 0.62rem;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            font-weight: 770;
+        }
+        .snapshot-card .value {
+            color: #f4f8ff;
+            font-size: 1.34rem;
+            line-height: 1.05;
+            font-weight: 880;
+        }
+        .snapshot-card.feature .value { font-size: 1.56rem; }
+        .snapshot-card .meta {
+            color: #cedcf5;
+            font-size: 0.72rem;
+            line-height: 1.28;
+            font-weight: 650;
+        }
+        .snapshot-insight-strip {
+            border-radius: 12px;
+            border: 1px solid rgba(130, 173, 232, 0.34);
+            background: linear-gradient(100deg, rgba(16, 31, 56, 0.82), rgba(10, 17, 29, 0.92));
+            padding: 10px 12px;
+            text-align: center;
+            color: #ddedff;
+            font-size: 0.8rem;
+            font-weight: 650;
+        }
+        .recent-form-shell {
+            display: grid;
+            gap: 12px;
+        }
+        .recent-form-meta {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .form-stat-chip {
+            border-radius: 11px;
+            border: 1px solid rgba(148, 171, 212, 0.28);
+            background: rgba(10, 16, 28, 0.84);
+            padding: 8px;
+            display: grid;
+            justify-items: center;
+            gap: 3px;
+            min-height: 70px;
+        }
+        .form-stat-chip .k {
+            color:#9fb6d8;
+            font-size:0.6rem;
+            letter-spacing:0.08em;
+            text-transform:uppercase;
+            font-weight:760;
+        }
+        .form-stat-chip .v {
+            color:#f2f7ff;
+            font-size:1rem;
+            line-height:1.02;
+            font-weight:860;
+        }
+        .form-stat-chip .s {
+            color:#c6d7f1;
+            font-size:0.66rem;
+            font-weight:640;
+        }
+        .momentum-row {
+            display: grid;
+            gap: 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(140, 164, 204, 0.26);
+            background: rgba(9, 15, 25, 0.78);
+            padding: 9px 10px;
+        }
+        .momentum-track {
+            display: grid;
+            grid-template-columns: 88px minmax(0, 1fr) 52px;
+            align-items: center;
+            gap: 8px;
+        }
+        .momentum-track .name {
+            color:#a7bcdd;
+            font-size:0.67rem;
+            font-weight:740;
+            text-transform:uppercase;
+            letter-spacing:0.06em;
+        }
+        .momentum-track .bar {
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(144, 164, 198, 0.22);
+            overflow: hidden;
+        }
+        .momentum-track .bar span {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #ff949e 0%, #f2c35d 52%, #58d8af 100%);
+        }
+        .momentum-track .num {
+            color:#deebff;
+            font-size:0.72rem;
+            font-weight:730;
+            text-align:right;
+        }
+        .compact-breakdown details {
+            border-radius: 13px;
+            border: 1px solid rgba(138, 165, 205, 0.3);
+            background: rgba(9, 14, 24, 0.82);
+            padding: 0;
+        }
+        .compact-breakdown summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 11px 12px;
+            color: #e6f0ff;
+            font-size: 0.82rem;
+            font-weight: 760;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .compact-breakdown summary::-webkit-details-marker { display:none; }
+        .breakdown-body {
+            border-top: 1px solid rgba(135, 162, 205, 0.26);
+            padding: 10px 11px 11px;
+            display: grid;
+            gap: 12px;
+        }
+        .component-group {
+            display: grid;
+            gap: 7px;
+        }
+        .component-title {
+            color:#cdddf8;
+            font-size:0.72rem;
+            text-transform:uppercase;
+            letter-spacing:0.08em;
+            font-weight:780;
+        }
+        .component-row {
+            display:grid;
+            grid-template-columns: 120px minmax(0,1fr) 50px;
+            align-items:center;
+            gap:8px;
+        }
+        .component-row .name {
+            color:#a8bedf;
+            font-size:0.7rem;
+            font-weight:700;
+        }
+        .component-row .track {
+            height:7px;
+            border-radius:999px;
+            background:rgba(141,164,202,0.22);
+            overflow:hidden;
+        }
+        .component-row .track span {
+            display:block;
+            height:100%;
+            background:linear-gradient(90deg, #6aaeff 0%, #54d9aa 100%);
+            border-radius: inherit;
+        }
+        .component-row .val {
+            color:#eff5ff;
+            font-size:0.69rem;
+            font-weight:730;
+            text-align:right;
+        }
         .tb-shell {
             max-width: var(--dashboard-max-width);
             margin: 0 auto 16px;
@@ -4095,46 +4295,19 @@ def _hltv_profile_view(
         f"<div class='core-grid'><div class='performance-grid'>{''.join(core_cards)}</div></div>",
         unsafe_allow_html=True,
     )
-    grev_component_rows = "".join(
-        f"<div class='premium-stat-card'><div class='k'>{html.escape(k.title())}</div><div class='v'>{v:.2f}</div><div class='s'>ratio vs pool</div></div>"
-        for k, v in metrics["grevscore_components"].items()
-    )
-    impact_component_rows = "".join(
-        f"<div class='premium-stat-card'><div class='k'>{html.escape(k.replace('_', ' ').title())}</div><div class='v'>{v:.1f}</div><div class='s'>index component</div></div>"
-        for k, v in metrics["impact_components"].items()
-    )
-    st.markdown(
-        f"""
-        <div class='analysis-module'>
-            <div class='analysis-head'>
-                <div>
-                    <h4>Metric Decomposition</h4>
-                    <p>Transparent breakdown for trust: GrevScore components and Impact pressure drivers.</p>
-                </div>
-                <div class='analysis-chip'>Custom Metric Model</div>
-            </div>
-            <div class='analysis-note'>{html.escape(metrics['grevscore_formula'])}</div>
-            <div class='premium-card-grid' style='margin-top:8px;'>{grev_component_rows}</div>
-            <div class='analysis-note' style='margin-top:10px;'>{html.escape(metrics['impact_formula'])}</div>
-            <div class='premium-card-grid' style='margin-top:8px;'>{impact_component_rows}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     trend_chart = None
     if not recent20.empty and go is not None:
         recent20["match_index"] = range(1, len(recent20) + 1)
         trend_chart = go.Figure()
         trend_chart.add_trace(go.Scatter(
             x=recent20["match_index"], y=recent20["kpd"], mode="lines+markers",
-            line=dict(color="#6cc0ff", width=2.7), marker=dict(size=8, color="#31d17b"),
+            line=dict(color="#6cc0ff", width=3.1), marker=dict(size=6, color="#68d2a5"),
             hovertemplate="Match %{x}<br>Rating: %{y:.2f}<extra></extra>", showlegend=False,
         ))
-        trend_chart.update_layout(title="Recent Form (Last 20)")
+        trend_chart.update_layout(title="Recent Form Trend · Last 20 Matches")
         trend_chart.update_xaxes(title_text="Recent matches")
         trend_chart.update_yaxes(title_text="Rating")
-        _apply_plotly_dark_style(trend_chart, height=290, hovermode="x unified")
+        _apply_plotly_dark_style(trend_chart, height=360, hovermode="x unified")
 
     form_avg_5 = float(recent20["kpd"].tail(5).mean()) if not recent20.empty else 0.0
     form_avg_10 = float(recent20["kpd"].tail(10).mean()) if not recent20.empty else 0.0
@@ -4195,79 +4368,14 @@ def _hltv_profile_view(
         side_chart.update_yaxes(title_text="Avg K/D")
         _apply_plotly_dark_style(side_chart, height=290)
 
-    st.markdown("<div class='section-block-title'>Form Analysis</div>", unsafe_allow_html=True)
-    bar_5 = _clamp((form_avg_5 - 0.75) / 0.55, 0.0, 1.0) * 100
-    bar_10 = _clamp((form_avg_10 - 0.75) / 0.55, 0.0, 1.0) * 100
     recent_trend = str(recent_window["trend"])
-    dir_pct = 100.0 if recent_trend == "Rising" else (52.0 if recent_trend == "Stable" else 24.0)
     form_delta_text = "—" if form_14d is None else f"{(form_14d - form_score):+,.1f}"
     grev_delta_text = "—" if grev_14d is None else f"{(grev_14d - metrics['grevscore']):+,.2f}"
     sample_text = f"{recent_window['matches']} matches in 14D window"
-    if recent_window["low_sample"]:
-        insight_text = f"Low sample in recent window ({sample_text}). Trend is shown, but confidence is intentionally reduced."
-    elif recent_trend == "Rising":
-        insight_text = "Form unstable but improving — recent outputs are climbing after a softer start to the window."
-    elif recent_trend == "Dropping":
-        insight_text = "Recent dip after stronger early-window form — monitor efficiency and opening impact."
-    else:
-        insight_text = "Recent form is stable with no strong directional swing in the last 14 days."
+    bar_5 = _clamp((form_avg_5 - 0.75) / 0.55, 0.0, 1.0) * 100
+    bar_10 = _clamp((form_avg_10 - 0.75) / 0.55, 0.0, 1.0) * 100
+    trend_word = "Improving" if recent_trend == "Rising" else ("Cooling" if recent_trend == "Dropping" else "Stable")
 
-    spark_values = recent_window.get("sparkline", [])
-    spark_html = ""
-    if spark_values:
-        spark_bars = []
-        for val in spark_values:
-            width = _clamp((float(val) - 35.0) / 45.0, 0.0, 1.0) * 100
-            spark_bars.append(f"<span style='background:linear-gradient(90deg, rgba(255,127,142,0.26) 0%, rgba(82,221,171,0.86) {width:.1f}%, rgba(152,173,210,0.2) {width:.1f}%);'></span>")
-        spark_html = f"<div class='sparkline-strip'>{''.join(spark_bars)}</div>"
-
-    st.markdown(
-        f"""
-        <div class='analysis-module form-card'>
-            <div class='analysis-head'>
-                <div>
-                    <h4>Recent Form Module</h4>
-                    <p>14-day window anchored to the latest available filtered match date.</p>
-                </div>
-                <div class='analysis-chip'>{sample_text}</div>
-            </div>
-            <div class='premium-card-grid'>
-                <div class='premium-stat-card form'>
-                    <div class='k'>Form (14D)</div>
-                    <div class='v'>{("—" if form_14d is None else f"{form_14d:.1f}")}</div>
-                    <div class='s'>Δ vs context {form_delta_text}</div>
-                </div>
-                <div class='premium-stat-card form'>
-                    <div class='k'>GrevScore (14D)</div>
-                    <div class='v'>{("—" if grev_14d is None else f"{grev_14d:.2f}")}</div>
-                    <div class='s'>Δ vs context {grev_delta_text}</div>
-                </div>
-                <div class='premium-stat-card form'>
-                    <div class='k'>Streak</div>
-                    <div class='v'>{streak:+d}</div>
-                    <div class='s'>{trend_icon} {recent_trend}</div>
-                </div>
-                <div class='premium-stat-card form'>
-                    <div class='k'>Last 5 / Last 10</div>
-                    <div class='v'>{form_avg_5:.2f} / {form_avg_10:.2f}</div>
-                    <div class='s'>Momentum profile</div>
-                </div>
-            </div>
-            <div class='pv-form-summary'>
-                <div class='pv-form-track'><div class='label'>Last 5 Momentum</div><div class='bar'><span style='width:{bar_5:.1f}%;'></span></div></div>
-                <div class='pv-form-track'><div class='label'>Last 10 Momentum</div><div class='bar'><span style='width:{bar_10:.1f}%;'></span></div></div>
-                <div class='pv-form-track'><div class='label'>Direction Bias</div><div class='bar'><span style='width:{dir_pct:.1f}%;'></span></div></div>
-            </div>
-            {spark_html}
-            <div class='analysis-note'>{html.escape(insight_text)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if trend_chart is not None:
-        st.plotly_chart(trend_chart, use_container_width=True)
-
-    st.markdown("<div class='section-block-title'>Impact Analysis</div>", unsafe_allow_html=True)
     team_impact = team_scope_metrics["impact"]
     impact_delta = metrics["impact"] - team_impact
     impact_14d = None
@@ -4279,7 +4387,7 @@ def _hltv_profile_view(
             recent_form_score=form_14d,
         )
         impact_14d = float(impact_14d_metrics["impact"])
-    impact_14d_delta = 0.0 if impact_14d is None else impact_14d - metrics["impact"]
+
     if metrics["impact_components"]["damage_pressure"] >= metrics["impact_components"]["mvp_conversion"] + 8:
         impact_profile_note = "High damage pressure with lower conversion — strong chip pressure but fewer closing rounds."
     elif metrics["impact_components"]["survival"] >= 56 and metrics["impact_components"]["kill_pressure"] < 52:
@@ -4288,40 +4396,156 @@ def _hltv_profile_view(
         impact_profile_note = "Frag-driven impact profile with above-average direct pressure."
     else:
         impact_profile_note = "Low influence period — pressure indicators are currently below the context average."
+
+    if recent_window["low_sample"]:
+        snapshot_insight = f"{sample_text}; read direction as early signal rather than settled form."
+    elif recent_trend == "Rising" and impact_14d is not None and impact_14d >= metrics["impact"]:
+        snapshot_insight = "Low-to-moderate baseline, but 14-day form and impact are both moving in a positive direction."
+    elif recent_trend == "Dropping":
+        snapshot_insight = "Output has cooled in the recent window; efficiency is holding better than fragging pressure."
+    elif form_avg_5 >= form_avg_10:
+        snapshot_insight = "Recent matches are tracking slightly above the broader 10-match form baseline."
+    else:
+        snapshot_insight = "Performance is steady overall, with no strong short-term acceleration in the latest matches."
+
+    if recent_window["low_sample"]:
+        form_summary = f"Small sample ({sample_text}) so direction can swing quickly."
+    elif recent_trend == "Rising" and form_avg_5 >= form_avg_10:
+        form_summary = "Recent output has improved in the 14-day window, and the last 5 sits above the 10-match trend."
+    elif recent_trend == "Dropping":
+        form_summary = "Form is drifting downward, with recent match output below earlier window levels."
+    else:
+        form_summary = "Form is mostly stable, with minor variation between short and medium recent windows."
+
+    grev_component_rows = "".join(
+        (
+            "<div class='component-row'>"
+            f"<div class='name'>{html.escape(k.title())}</div>"
+            f"<div class='track'><span style='width:{_clamp((float(v) - 0.6) / 0.95, 0.0, 1.0) * 100:.1f}%;'></span></div>"
+            f"<div class='val'>{float(v):.2f}</div>"
+            "</div>"
+        )
+        for k, v in metrics["grevscore_components"].items()
+    )
+    impact_component_rows = "".join(
+        (
+            "<div class='component-row'>"
+            f"<div class='name'>{html.escape(k.replace('_', ' ').title())}</div>"
+            f"<div class='track'><span style='width:{_clamp(float(v) / 100.0, 0.0, 1.0) * 100:.1f}%;'></span></div>"
+            f"<div class='val'>{float(v):.1f}</div>"
+            "</div>"
+        )
+        for k, v in metrics["impact_components"].items()
+    )
+
+    st.markdown("<div class='section-block-title'>Performance Snapshot</div>", unsafe_allow_html=True)
     st.markdown(
         f"""
-        <div class='analysis-module impact-card'>
-            <div class='analysis-head'>
-                <div>
-                    <h4>Impact Pressure Model</h4>
-                    <p>Scaled 0–100 where ~50 is average, 70+ strong, 85+ elite.</p>
+        <div class='insight-shell'>
+            <div class='analysis-module'>
+                <div class='analysis-head'>
+                    <div>
+                        <h4>Performance Snapshot</h4>
+                        <p>Headline profile view for current context and 14-day movement.</p>
+                    </div>
+                    <div class='analysis-chip'>{html.escape(score_tier)}</div>
                 </div>
-                <div class='analysis-chip'>{html.escape(metrics['impact_tier'])}</div>
+                <div class='snapshot-grid'>
+                    <div class='snapshot-card feature'>
+                        <div class='label'>GrevScore</div>
+                        <div class='value'>{metrics['grevscore']:.2f}</div>
+                        <div class='meta'>{percentile:.0f}th percentile · Rank #{team_rank}/{rank_total}</div>
+                    </div>
+                    <div class='snapshot-card feature impact'>
+                        <div class='label'>Impact</div>
+                        <div class='value'>{metrics['impact']:.1f}</div>
+                        <div class='meta'>{impact_delta:+.1f} vs team average</div>
+                    </div>
+                    <div class='snapshot-card'>
+                        <div class='label'>Form (14D)</div>
+                        <div class='value'>{("—" if form_14d is None else f"{form_14d:.1f}")}</div>
+                        <div class='meta'>Δ {form_delta_text}</div>
+                    </div>
+                    <div class='snapshot-card'>
+                        <div class='label'>GrevScore (14D)</div>
+                        <div class='value'>{("—" if grev_14d is None else f"{grev_14d:.2f}")}</div>
+                        <div class='meta'>Δ {grev_delta_text}</div>
+                    </div>
+                </div>
+                <div class='snapshot-insight-strip'>{html.escape(snapshot_insight)}</div>
             </div>
-            <div class='premium-card-grid'>
-                <div class='premium-stat-card impact'>
-                    <div class='k'>Impact</div>
-                    <div class='v'>{metrics['impact']:.1f}</div>
-                    <div class='s'>{percentile:.0f}th percentile</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='section-block-title'>Recent Form</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class='insight-shell'>
+            <div class='analysis-module recent-form-shell'>
+                <div class='analysis-head'>
+                    <div>
+                        <h4>Recent Form Trend</h4>
+                        <p>Last 20 matches with 14-day movement context.</p>
+                    </div>
+                    <div class='analysis-chip'>{sample_text}</div>
                 </div>
-                <div class='premium-stat-card impact {("delta-positive" if impact_delta >= 0 else "delta-negative")}'>
-                    <div class='k'>vs Team Avg</div>
-                    <div class='v'>{impact_delta:+.1f}</div>
-                    <div class='s'>Relative influence</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if trend_chart is not None:
+        st.plotly_chart(trend_chart, use_container_width=True)
+    elif go is None:
+        _render_plotly_unavailable()
+    st.markdown(
+        f"""
+                <div class='recent-form-meta'>
+                    <div class='form-stat-chip'><div class='k'>Last 5</div><div class='v'>{form_avg_5:.2f}</div><div class='s'>Current run</div></div>
+                    <div class='form-stat-chip'><div class='k'>Last 10</div><div class='v'>{form_avg_10:.2f}</div><div class='s'>Reference band</div></div>
+                    <div class='form-stat-chip'><div class='k'>Streak</div><div class='v'>{streak:+d}</div><div class='s'>Result run</div></div>
+                    <div class='form-stat-chip'><div class='k'>Direction</div><div class='v'>{trend_word}</div><div class='s'>{trend_icon} {recent_trend}</div></div>
                 </div>
-                <div class='premium-stat-card impact {("delta-positive" if impact_14d_delta >= 0 else "delta-negative")}'>
-                    <div class='k'>Impact (14D)</div>
-                    <div class='v'>{("—" if impact_14d is None else f"{impact_14d:.1f}")}</div>
-                    <div class='s'>Δ vs context {("—" if impact_14d is None else f"{impact_14d_delta:+.1f}")}</div>
+                <div class='momentum-row'>
+                    <div class='momentum-track'><div class='name'>Last 5 momentum</div><div class='bar'><span style='width:{bar_5:.1f}%;'></span></div><div class='num'>{form_avg_5:.2f}</div></div>
+                    <div class='momentum-track'><div class='name'>Last 10 momentum</div><div class='bar'><span style='width:{bar_10:.1f}%;'></span></div><div class='num'>{form_avg_10:.2f}</div></div>
                 </div>
-                <div class='premium-stat-card impact'>
-                    <div class='k'>Recent Trend</div>
-                    <div class='v'>{trend_icon} {recent_trend}</div>
-                    <div class='s'>14-day movement</div>
-                </div>
+                <div class='analysis-note'>{html.escape(form_summary)}</div>
             </div>
-            <div class='analysis-note'>{html.escape(impact_profile_note)}</div>
-            <div class='analysis-note' style='margin-top:6px;'>{html.escape(metrics['impact_formula'])}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='section-block-title'>Metric Breakdown</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class='insight-shell'>
+            <div class='analysis-module compact-breakdown'>
+                <div class='analysis-head'>
+                    <div>
+                        <h4>How It’s Built</h4>
+                        <p>Transparent component view, compact by default.</p>
+                    </div>
+                    <div class='analysis-chip'>Model Details</div>
+                </div>
+                <details>
+                    <summary><span>Expand component breakdown</span><span>GrevScore + Impact drivers</span></summary>
+                    <div class='breakdown-body'>
+                        <div class='component-group'>
+                            <div class='component-title'>GrevScore components</div>
+                            {grev_component_rows}
+                            <div class='analysis-note'>{html.escape(metrics['grevscore_formula'])}</div>
+                        </div>
+                        <div class='component-group'>
+                            <div class='component-title'>Impact components</div>
+                            {impact_component_rows}
+                            <div class='analysis-note'>{html.escape(metrics['impact_formula'])}</div>
+                            <div class='analysis-note'>{html.escape(impact_profile_note)}</div>
+                        </div>
+                    </div>
+                </details>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
