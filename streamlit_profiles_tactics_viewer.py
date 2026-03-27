@@ -2999,6 +2999,141 @@ def apply_season_filter(df: pd.DataFrame, selected_season: str, competition_col:
     return filtered_df
 
 
+def _format_season_label(season_number: int | None) -> str | None:
+    if season_number is None:
+        return None
+    return f"S{int(season_number)}"
+
+
+def resolve_row_season(
+    row: pd.Series,
+    *,
+    competition_col: str = "competition",
+    normalized_competition_col: str = "grouped_competition",
+    season_lookup_by_match_id: dict[str, str] | None = None,
+    season_lookup_by_date: dict[pd.Timestamp, str] | None = None,
+) -> str | None:
+    explicit_season_columns = (
+        "season",
+        "season_code",
+        "season_label",
+        "match_season",
+        "competition_season",
+        "event_season",
+        "split",
+    )
+    for col in explicit_season_columns:
+        if col not in row.index:
+            continue
+        season_number = extract_season_number(row.get(col))
+        if season_number is not None:
+            return _format_season_label(season_number)
+
+    if season_lookup_by_match_id and "match_id" in row.index:
+        match_id = str(row.get("match_id", "")).strip()
+        if match_id and match_id in season_lookup_by_match_id:
+            return season_lookup_by_match_id[match_id]
+
+    if season_lookup_by_date and "date" in row.index:
+        date_value = pd.to_datetime(row.get("date"), errors="coerce")
+        if pd.notna(date_value):
+            date_key = pd.Timestamp(date_value).normalize()
+            if date_key in season_lookup_by_date:
+                return season_lookup_by_date[date_key]
+
+    if normalized_competition_col in row.index:
+        season_number = extract_season_number(row.get(normalized_competition_col))
+        if season_number is not None:
+            return _format_season_label(season_number)
+
+    season_number = extract_season_number(row.get(competition_col))
+    if season_number is not None:
+        return _format_season_label(season_number)
+
+    for fallback_col in ("competition_raw", "raw_competition", "competition_name"):
+        if fallback_col not in row.index:
+            continue
+        season_number = extract_season_number(row.get(fallback_col))
+        if season_number is not None:
+            return _format_season_label(season_number)
+
+    return None
+
+
+def _apply_resolved_season_filter_for_medisports(
+    df: pd.DataFrame,
+    selected_season: str,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if df.empty:
+        return df.copy(), pd.DataFrame()
+
+    debug_df = df.copy()
+    debug_df["resolved_season"] = pd.NA
+
+    if selected_season == "Lifetime":
+        debug_df["excluded_for_season"] = False
+        return debug_df.copy(), debug_df
+
+    season_match = re.match(r"^S(\d+)$", str(selected_season), flags=re.IGNORECASE)
+    if season_match is None:
+        debug_df["excluded_for_season"] = False
+        return debug_df.copy(), debug_df
+    target_season = f"S{int(season_match.group(1))}"
+
+    explicit_season_cols = [
+        col for col in ("season", "season_code", "season_label", "match_season", "competition_season", "event_season", "split")
+        if col in debug_df.columns
+    ]
+    known_rows = debug_df.copy()
+    if explicit_season_cols:
+        known_rows["_explicit_season"] = known_rows[explicit_season_cols].bfill(axis=1).iloc[:, 0]
+    else:
+        known_rows["_explicit_season"] = pd.NA
+    known_rows["_seed_season"] = known_rows["_explicit_season"].apply(extract_season_number)
+    known_rows.loc[known_rows["_seed_season"].isna(), "_seed_season"] = known_rows["competition_raw"].apply(extract_season_number)
+    known_rows = known_rows.dropna(subset=["_seed_season"]).copy()
+    known_rows["_seed_season"] = known_rows["_seed_season"].astype(int).apply(lambda n: f"S{n}")
+    season_lookup_by_match_id = (
+        known_rows.dropna(subset=["match_id"])
+        .drop_duplicates(subset=["match_id"])
+        .set_index("match_id")["_seed_season"]
+        .astype(str)
+        .to_dict()
+    )
+    season_lookup_by_date = (
+        known_rows.dropna(subset=["date"])
+        .assign(_date_key=lambda d: pd.to_datetime(d["date"], errors="coerce").dt.normalize())
+        .dropna(subset=["_date_key"])
+        .groupby("_date_key")["_seed_season"]
+        .agg(lambda s: s.mode().iloc[0] if not s.mode().empty else s.iloc[0])
+        .to_dict()
+    )
+
+    debug_df["resolved_season"] = debug_df.apply(
+        lambda row: resolve_row_season(
+            row,
+            competition_col="competition",
+            normalized_competition_col="grouped_competition",
+            season_lookup_by_match_id=season_lookup_by_match_id,
+            season_lookup_by_date=season_lookup_by_date,
+        ),
+        axis=1,
+    )
+
+    known_mask = debug_df["resolved_season"].notna()
+    known_target_mask = known_mask & (debug_df["resolved_season"] == target_season)
+    unknown_mask = ~known_mask
+    league_mask = debug_df["competition_raw"].astype(str).str.contains("league", case=False, na=False)
+    selected_supported_in_context = bool(known_target_mask.any())
+    has_any_known_season = bool(known_mask.any())
+
+    include_unknown_mask = (unknown_mask & league_mask & selected_supported_in_context) | (unknown_mask & ~has_any_known_season)
+    include_mask = known_target_mask | include_unknown_mask
+    debug_df["excluded_for_season"] = ~include_mask
+
+    return debug_df[include_mask].copy(), debug_df
+
+
 def _sanitize_competition_value(value: object) -> object:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return value
@@ -5548,11 +5683,49 @@ def _medisports_vs_breakdown(
     st.markdown("</div>", unsafe_allow_html=True)
 
     filtered = match_results.copy()
+    filtered["competition_raw"] = filtered["competition"]
+    filtered["grouped_competition"] = filtered["competition_raw"].apply(normalize_competition_name)
     if grouped_competitions:
-        filtered["competition"] = filtered["competition"].apply(normalize_competition_name)
+        filtered["competition"] = filtered["grouped_competition"]
     if selected_comp:
         filtered = filtered[filtered["competition"].isin(selected_comp)]
-    filtered = apply_season_filter(filtered, selected_season, "competition")
+    before_season_count = int(filtered["match_id"].nunique()) if "match_id" in filtered.columns else int(len(filtered))
+    filtered, season_debug = _apply_resolved_season_filter_for_medisports(filtered, selected_season)
+    after_season_count = int(filtered["match_id"].nunique()) if "match_id" in filtered.columns else int(len(filtered))
+    with st.expander("Season resolution debug (temporary)", expanded=False):
+        st.markdown(
+            f"- Selected season: **{selected_season}**\n"
+            f"- Rows before season filter: **{before_season_count}**\n"
+            f"- Rows after season filter: **{after_season_count}**"
+        )
+        if not season_debug.empty:
+            debug_cols = [
+                col for col in [
+                    "match_id",
+                    "date",
+                    "competition_raw",
+                    "competition",
+                    "grouped_competition",
+                    "resolved_season",
+                    "excluded_for_season",
+                ]
+                if col in season_debug.columns
+            ]
+            st.dataframe(
+                season_debug[debug_cols].sort_values(["excluded_for_season", "date"], ascending=[True, False]),
+                use_container_width=True,
+                hide_index=True,
+            )
+            league_debug = season_debug[
+                season_debug["competition_raw"].astype(str).str.contains("league", case=False, na=False)
+            ]
+            if not league_debug.empty:
+                st.markdown("**League row sample (included/excluded):**")
+                st.dataframe(
+                    league_debug[debug_cols].sort_values("date", ascending=False).head(30),
+                    use_container_width=True,
+                    hide_index=True,
+                )
     if form_window != "All time":
         n_recent = int(form_window.split(" ")[1])
         filtered = filtered.sort_values("date", ascending=False).head(n_recent)
