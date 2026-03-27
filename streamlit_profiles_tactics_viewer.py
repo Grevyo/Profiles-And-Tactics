@@ -1935,13 +1935,164 @@ def _inject_styles() -> None:
             margin-left: auto;
             margin-right: auto;
         }
+        .tb-shell {
+            max-width: var(--dashboard-max-width);
+            margin: 0 auto 16px;
+            display: grid;
+            gap: 12px;
+        }
+        .tb-section-title {
+            color: #eef5ff;
+            font-size: 1.02rem;
+            font-weight: 860;
+            letter-spacing: 0.02em;
+            margin: 6px 0 4px;
+        }
+        .tb-console {
+            border-radius: 18px;
+            border: 1px solid rgba(131, 176, 245, 0.42);
+            background:
+                radial-gradient(circle at 12% 0%, rgba(68, 217, 195, 0.2), transparent 34%),
+                radial-gradient(circle at 92% 2%, rgba(88, 164, 255, 0.22), transparent 38%),
+                linear-gradient(145deg, rgba(14, 23, 39, 0.96), rgba(8, 13, 24, 0.98));
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(216, 230, 255, 0.06);
+            padding: 12px 14px;
+        }
+        .tb-console-head {
+            display: grid;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+        .tb-kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .tb-kpi {
+            border-radius: 12px;
+            border: 1px solid rgba(139, 167, 217, 0.36);
+            background: linear-gradient(160deg, rgba(20, 34, 57, 0.84), rgba(9, 16, 28, 0.92));
+            padding: 9px 10px;
+        }
+        .tb-kpi .k { color: #9fc3f8; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 780; }
+        .tb-kpi .v { color: #f0f6ff; font-size: 1.04rem; font-weight: 860; margin-top: 4px; }
+        .tb-slider-note {
+            margin-top: 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(116, 203, 255, 0.36);
+            background: linear-gradient(90deg, rgba(29, 66, 101, 0.34), rgba(11, 22, 37, 0.46));
+            color: #d2e9ff;
+            font-size: 0.76rem;
+            padding: 6px 10px;
+        }
+        .tb-action-col {
+            border-radius: 14px;
+            border: 1px solid rgba(140, 165, 211, 0.34);
+            background: linear-gradient(180deg, rgba(14, 23, 37, 0.88), rgba(8, 12, 23, 0.9));
+            padding: 8px;
+            min-height: 100%;
+        }
+        .tb-action-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(161, 184, 227, 0.2);
+            padding-bottom: 6px;
+            margin-bottom: 7px;
+            color: #e7f0ff;
+            font-size: 0.8rem;
+            font-weight: 830;
+        }
+        .tb-action-pill {
+            border-radius: 999px;
+            border: 1px solid currentColor;
+            padding: 2px 8px;
+            font-size: 0.62rem;
+            font-weight: 780;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .tb-action-col.keep { border-color: rgba(74, 213, 143, 0.42); box-shadow: inset 0 0 0 1px rgba(85, 231, 153, 0.1); }
+        .tb-action-col.use-more { border-color: rgba(103, 182, 255, 0.45); box-shadow: inset 0 0 0 1px rgba(109, 198, 255, 0.12); }
+        .tb-action-col.monitor { border-color: rgba(235, 192, 103, 0.44); box-shadow: inset 0 0 0 1px rgba(245, 201, 109, 0.1); }
+        .tb-action-col.rework { border-color: rgba(247, 158, 95, 0.45); box-shadow: inset 0 0 0 1px rgba(246, 157, 86, 0.11); }
+        .tb-action-col.drop { border-color: rgba(241, 108, 128, 0.44); box-shadow: inset 0 0 0 1px rgba(244, 114, 136, 0.1); }
+        .tb-decision-card {
+            border-radius: 11px;
+            border: 1px solid rgba(136, 160, 204, 0.33);
+            background: linear-gradient(165deg, rgba(17, 30, 49, 0.88), rgba(10, 17, 29, 0.92));
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        .tb-decision-card::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--accent, rgba(132, 201, 255, 0.8));
+            box-shadow: 0 0 12px var(--accent, rgba(132, 201, 255, 0.45));
+        }
+        .tb-card-title { color: #f2f7ff; font-weight: 830; font-size: 0.84rem; margin-left: 6px; }
+        .tb-card-sub { color: #aacaef; font-size: 0.68rem; margin-left: 6px; margin-top: 2px; }
+        .tb-card-meta { color: #d6e4fa; font-size: 0.7rem; margin-left: 6px; margin-top: 4px; }
+        .tb-card-reason { color: #bac8e0; font-size: 0.72rem; margin-left: 6px; margin-top: 4px; line-height: 1.28; }
+        .tb-feature {
+            border-radius: 16px;
+            border: 1px solid rgba(133, 171, 233, 0.44);
+            background:
+                radial-gradient(circle at 7% 0%, rgba(74, 218, 186, 0.15), transparent 34%),
+                radial-gradient(circle at 92% 0%, rgba(99, 163, 255, 0.16), transparent 38%),
+                linear-gradient(155deg, rgba(13, 24, 43, 0.95), rgba(8, 13, 24, 0.97));
+            padding: 12px 14px;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(204, 226, 255, 0.05);
+        }
+        .tb-badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+        .tb-chip {
+            border-radius: 999px;
+            padding: 2px 8px;
+            border: 1px solid rgba(140, 165, 212, 0.42);
+            color: #deebff;
+            font-size: 0.64rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 760;
+            background: linear-gradient(180deg, rgba(28, 46, 74, 0.65), rgba(10, 17, 30, 0.72));
+        }
+        .tb-empty {
+            border-radius: 14px;
+            border: 1px dashed rgba(143, 169, 218, 0.45);
+            background: linear-gradient(180deg, rgba(16, 27, 44, 0.72), rgba(8, 13, 24, 0.8));
+            color: #c7d9f4;
+            text-align: center;
+            padding: 18px 12px;
+            font-size: 0.82rem;
+        }
+        .tb-family-card {
+            border-radius: 12px;
+            border: 1px solid rgba(136, 163, 212, 0.36);
+            padding: 10px;
+            background: linear-gradient(170deg, rgba(18, 34, 57, 0.86), rgba(10, 18, 31, 0.9));
+        }
+        .tb-family-card.pistol { border-color: rgba(96, 192, 255, 0.45); }
+        .tb-family-card.eco { border-color: rgba(244, 186, 97, 0.44); }
+        .tb-family-card.standard { border-color: rgba(101, 224, 163, 0.43); }
+        .tb-note {
+            color: #9ebeea;
+            font-size: 0.72rem;
+            letter-spacing: 0.04em;
+        }
         @media (min-width: 1600px) {
             .cpl-top-grid,
             .cpl-hero,
             .core-grid,
             .section-block-title,
             .form-card, .impact-card, .support-table, .chart-panel,
-            .panel-card {
+            .panel-card,
+            .tb-shell {
                 max-width: var(--dashboard-max-width-xl);
             }
         }
@@ -3819,7 +3970,17 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     )
     default_season = f"S{latest_season}" if latest_season is not None else "Lifetime"
 
-    st.subheader("Tactical Decision Console")
+    st.markdown("<div class='tb-shell'>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <section class="tb-console">
+            <div class="tb-console-head">
+                <div class="tb-section-title">Tactical Decision Console</div>
+                <div class="tb-note">Filters and sample controls for map + side specific analysis (no cross-context transfer).</div>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
     with st.expander("Filters", expanded=False):
         filter_cols = st.columns(6)
         season_options = ["Lifetime"] + [f"S{season}" for season in all_seasons]
@@ -3861,6 +4022,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             placeholder="All (no filter)",
         )
         active_tactics = selected_tactics if selected_tactics else tactic_opts
+    st.markdown("</section>", unsafe_allow_html=True)
 
     df = apply_season_filter(df, selected_season, competition_source_col)
     if sides:
@@ -3915,6 +4077,10 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         return
 
     min_sample = int(st.slider("Minimum sample (uses)", 1, max(int(tactic_perf["times_used"].max()), 1), 1, key="tactic_min_sample"))
+    st.markdown(
+        f"<div class='tb-slider-note'>Minimum sample active: <strong>{min_sample}</strong> uses per tactic in the current map+side context.</div>",
+        unsafe_allow_html=True,
+    )
     tactic_perf = tactic_perf[tactic_perf["times_used"] >= min_sample].copy()
     if tactic_perf.empty:
         st.warning("No tactics meet the minimum sample threshold.")
@@ -4082,33 +4248,66 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         st.warning("No tactic summaries available.")
         return
 
-    st.subheader("Tactical Action Board")
+    action_counts = tactic_perf["recommended_action"].value_counts().to_dict()
+    kpi_items = [
+        ("Total tactics", len(tactic_perf)),
+        ("High-confidence good", int((tactic_perf["confidence"] == "Proven good").sum())),
+        ("High-confidence poor", int((tactic_perf["confidence"] == "Proven poor").sum())),
+        ("Underused opportunities", int((tactic_perf["recommended_action"] == "Use More").sum())),
+    ]
+    st.markdown("<div class='tb-kpi-strip'>", unsafe_allow_html=True)
+    for label, value in kpi_items:
+        st.markdown(
+            f"<div class='tb-kpi'><div class='k'>{label}</div><div class='v'>{int(value)}</div></div>",
+            unsafe_allow_html=True,
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='tb-section-title'>Tactical Action Board</div>", unsafe_allow_html=True)
     action_order = ["Keep", "Use More", "Monitor", "Rework", "Drop"]
+    action_class = {
+        "Keep": ("keep", "#3fd18b"),
+        "Use More": ("use-more", "#5eb6ff"),
+        "Monitor": ("monitor", "#f0be4f"),
+        "Rework": ("rework", "#f39b54"),
+        "Drop": ("drop", "#f16c80"),
+    }
     board_cols = st.columns(len(action_order))
     for i, action_name in enumerate(action_order):
         with board_cols[i]:
-            st.markdown(f"#### {action_name}")
+            cls_name, accent = action_class[action_name]
+            st.markdown(
+                f"""
+                <div class="tb-action-col {cls_name}">
+                    <div class="tb-action-head">
+                        <span>{action_name}</span>
+                        <span class="tb-action-pill" style="color:{accent};">{action_counts.get(action_name, 0)}</span>
+                    </div>
+                """,
+                unsafe_allow_html=True,
+            )
             action_df = tactic_perf[tactic_perf["recommended_action"] == action_name].sort_values(
                 ["delta_vs_baseline", "times_used"],
                 ascending=[False, False],
             )
             if action_df.empty:
-                st.caption("No tactics in this bucket.")
+                st.markdown("<div class='tb-empty'>No tactics in this bucket.</div>", unsafe_allow_html=True)
             else:
                 for _, row in action_df.head(6).iterrows():
                     st.markdown(
                         f"""
-                        <div class="panel-card" style="padding:10px 12px;margin-bottom:10px;">
-                            <div style="font-weight:700;color:#f5f7fb;">{row["tactic_name"]}</div>
-                            <div class="panel-muted">{row["map"]} • {row["side"]}</div>
-                            <div style="font-size:0.78rem;color:#d4dbea;">{row["confidence_badge"]}</div>
-                            <div style="font-size:0.8rem;color:#aeb9cf;">{row["reason"]}</div>
+                        <div class="tb-decision-card" style="--accent:{accent};">
+                            <div class="tb-card-title">{row["tactic_name"]}</div>
+                            <div class="tb-card-sub">{row["map"]} • {row["side"]}</div>
+                            <div class="tb-card-meta">{row["confidence_badge"]} • Δ {row["delta_vs_baseline"]:+.1f}pp • WR {row["win_pct"]:.1f}%</div>
+                            <div class="tb-card-reason">{row["reason"]}</div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    st.subheader("Main tactic table")
+    st.markdown("<div class='tb-section-title'>Main tactic table</div>", unsafe_allow_html=True)
     perf_table = tactic_perf.rename(
         columns={
             "tactic_name": "Tactic",
@@ -4123,12 +4322,15 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             "reason": "Reason",
         }
     )
+    perf_table["Confidence"] = perf_table["Confidence"].fillna("⚪ Neutral / unproven")
+    perf_table["Action"] = perf_table["Action"].fillna("🟡 Monitor")
     perf_cols = ["Tactic", "Map", "Side", "Uses", "Win %", "Last 10", "Usage %", "Confidence", "Action", "Reason"]
     st.dataframe(
         perf_table[perf_cols].sort_values(["Action", "Win %", "Uses"], ascending=[True, False, False]),
         use_container_width=True,
         hide_index=True,
     )
+    st.caption("Detailed table retains full tactical logic. Chips and actions are map + side specific only.")
 
     with st.expander("Secondary columns", expanded=False):
         secondary_cols = [
@@ -4157,6 +4359,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             hide_index=True,
         )
 
+    st.markdown("<div class='tb-section-title'>Selected tactic summary panel</div>", unsafe_allow_html=True)
     selected_key = st.selectbox("Selected tactic summary", summary_options, key="selected_tactic_summary")
     selected_row = summary_key_df[summary_key_df["summary_key"] == selected_key].iloc[0]
     verdict = selected_row["recommended_action"]
@@ -4169,12 +4372,17 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     }
     st.markdown(
         f"""
-        <div class="panel-card">
-            <div class="panel-muted">Selected tactic insight</div>
+        <div class="tb-feature">
+            <div class="panel-muted">Featured tactic insight</div>
             <div class="panel-title">{selected_row["tactic_name"]}</div>
-            <div class="panel-muted">{selected_row["map"]} • {selected_row["side"]} • {selected_row["action_badge"]} • {selected_row["confidence_badge"]}</div>
-            <div style="margin-top:6px;color:#cfd6e5;font-size:0.88rem;"><strong>Why flagged:</strong> {selected_row.get("reason", "Monitor trend")}</div>
-            <div style="margin-top:6px;color:#e6eefc;font-size:0.9rem;"><strong>Coach summary:</strong> {coach_summary_map.get(verdict, "Monitor tactical performance in this context")}</div>
+            <div class="tb-badge-row">
+                <span class="tb-chip">{selected_row["map"]}</span>
+                <span class="tb-chip">{selected_row["side"]}</span>
+                <span class="tb-chip">{selected_row["action_badge"]}</span>
+                <span class="tb-chip">{selected_row["confidence_badge"]}</span>
+            </div>
+            <div style="margin-top:8px;color:#d4deef;font-size:0.88rem;"><strong>Why flagged:</strong> {selected_row.get("reason", "Monitor trend")}</div>
+            <div style="margin-top:6px;color:#edf4ff;font-size:0.9rem;"><strong>Coach summary:</strong> {coach_summary_map.get(verdict, "Monitor tactical performance in this context")}</div>
             <div class="stats-grid">
                 <div class="stat-chip"><div class="stat-label">Uses</div><div class="stat-value">{int(selected_row["times_used"])}</div></div>
                 <div class="stat-chip"><div class="stat-label">Overall WR</div><div class="stat-value">{selected_row["win_pct"]:.1f}%</div></div>
@@ -4192,7 +4400,8 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### Opportunity swaps (same map + side only)")
+    st.markdown("<div class='tb-section-title'>Opportunity swaps</div>", unsafe_allow_html=True)
+    st.caption("Strict rule: only alternatives from the exact same map + side context are considered.")
     if bool(selected_row["insufficient_context_sample"]):
         st.info("Insufficient sample in this exact map+side pool to recommend alternatives.")
     else:
@@ -4212,6 +4421,21 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             if better_alts.empty:
                 st.info("No clearly better underused alternatives in this exact map+side context.")
             else:
+                top_alts = better_alts.head(3)
+                alt_cols = st.columns(len(top_alts))
+                for idx, (_, alt_row) in enumerate(top_alts.iterrows()):
+                    with alt_cols[idx]:
+                        st.markdown(
+                            f"""
+                            <div class="tb-family-card">
+                                <div class="panel-title">{alt_row["tactic_name"]}</div>
+                                <div class="panel-muted">{alt_row["map"]} • {alt_row["side"]}</div>
+                                <div class="tb-note">Δ baseline {alt_row["delta_vs_baseline"]:+.1f}pp • Usage {alt_row["usage_pct"]:.1f}%</div>
+                                <div class="tb-note">WR {alt_row["win_pct"]:.1f}% • Uses {int(alt_row["times_used"])}</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
                 st.dataframe(
                     better_alts[
                         ["tactic_name", "map", "side", "times_used", "win_pct", "usage_pct", "delta_vs_baseline", "recommended_action", "reason"]
@@ -4232,21 +4456,38 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                     hide_index=True,
                 )
 
-    st.subheader("Trend over time")
+    st.markdown("<div class='tb-section-title'>Trend over time</div>", unsafe_allow_html=True)
     selected_rounds = rounds_long[
         (rounds_long["tactic_name"] == selected_row["tactic_name"])
         & (rounds_long["map"] == selected_row["map"])
         & (rounds_long["side"] == selected_row["side"])
     ].sort_values(["date", "match_id"])
     if selected_rounds.empty:
-        st.info("No round-level trend data available.")
+        st.markdown(
+            "<div class='tb-empty'>Insufficient trend sample for this exact map + side tactic context.</div>",
+            unsafe_allow_html=True,
+        )
     else:
         selected_rounds = selected_rounds.assign(
             use_idx=range(1, len(selected_rounds) + 1),
             rolling_5=lambda d: (d["round_result"].gt(0).rolling(5, min_periods=1).mean() * 100).round(1),
             rolling_10=lambda d: (d["round_result"].gt(0).rolling(10, min_periods=1).mean() * 100).round(1),
         )
-        if go is None or make_subplots is None:
+        insight_label = "too little sample" if len(selected_rounds) < 8 else (
+            "improving" if selected_rounds["rolling_5"].iloc[-1] > selected_rounds["rolling_10"].iloc[-1] + 4 else
+            "unstable" if selected_rounds["rolling_5"].std() > 18 else
+            "flat"
+        )
+        st.caption(f"Trend insight: **{insight_label}** for this exact {selected_row['map']} {selected_row['side']} context.")
+        if len(selected_rounds) < 5:
+            st.markdown(
+                "<div class='tb-empty'>Not enough points for a reliable trend chart yet. Continue collecting rounds in this same map + side context.</div>",
+                unsafe_allow_html=True,
+            )
+            selected_rounds = pd.DataFrame()
+        if selected_rounds.empty:
+            pass
+        elif go is None or make_subplots is None:
             _render_plotly_unavailable()
         else:
             trend_fig = make_subplots(
@@ -4307,7 +4548,8 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             _apply_plotly_dark_style(trend_fig, height=500, hovermode="x unified")
             st.plotly_chart(trend_fig, use_container_width=True)
 
-    st.subheader("Map + side split heatmap")
+    st.markdown("<div class='tb-section-title'>Map + side split heatmap</div>", unsafe_allow_html=True)
+    st.caption("Tabs preserve strict map context; side split is rendered independently within each map.")
     heatmap_data = tactic_perf.copy()
     if heatmap_data.empty:
         st.info("No heatmap data for current filters.")
@@ -4359,7 +4601,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                 _apply_plotly_dark_style(heatmap_fig, height=max(420, 40 * max(len(tactic_order), 8)))
                 st.plotly_chart(heatmap_fig, use_container_width=True)
 
-    st.subheader("Round share vs success")
+    st.markdown("<div class='tb-section-title'>Round share vs success</div>", unsafe_allow_html=True)
     if go is None:
         _render_plotly_unavailable()
     else:
@@ -4394,13 +4636,13 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                     ),
                 )
             )
-        scatter_fig.update_layout(title="Round share vs success")
+        scatter_fig.update_layout(title="Round share vs success", legend_title_text="Confidence tier")
         scatter_fig.update_xaxes(title_text="Usage rate / round share %")
         scatter_fig.update_yaxes(title_text="Win rate %")
         _apply_plotly_dark_style(scatter_fig, height=400)
         st.plotly_chart(scatter_fig, use_container_width=True)
 
-    st.subheader("By enemy tier")
+    st.markdown("<div class='tb-section-title'>By enemy tier</div>", unsafe_allow_html=True)
     sel_tier = tier_perf[
         (tier_perf["tactic_name"] == selected_row["tactic_name"])
         & (tier_perf["map"] == selected_row["map"])
@@ -4408,6 +4650,21 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     ].copy()
     if sel_tier.empty:
         st.info("No tier-split data for selected tactic.")
+    elif len(sel_tier) < 2:
+        tier_cols = st.columns(len(sel_tier))
+        for idx, (_, row) in enumerate(sel_tier.iterrows()):
+            with tier_cols[idx]:
+                st.markdown(
+                    f"""
+                    <div class="tb-family-card">
+                        <div class="panel-title">Tier {row["tier"]}</div>
+                        <div class="tb-note">WR {row["tier_win_pct"]:.1f}%</div>
+                        <div class="tb-note">Record {int(row["wins"])}-{int(row["losses"])}</div>
+                        <div class="tb-note">Uses {int(row["tier_uses"])}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
     else:
         sel_tier["tier_adjusted_score"] = sel_tier["tier_win_pct"] * sel_tier["tier"].map({"S": 1.35, "A": 1.15, "B": 1.0, "C": 0.85}).fillna(1.0)
         tier_palette_domain = ["S", "A", "B", "C"]
@@ -4431,7 +4688,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             _apply_plotly_dark_style(tier_chart, height=320)
             st.plotly_chart(tier_chart, use_container_width=True)
 
-    st.subheader("Family/category summaries")
+    st.markdown("<div class='tb-section-title'>Family/category summaries</div>", unsafe_allow_html=True)
     family_summary = (
         tactic_perf.groupby(["family", "map", "side"], as_index=False)
         .agg(
@@ -4446,14 +4703,16 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     family_cards = st.columns(max(max_cards, 1))
     for idx, fam_row in family_summary.head(max_cards).iterrows():
         with family_cards[idx % max_cards]:
+            family_class = str(fam_row["family"]).strip().lower()
+            if family_class not in {"pistol", "eco", "standard"}:
+                family_class = "standard"
             st.markdown(
                 f"""
-                <div class="panel-card" style="padding:12px;">
+                <div class="tb-family-card {family_class}">
                     <div class="panel-title">{fam_row["family"]}</div>
                     <div class="panel-muted">{fam_row["map"]} • {fam_row["side"]}</div>
-                    <div class="panel-muted">Rounds: {int(fam_row["total_rounds_played"])}</div>
-                    <div class="panel-muted">Win %: {float(fam_row["total_win_pct"]):.1f}%</div>
-                    <div style="font-size:0.8rem;color:#d4dbea;">Most used: {fam_row["most_used_tactic"]}</div>
+                    <div class="tb-note">Rounds {int(fam_row["total_rounds_played"])} • WR {float(fam_row["total_win_pct"]):.1f}%</div>
+                    <div class="tb-note">Most used: {fam_row["most_used_tactic"]}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -4476,7 +4735,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             c2.metric(f"{family_name} win rate", f"{family_win_rate:.1f}%")
             c3.metric(f"Best {family_name.lower()} tactic", best_tactic)
 
-            st.caption("Map+side context split (no cross-context fallback)")
+            st.caption("Map+side context split (no cross-context fallback).")
             context_summary = (
                 family_df.groupby(["map", "side"], as_index=False)
                 .agg(rounds=("times_used", "sum"), wins=("wins", "sum"), losses=("losses", "sum"))
@@ -4495,7 +4754,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     _render_family_breakdown("Eco breakdown", "Eco", "Eco rounds")
     _render_family_breakdown("Standard rounds section", "Standard", "Standard rounds")
 
-    st.subheader("Match context drilldown")
+    st.markdown("<div class='tb-section-title'>Match context drilldown</div>", unsafe_allow_html=True)
     drilldown = df[
         (df["tactic_name"] == selected_row["tactic_name"])
         & (df["map"] == selected_row["map"])
@@ -4504,6 +4763,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     drill_cols = ["match_id", "opponent_team", "tier", "map", "side", "wins", "losses", competition_source_col, "date"]
     drill_df = drilldown[drill_cols].rename(columns={competition_source_col: "competition"})
     st.dataframe(drill_df.sort_values("date", ascending=False), use_container_width=True, hide_index=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _medisports_vs_breakdown(
