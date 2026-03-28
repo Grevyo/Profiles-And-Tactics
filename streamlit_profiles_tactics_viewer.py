@@ -3371,17 +3371,112 @@ def normalize_competition_name(competition: str | None) -> str | None:
     return re.sub(r"\b(S\d+)\.\d+\b", r"\1", str(competition))
 
 
+AWAY_STATUS_SMALLCAP_MAP = str.maketrans(
+    {
+        "ᴀ": "a",
+        "ʙ": "b",
+        "ᴄ": "c",
+        "ᴅ": "d",
+        "ᴇ": "e",
+        "ꜰ": "f",
+        "ɢ": "g",
+        "ʜ": "h",
+        "ɪ": "i",
+        "ᴊ": "j",
+        "ᴋ": "k",
+        "ʟ": "l",
+        "ᴍ": "m",
+        "ɴ": "n",
+        "ᴏ": "o",
+        "ᴘ": "p",
+        "ǫ": "q",
+        "ʀ": "r",
+        "ꜱ": "s",
+        "ᴛ": "t",
+        "ᴜ": "u",
+        "ᴠ": "v",
+        "ᴡ": "w",
+        "x": "x",
+        "ʏ": "y",
+        "ᴢ": "z",
+    }
+)
+
+
+def _normalize_away_status_text(value: str) -> str:
+    text = unicodedata.normalize("NFKC", str(value))
+    text = html.unescape(text).translate(AWAY_STATUS_SMALLCAP_MAP).casefold()
+    text = re.sub(r"[\u200b-\u200d\ufeff]", "", text)
+    text = text.replace("’", "'").replace("`", "'")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def strip_away_status_tokens(name: str) -> tuple[str, bool]:
+    """Remove obvious AFK/idle status markers from team names."""
+    if name is None or (isinstance(name, float) and pd.isna(name)):
+        return "", False
+    original = str(name).strip()
+    if not original:
+        return "", False
+
+    text = _normalize_away_status_text(original)
+    before = text
+    patterns = [
+        r"[\[\(]\s*(?:afk|idle|idling)\s*[\]\)]",
+        r"\bis\s+idling\b",
+        r"\bidling\b",
+        r"\bidle\b",
+        r"\bafk\b",
+    ]
+    for pattern in patterns:
+        text = re.sub(pattern, " ", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text).strip(" -_.,")
+    return text, bool(text and text != before)
+
+
 def normalize_opponent_name(value: str) -> str:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return ""
-    text = unicodedata.normalize("NFKC", str(value))
-    text = text.strip().lower()
+    text = _normalize_away_status_text(str(value))
     text = re.sub(r"[\u200b-\u200d\ufeff]", "", text)
-    text = text.replace("’", "'").replace("`", "'")
     text = re.sub(r"[._\-]+", " ", text)
     text = re.sub(r"[^\w\s']", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
+
+
+def resolve_canonical_opponent_name(
+    value: str,
+    *,
+    known_clean_names: set[str],
+    preferred_label_by_key: dict[str, str] | None = None,
+) -> dict[str, object]:
+    original = "" if value is None or (isinstance(value, float) and pd.isna(value)) else str(value).strip()
+    original_key = normalize_opponent_name(original)
+    stripped_name, away_applied = strip_away_status_tokens(original)
+    cleaned_key = normalize_opponent_name(stripped_name)
+
+    canonical_key = original_key
+    canonical_label = original
+    canonicalized = False
+    if away_applied and cleaned_key and cleaned_key in known_clean_names and cleaned_key != original_key:
+        canonical_key = cleaned_key
+        canonicalized = True
+        if preferred_label_by_key and cleaned_key in preferred_label_by_key:
+            canonical_label = preferred_label_by_key[cleaned_key]
+        elif stripped_name:
+            canonical_label = stripped_name
+
+    return {
+        "opponent_original_raw": original,
+        "opponent_cleaned_raw": stripped_name,
+        "opponent_original_key": original_key,
+        "opponent_cleaned_key": cleaned_key,
+        "opponent_away_status_applied": away_applied,
+        "opponent_canonicalized": canonicalized,
+        "opponent_raw": canonical_label,
+        "opponent_key": canonical_key,
+    }
 
 
 def resolve_latest_opponent_tier(df: pd.DataFrame) -> pd.DataFrame:
@@ -3582,10 +3677,33 @@ def build_medisports_vs_base_df(tactics_df: pd.DataFrame, competition_source_col
     )
     base_df["competition_grouped"] = base_df["competition_raw"].apply(normalize_competition_name)
     base_df["competition_key"] = base_df["competition_grouped"].apply(normalize_competition_label)
-    base_df["opponent_raw"] = base_df["opponent_team"].apply(
+    base_df["opponent_original_raw"] = base_df["opponent_team"].apply(
         lambda v: "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v).strip()
     )
-    base_df["opponent_key"] = base_df["opponent_raw"].apply(normalize_opponent_name)
+    base_df["opponent_original_key"] = base_df["opponent_original_raw"].apply(normalize_opponent_name)
+    away_strip = base_df["opponent_original_raw"].apply(strip_away_status_tokens)
+    base_df["opponent_cleaned_raw"] = away_strip.apply(lambda item: item[0])
+    base_df["opponent_away_status_applied"] = away_strip.apply(lambda item: bool(item[1]))
+    base_df["opponent_cleaned_key"] = base_df["opponent_cleaned_raw"].apply(normalize_opponent_name)
+    clean_source = base_df[~base_df["opponent_away_status_applied"] & (base_df["opponent_original_key"] != "")]
+    preferred_label_by_key = (
+        clean_source.groupby("opponent_original_key")["opponent_original_raw"]
+        .agg(lambda s: _preferred_label(s, fallback=""))
+        .to_dict()
+    )
+    known_clean_names = set(preferred_label_by_key.keys())
+    canonical_rows = base_df["opponent_original_raw"].apply(
+        lambda value: resolve_canonical_opponent_name(
+            value,
+            known_clean_names=known_clean_names,
+            preferred_label_by_key=preferred_label_by_key,
+        )
+    )
+    canonical_df = pd.DataFrame(canonical_rows.tolist(), index=base_df.index)
+    for col in canonical_df.columns:
+        base_df[col] = canonical_df[col]
+    base_df["opponent_raw"] = base_df["opponent_raw"].astype(str).str.strip()
+    base_df["opponent_key"] = base_df["opponent_key"].astype(str).str.strip()
     base_df["season_resolved"] = pd.NA
     base_df["season_num_resolved"] = pd.NA
 
@@ -8145,7 +8263,11 @@ def _medisports_vs_breakdown(
                     "date",
                     "competition_raw",
                     "competition_key",
+                    "opponent_original_raw",
+                    "opponent_cleaned_raw",
                     "opponent_raw",
+                    "opponent_away_status_applied",
+                    "opponent_canonicalized",
                     "opponent_key",
                     "season_resolved",
                     "excluded_for_season",
@@ -8160,7 +8282,7 @@ def _medisports_vs_breakdown(
             )
             st.markdown("**Opponent raw vs key grouping counts:**")
             opponent_debug = (
-                season_debug.groupby(["opponent_key", "opponent_raw"], as_index=False)
+                season_debug.groupby(["opponent_key", "opponent_raw", "opponent_original_raw", "opponent_cleaned_raw", "opponent_canonicalized"], as_index=False)
                 .agg(matches=("match_id", "nunique"))
                 .sort_values(["opponent_key", "matches"], ascending=[True, False])
             )
