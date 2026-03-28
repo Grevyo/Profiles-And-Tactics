@@ -2350,6 +2350,24 @@ def _inject_styles() -> None:
         .tb-card-title { color: #f2f7ff; font-weight: 830; font-size: 0.84rem; }
         .tb-card-sub { color: #aacaef; font-size: 0.68rem; margin-left: 6px; margin-top: 2px; }
         .tb-card-meta { color: #d6e4fa; font-size: 0.7rem; margin-left: 6px; margin-top: 5px; line-height: 1.35; }
+        .tb-card-chips {
+            margin-left: 6px;
+            margin-top: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .tb-priority-pill {
+            border-radius: 999px;
+            padding: 2px 8px;
+            border: 1px solid color-mix(in srgb, var(--accent, #7ab4ff) 68%, #ffffff 32%);
+            background: color-mix(in srgb, var(--accent, #7ab4ff) 28%, rgba(11, 19, 32, 0.84));
+            color: var(--accent-text, #e7f2ff);
+            font-size: 0.62rem;
+            font-weight: 810;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
         .tb-card-reason {
             color: #d4e2f7;
             font-size: 0.73rem;
@@ -2433,6 +2451,30 @@ def _inject_styles() -> None:
             border-radius: 999px;
             box-shadow: 0 0 8px currentColor;
             flex-shrink: 0;
+        }
+        .tb-tier-row {
+            margin-left: 6px;
+            margin-top: 7px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+        }
+        .tb-tier-chip {
+            border-radius: 7px;
+            border: 1px solid rgba(141, 170, 214, 0.34);
+            background: linear-gradient(180deg, rgba(26, 40, 66, 0.74), rgba(9, 16, 30, 0.8));
+            padding: 4px 6px;
+            text-align: center;
+            color: #daebff;
+            font-size: 0.64rem;
+            line-height: 1.22;
+        }
+        .tb-tier-chip .tier-label {
+            color: #a9c6ef;
+            font-size: 0.58rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            display: block;
         }
         .tb-module-grid {
             display: grid;
@@ -3833,6 +3875,69 @@ def compute_tactical_recommendation_score(
         score -= 5
     score += float(row.get("route_bonus", 0.0))
     return round(score, 1)
+
+
+def classify_keep_priority(score: float) -> tuple[str, str]:
+    score_value = float(score)
+    if score_value >= 80:
+        return "Core pick", "core"
+    if score_value >= 70:
+        return "Strong keep", "strong"
+    if score_value >= 60:
+        return "Useful keep", "useful"
+    if score_value >= 50:
+        return "Situational", "situational"
+    return "Tentative", "tentative"
+
+
+def keep_priority_color_token(priority_tier: str) -> dict[str, str]:
+    tokens = {
+        "core": {"accent": "#1fd27d", "bg": "rgba(34, 182, 118, 0.14)", "text": "#d8ffe9"},
+        "strong": {"accent": "#1fbca4", "bg": "rgba(42, 181, 170, 0.14)", "text": "#d8fffb"},
+        "useful": {"accent": "#4e97ff", "bg": "rgba(83, 150, 255, 0.14)", "text": "#dce9ff"},
+        "situational": {"accent": "#e4b44d", "bg": "rgba(232, 177, 74, 0.14)", "text": "#ffefd2"},
+        "tentative": {"accent": "#ef6d4e", "bg": "rgba(239, 109, 78, 0.14)", "text": "#ffe0d7"},
+    }
+    return tokens.get(priority_tier, tokens["useful"])
+
+
+def compute_tactic_vs_tier_summary(
+    context_df: pd.DataFrame,
+    *,
+    min_tier_sample: int = 2,
+) -> pd.DataFrame:
+    if context_df.empty or "tier" not in context_df.columns:
+        return pd.DataFrame(columns=["tactic_name", "map", "side", "vs_s_text", "vs_a_text", "vs_b_text", "vs_c_text"])
+
+    tier_perf = (
+        context_df.groupby(["tactic_name", "map", "side", "tier"], as_index=False)[["wins", "losses"]]
+        .sum()
+        .assign(
+            tier_uses=lambda d: d["wins"] + d["losses"],
+            tier_win_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+        )
+    )
+    if tier_perf.empty:
+        return pd.DataFrame(columns=["tactic_name", "map", "side", "vs_s_text", "vs_a_text", "vs_b_text", "vs_c_text"])
+
+    tier_perf["tier"] = tier_perf["tier"].astype(str).str.upper().str.strip()
+    tier_perf = tier_perf[tier_perf["tier"].isin(["S", "A", "B", "C"])].copy()
+    if tier_perf.empty:
+        return pd.DataFrame(columns=["tactic_name", "map", "side", "vs_s_text", "vs_a_text", "vs_b_text", "vs_c_text"])
+
+    tiers = ["S", "A", "B", "C"]
+    records: list[dict[str, str]] = []
+    for (tactic_name, map_name, side_name), group in tier_perf.groupby(["tactic_name", "map", "side"], as_index=False):
+        row = {"tactic_name": tactic_name, "map": map_name, "side": side_name}
+        tier_lookup = {str(r["tier"]): r for _, r in group.iterrows()}
+        for tier in tiers:
+            tier_row = tier_lookup.get(tier)
+            if tier_row is None or int(tier_row["tier_uses"]) < min_tier_sample:
+                row[f"vs_{tier.lower()}_text"] = "n/a"
+            else:
+                row[f"vs_{tier.lower()}_text"] = f"{float(tier_row['tier_win_pct']):.1f}%"
+        records.append(row)
+    return pd.DataFrame(records)
 
 
 def _tactic_overlap_key(tactic_name: str) -> str:
@@ -6074,6 +6179,13 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     tactic_perf["usage_pct"] = (tactic_perf["times_used"] / tactic_perf["total_map_side_rounds"].clip(lower=1) * 100).round(1)
     tactic_perf["delta_vs_baseline"] = (tactic_perf["win_pct"] - tactic_perf["context_baseline_win_pct"]).round(1)
     tactic_perf["context_usage_avg"] = tactic_perf["usage_pct"].mean().round(1)
+    tier_summary = compute_tactic_vs_tier_summary(context_df, min_tier_sample=max(2, min_sample))
+    if not tier_summary.empty:
+        tactic_perf = tactic_perf.merge(tier_summary, on=["tactic_name", "map", "side"], how="left")
+    for tier_col in ("vs_s_text", "vs_a_text", "vs_b_text", "vs_c_text"):
+        if tier_col not in tactic_perf.columns:
+            tactic_perf[tier_col] = "n/a"
+        tactic_perf[tier_col] = tactic_perf[tier_col].fillna("n/a")
 
     round_rows: list[dict[str, object]] = []
     for row in context_df.sort_values(["date", "match_id", "tactic_name"]).itertuples(index=False):
@@ -6168,6 +6280,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         ),
         axis=1,
     )
+    keep_priority = tactic_perf["recommendation_score"].apply(classify_keep_priority)
+    tactic_perf["keep_priority_label"] = keep_priority.apply(lambda x: x[0])
+    tactic_perf["keep_priority_tier"] = keep_priority.apply(lambda x: x[1])
     tactic_perf = tactic_perf.sort_values(["recommendation_score", "times_used", "win_pct"], ascending=[False, False, False])
 
     category_order = ["Pistol", "Eco", "Standard", "Mid", "Ivy"]
@@ -6265,25 +6380,17 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    category_colors = {
-        "Pistol": "#f5c451",
-        "Eco": "#5ccf86",
-        "Standard": "#5ea9ff",
-        "Mid": "#f0be4f",
-        "Ivy": "#5ad9ff",
-    }
     st.markdown(
         """
         <div class="tb-legend-strip">
-            <div class="panel-title">Colour guide</div>
-            <div class="panel-muted">Colours indicate tactic role/category and help show coverage across the recommended set.</div>
+            <div class="panel-title">Recommendation-strength colour guide</div>
+            <div class="panel-muted">Card accents show how strongly each tactic should be kept in your active pool. Category is shown by chip label only.</div>
             <div class="tb-legend-row">
-                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#f5c451;background:#f5c451;"></span>Pistol</span>
-                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#5ccf86;background:#5ccf86;"></span>Eco</span>
-                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#5ea9ff;background:#5ea9ff;"></span>Standard</span>
-                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#f0be4f;background:#f0be4f;"></span>Mid</span>
-                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#5ad9ff;background:#5ad9ff;"></span>Ivy</span>
-                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#c8d9ff;background:#c8d9ff;"></span>Confidence/quality accents</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#1fd27d;background:#1fd27d;"></span>Core pick (green)</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#1fbca4;background:#1fbca4;"></span>Strong keep (teal)</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#4e97ff;background:#4e97ff;"></span>Useful keep (blue)</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#e4b44d;background:#e4b44d;"></span>Situational (amber)</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#ef6d4e;background:#ef6d4e;"></span>Tentative (orange/red)</span>
             </div>
         </div>
         """,
@@ -6296,28 +6403,32 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         if block.empty:
             continue
         for _, row in block.iterrows():
-            accent = category_colors.get(category, "#5ea9ff")
-            if category == "Eco":
-                reason = "Selected as top eco option because it beats eco baseline and holds usable sample."
-            elif category == "Standard":
-                reason = "Strong standard with distinct route/tempo profile and above-category performance."
-            elif category == "Pistol":
-                reason = "Best pistol option in this map-side context with reliable signal."
-            elif category == "Mid":
-                reason = "Useful Mid coverage with solid local performance."
-            elif category == "Ivy":
-                reason = "Useful Ivy coverage with enough independent value."
-            else:
-                reason = "Selected for high score and contextual fit."
+            priority_label = str(row["keep_priority_label"])
+            priority_tier = str(row["keep_priority_tier"])
+            color_tokens = keep_priority_color_token(priority_tier)
+            reason = (
+                f"Selected because it rates as {priority_label.lower()} in this exact map + side pool, "
+                f"with score-led value and stable context fit."
+            )
             st.markdown(
                 f"""
-                <div class="tb-decision-card" style="--accent:{accent}; border-color:{accent}55;">
+                <div class="tb-decision-card" style="--accent:{color_tokens['accent']}; --accent-text:{color_tokens['text']}; border-color:{color_tokens['accent']}66; background:linear-gradient(160deg, {color_tokens['bg']}, rgba(10, 17, 29, 0.92));">
                     <div class="tb-card-head">
                         <div class="tb-card-title">{row["tactic_name"]}</div>
-                        <div class="tb-category-pill">{category}</div>
+                        <div class="tb-category-pill" style="--accent:#7ea7da;">{category}</div>
                     </div>
                     <div class="tb-card-sub">{row["map"]} • {row["side"]}</div>
-                    <div class="tb-card-meta">Score {row["recommendation_score"]:.1f} • WR {row["win_pct"]:.1f}% • Uses {int(row["times_used"])} • {row["confidence"]}<br/>Δmap {row["delta_vs_baseline"]:+.1f}pp • Δcat {row["delta_vs_category_baseline"]:+.1f}pp • Trend {row["trend_delta"]:+.1f}pp</div>
+                    <div class="tb-card-meta">Score {row["recommendation_score"]:.1f} • WR {row["win_pct"]:.1f}% • Uses {int(row["times_used"])}<br/>Δmap {row["delta_vs_baseline"]:+.1f}pp • Δcat {row["delta_vs_category_baseline"]:+.1f}pp • Trend {row["trend_delta"]:+.1f}pp</div>
+                    <div class="tb-card-chips">
+                        <span class="tb-priority-pill" style="--accent:{color_tokens['accent']}; --accent-text:{color_tokens['text']};">{priority_label}</span>
+                        <span class="tb-chip">{row["confidence"]}</span>
+                    </div>
+                    <div class="tb-tier-row">
+                        <div class="tb-tier-chip"><span class="tier-label">vs S</span>{row["vs_s_text"]}</div>
+                        <div class="tb-tier-chip"><span class="tier-label">vs A</span>{row["vs_a_text"]}</div>
+                        <div class="tb-tier-chip"><span class="tier-label">vs B</span>{row["vs_b_text"]}</div>
+                        <div class="tb-tier-chip"><span class="tier-label">vs C</span>{row["vs_c_text"]}</div>
+                    </div>
                     <div class="tb-card-reason">{reason}</div>
                 </div>
                 """,
@@ -6347,21 +6458,21 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     route_coverage_labels = sorted({tag for tags in selected_route_tags for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
     route_coverage_markup = "".join(f"<span class='tb-chip'>{label}</span>" for label in route_coverage_labels) or "<span class='tb-chip'>Core routes only</span>"
     category_mix_markup = "".join(
-        f"<span class='tb-chip' style='border-color:{category_colors.get(bucket, '#7cb6ff')}66'>{bucket} {int((selected_df['bucket'] == bucket).sum())}</span>"
+        f"<span class='tb-chip'>{bucket} {int((selected_df['bucket'] == bucket).sum())}</span>"
         for bucket in category_order
         if int((selected_df["bucket"] == bucket).sum()) > 0
     )
 
     def _alt_reason(row: pd.Series, overlap_with: str | None) -> str:
         if overlap_with:
-            return f"Good option, but overlaps with stronger selected {row['bucket'].lower()} pick ({overlap_with})."
+            return f"Overlap with stronger pick ({overlap_with}) — bench but viable."
         if int(row["times_used"]) <= 3:
-            return "Low sample, recommendation remains tentative."
+            return "Low-confidence alternative due to limited sample."
         if float(row["trend_delta"]) < -4:
-            return "Useful coverage, but weaker recent trend."
+            return "Coverage option, but recent trend is weaker."
         if row["confidence"] in {"Neutral / unproven", "Early negative signal", "Proven poor"}:
-            return "Lower confidence than selected pick."
-        return "Solid backup, but current set has stronger category-relative quality."
+            return "Bench but viable: confidence signal is lower than selected set."
+        return "Coverage option with decent score, but current picks are stronger keeps."
 
     st.markdown("<div class='tb-module-grid'>", unsafe_allow_html=True)
     st.markdown(
@@ -6376,7 +6487,6 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     for category in category_order:
         category_pool = tactic_perf[tactic_perf["bucket"] == category].copy()
         alternatives = category_pool[~category_pool["tactic_name"].isin(selected_names)].head(3) if not category_pool.empty else pd.DataFrame()
-        accent = category_colors.get(category, "#5ea9ff")
         st.markdown(f"<div class='tb-module tb-alt-group'><div class='tb-alt-group-head'>{category} alternatives</div>", unsafe_allow_html=True)
         if alternatives.empty:
             st.markdown(
@@ -6399,14 +6509,23 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 None,
             )
             why_not = _alt_reason(row, overlap_with)
+            priority_label = str(row["keep_priority_label"])
+            priority_tier = str(row["keep_priority_tier"])
+            color_tokens = keep_priority_color_token(priority_tier)
             st.markdown(
                 f"""
-                <div class="tb-alt-item" style="--accent:{accent};">
+                <div class="tb-alt-item" style="--accent:{color_tokens['accent']}; border-color:{color_tokens['accent']}55; background:linear-gradient(160deg, {color_tokens['bg']}, rgba(10, 16, 28, 0.9));">
                     <div class="tb-alt-item-top">
                         <div class="tb-alt-name">{row["tactic_name"]}</div>
-                        <span class="tb-category-pill" style="--accent:{accent};">{category}</span>
+                        <span class="tb-category-pill" style="--accent:#7ea7da;">{category}</span>
                     </div>
-                    <div class="tb-alt-meta">Score {row["recommendation_score"]:.1f} • WR {row["win_pct"]:.1f}% • Uses {int(row["times_used"])} • {row["confidence"]}</div>
+                    <div class="tb-alt-meta">Score {row["recommendation_score"]:.1f} • WR {row["win_pct"]:.1f}% • Uses {int(row["times_used"])} • {row["confidence"]} • {priority_label}</div>
+                    <div class="tb-tier-row" style="margin-left:0; margin-top:6px;">
+                        <div class="tb-tier-chip"><span class="tier-label">S</span>{row["vs_s_text"]}</div>
+                        <div class="tb-tier-chip"><span class="tier-label">A</span>{row["vs_a_text"]}</div>
+                        <div class="tb-tier-chip"><span class="tier-label">B</span>{row["vs_b_text"]}</div>
+                        <div class="tb-tier-chip"><span class="tier-label">C</span>{row["vs_c_text"]}</div>
+                    </div>
                     <div class="tb-alt-reason">{why_not}</div>
                 </div>
                 """,
