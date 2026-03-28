@@ -6952,19 +6952,19 @@ def render_tournament_summary_page(match_rows: pd.DataFrame, summary_df: pd.Data
             date_label = date_text.strftime("%Y-%m-%d") if pd.notna(date_text) else "Unknown date"
             comparison = str(row.get("comparison_note", ""))
             match_cards.append(
-                f"""
-                <article class='match-card {result_class}'>
-                    <div class='panel-muted'>{date_label}</div>
-                    <div class='panel-title' style='font-size:0.95rem;'>{html.escape(str(row.get("opponent_raw", "Unknown opponent")))}</div>
-                    <div style='display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;'>
-                        <span class='vs-pill'>Tier {html.escape(str(row.get("opponent_tier_resolved", "—")))}</span>
-                        <span class='vs-pill'>Map {html.escape(str(row.get("map", "—")))}</span>
-                        <span class='vs-pill {"vs-pill-good" if result == "win" else "vs-pill-bad" if result == "loss" else "vs-pill-mid"}'>{html.escape(str(row.get("match_result", "Draw")))} {int(row.get("round_wins", 0))}-{int(row.get("round_losses", 0))}</span>
-                        <span class='vs-pill {"vs-pill-good" if int(row.get("round_diff", 0)) >= 0 else "vs-pill-bad"}'>RD {int(row.get("round_diff", 0)):+d}</span>
-                    </div>
-                    <div class='mini-note'>{html.escape(comparison)}</div>
-                </article>
-                """
+                (
+                    f"<article class='match-card {result_class}'>"
+                    f"<div class='panel-muted'>{date_label}</div>"
+                    f"<div class='panel-title' style='font-size:0.95rem;'>{html.escape(str(row.get('opponent_raw', 'Unknown opponent')))}</div>"
+                    "<div style='display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;'>"
+                    f"<span class='vs-pill'>Tier {html.escape(str(row.get('opponent_tier_resolved', '—')))}</span>"
+                    f"<span class='vs-pill'>Map {html.escape(str(row.get('map', '—')))}</span>"
+                    f"<span class='vs-pill {'vs-pill-good' if result == 'win' else 'vs-pill-bad' if result == 'loss' else 'vs-pill-mid'}'>{html.escape(str(row.get('match_result', 'Draw')))} {int(row.get('round_wins', 0))}-{int(row.get('round_losses', 0))}</span>"
+                    f"<span class='vs-pill {'vs-pill-good' if int(row.get('round_diff', 0)) >= 0 else 'vs-pill-bad'}'>RD {int(row.get('round_diff', 0)):+d}</span>"
+                    "</div>"
+                    f"<div class='mini-note'>{html.escape(comparison)}</div>"
+                    "</article>"
+                )
             )
         st.markdown(
             f"<div class='panel-card'><div class='panel-muted'>Recent results</div><section class='match-card-grid'>{''.join(match_cards)}</section></div>",
