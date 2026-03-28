@@ -290,17 +290,26 @@ def _inject_styles() -> None:
         }
         .achievement-season {
             z-index: 3;
-            padding: 2px 7px;
+            height: 20px;
+            padding: 0 8px;
             border-radius: 999px;
             border: 1px solid rgba(160, 186, 233, 0.52);
             background: rgba(7, 12, 20, 0.86);
             color: #d7e8ff;
-            font-size: 0.52rem;
-            letter-spacing: 0.08em;
+            font-size: 0.54rem;
+            letter-spacing: 0.07em;
             text-transform: uppercase;
             font-weight: 850;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
             white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+        .achievement-season-badge {
+            justify-self: start;
         }
         .achievement-image-wrap {
             position: relative;
@@ -314,17 +323,16 @@ def _inject_styles() -> None:
             justify-content: center;
         }
         .achievement-tier-icon {
-            width: 20px;
-            height: 20px;
-            min-width: 20px;
-            min-height: 20px;
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            min-height: 22px;
             border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
+            display: inline-grid;
+            place-items: center;
+            line-height: 22px;
             padding: 0;
-            font-size: 0.58rem;
+            font-size: 0.62rem;
             font-weight: 900;
             letter-spacing: 0.03em;
             border: 1px solid rgba(148, 173, 214, 0.36);
@@ -334,15 +342,16 @@ def _inject_styles() -> None:
             flex: 0 0 auto;
         }
         .achievement-position {
-            min-height: 18px;
+            height: 22px;
+            min-height: 22px;
             min-width: 30px;
-            max-width: 58px;
-            padding: 0 7px;
+            max-width: 64px;
+            padding: 0 8px;
             border-radius: 999px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.52rem;
+            font-size: 0.55rem;
             font-weight: 860;
             letter-spacing: 0.03em;
             text-transform: uppercase;
@@ -379,7 +388,7 @@ def _inject_styles() -> None:
         .achievement-inline-name {
             color: #ebf3ff;
             font-weight: 820;
-            line-height: 1.15;
+            line-height: 1.2;
             font-size: 0.53rem;
             letter-spacing: 0.045em;
             text-transform: uppercase;
@@ -1160,28 +1169,32 @@ def _inject_styles() -> None:
         }
         .achievement-top-row {
             position: absolute;
-            top: 7px;
-            left: 7px;
-            right: 7px;
+            top: 8px;
+            left: 8px;
+            right: 8px;
             z-index: 4;
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 6px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 8px;
             pointer-events: none;
         }
         .achievement-badge-stack {
             display: inline-flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 5px;
+            gap: 6px;
             min-width: 0;
+            max-width: 100%;
             pointer-events: auto;
+        }
+        .achievement-header-cluster {
+            justify-self: end;
         }
         .achievement-premium .achievement-image-wrap {
             width: 100%;
             height: 100%;
-            padding: 30px 7px 28px;
+            padding: 38px 8px 34px;
             box-sizing: border-box;
             background: linear-gradient(180deg, rgba(18, 27, 41, 0.55), rgba(9, 13, 22, 0.72));
         }
@@ -1197,7 +1210,7 @@ def _inject_styles() -> None:
             top: 0;
             left: 0;
             right: 0;
-            height: 38px;
+            height: 50px;
             background: linear-gradient(180deg, rgba(4, 7, 12, 0.78), rgba(4, 7, 12, 0));
             z-index: 1;
             pointer-events: none;
@@ -1207,21 +1220,21 @@ def _inject_styles() -> None:
             left: 0;
             right: 0;
             bottom: 0;
-            height: 36px;
+            height: 44px;
             background: linear-gradient(180deg, rgba(4, 7, 12, 0), rgba(4, 7, 12, 0.86));
             z-index: 1;
             pointer-events: none;
         }
         .achievement-footer {
             position: absolute;
-            left: 6px;
-            right: 6px;
-            bottom: 5px;
+            left: 8px;
+            right: 8px;
+            bottom: 8px;
             z-index: 4;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 17px;
+            min-height: 21px;
             pointer-events: none;
         }
         .achievement-missing {
@@ -2726,6 +2739,37 @@ def _inject_styles() -> None:
                 width: 82px;
                 height: 112px;
                 flex-basis: 82px;
+            }
+            .achievement-top-row {
+                grid-template-columns: 1fr;
+                align-items: start;
+                gap: 5px;
+            }
+            .achievement-badge-stack {
+                justify-self: end;
+            }
+            .achievement-premium .achievement-image-wrap {
+                padding: 42px 7px 30px;
+            }
+            .achievement-season {
+                height: 19px;
+                font-size: 0.5rem;
+                padding: 0 7px;
+            }
+            .achievement-position {
+                height: 20px;
+                min-height: 20px;
+                max-width: 60px;
+                font-size: 0.5rem;
+                padding: 0 7px;
+            }
+            .achievement-tier-icon {
+                width: 20px;
+                height: 20px;
+                min-width: 20px;
+                min-height: 20px;
+                line-height: 20px;
+                font-size: 0.56rem;
             }
             .stats-tile-grid { gap: 7px; }
             .stats-tile { min-height: 82px; }
@@ -4735,8 +4779,8 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
         "<div class='achievement-footer-gradient'></div>"
         f"<div class='achievement-image-wrap'>{image_html}</div>"
         "<div class='achievement-top-row'>"
-        f"<div class='achievement-season'>{season}</div>"
-        "<div class='achievement-badge-stack'>"
+        f"<div class='achievement-season achievement-season-badge'>{season}</div>"
+        "<div class='achievement-badge-stack achievement-header-cluster'>"
         f"{position_badge_html}"
         f"<span class='achievement-tier achievement-tier-icon tier-{tier_class}'>{top_badge}</span>"
         "</div>"
