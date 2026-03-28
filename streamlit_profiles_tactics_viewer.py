@@ -2340,10 +2340,37 @@ def _inject_styles() -> None:
             background: var(--accent, rgba(132, 201, 255, 0.8));
             box-shadow: 0 0 12px var(--accent, rgba(132, 201, 255, 0.45));
         }
-        .tb-card-title { color: #f2f7ff; font-weight: 830; font-size: 0.84rem; margin-left: 6px; }
+        .tb-card-head {
+            margin-left: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .tb-card-title { color: #f2f7ff; font-weight: 830; font-size: 0.84rem; }
         .tb-card-sub { color: #aacaef; font-size: 0.68rem; margin-left: 6px; margin-top: 2px; }
-        .tb-card-meta { color: #d6e4fa; font-size: 0.7rem; margin-left: 6px; margin-top: 4px; }
-        .tb-card-reason { color: #bac8e0; font-size: 0.72rem; margin-left: 6px; margin-top: 4px; line-height: 1.28; }
+        .tb-card-meta { color: #d6e4fa; font-size: 0.7rem; margin-left: 6px; margin-top: 5px; line-height: 1.35; }
+        .tb-card-reason {
+            color: #d4e2f7;
+            font-size: 0.73rem;
+            margin-left: 6px;
+            margin-top: 6px;
+            line-height: 1.35;
+            padding-top: 5px;
+            border-top: 1px solid rgba(136, 161, 201, 0.22);
+        }
+        .tb-category-pill {
+            border-radius: 999px;
+            padding: 2px 8px;
+            border: 1px solid color-mix(in srgb, var(--accent, #7ab4ff) 70%, #ffffff 30%);
+            color: #e9f2ff;
+            font-size: 0.62rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-weight: 800;
+            background: color-mix(in srgb, var(--accent, #7ab4ff) 22%, rgba(10, 18, 31, 0.84));
+            white-space: nowrap;
+        }
         .tb-feature {
             border-radius: 16px;
             border: 1px solid rgba(133, 171, 233, 0.44);
@@ -2374,6 +2401,142 @@ def _inject_styles() -> None:
             text-align: center;
             padding: 18px 12px;
             font-size: 0.82rem;
+        }
+        .tb-legend-strip {
+            border-radius: 14px;
+            border: 1px solid rgba(126, 166, 226, 0.34);
+            background: linear-gradient(155deg, rgba(17, 30, 49, 0.85), rgba(10, 16, 29, 0.92));
+            padding: 10px 12px;
+            margin: 8px 0 2px;
+        }
+        .tb-legend-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 7px;
+        }
+        .tb-legend-item {
+            border-radius: 999px;
+            border: 1px solid rgba(140, 165, 212, 0.42);
+            background: linear-gradient(180deg, rgba(30, 49, 78, 0.64), rgba(11, 18, 32, 0.76));
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 4px 9px 4px 7px;
+            color: #deebff;
+            font-size: 0.66rem;
+            font-weight: 760;
+        }
+        .tb-legend-swatch {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            box-shadow: 0 0 8px currentColor;
+            flex-shrink: 0;
+        }
+        .tb-module-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .tb-module {
+            grid-column: span 12;
+            border-radius: 16px;
+            border: 1px solid rgba(133, 172, 230, 0.36);
+            background:
+                radial-gradient(circle at 11% 0%, rgba(75, 214, 186, 0.12), transparent 36%),
+                radial-gradient(circle at 95% 0%, rgba(99, 161, 255, 0.12), transparent 40%),
+                linear-gradient(160deg, rgba(15, 26, 44, 0.92), rgba(8, 13, 25, 0.96));
+            padding: 12px;
+        }
+        .tb-module h4 {
+            margin: 0;
+            color: #eef5ff;
+            font-size: 0.9rem;
+            font-weight: 840;
+            letter-spacing: 0.02em;
+        }
+        .tb-module-sub {
+            margin-top: 4px;
+            color: #a9c3e8;
+            font-size: 0.72rem;
+            line-height: 1.35;
+        }
+        .tb-alt-group { margin-top: 10px; }
+        .tb-alt-group-head {
+            color: #dbe9ff;
+            font-size: 0.75rem;
+            font-weight: 810;
+            margin-bottom: 6px;
+        }
+        .tb-alt-item {
+            border-radius: 12px;
+            border: 1px solid rgba(131, 160, 206, 0.34);
+            border-left: 3px solid var(--accent, #7cb6ff);
+            background: linear-gradient(155deg, rgba(17, 29, 48, 0.8), rgba(10, 16, 28, 0.9));
+            padding: 8px 10px;
+            margin-bottom: 6px;
+        }
+        .tb-alt-item-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .tb-alt-name { color: #f0f6ff; font-size: 0.79rem; font-weight: 790; }
+        .tb-alt-meta { color: #c4d8f5; font-size: 0.69rem; margin-top: 4px; line-height: 1.35; }
+        .tb-alt-reason {
+            color: #afc4e4;
+            font-size: 0.69rem;
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px solid rgba(135, 163, 208, 0.24);
+        }
+        .tb-balance-strip {
+            margin-top: 9px;
+            border-radius: 999px;
+            height: 9px;
+            overflow: hidden;
+            background: rgba(137, 160, 201, 0.2);
+        }
+        .tb-balance-strip > span {
+            display: block;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #f58e86 0%, #f2be55 42%, #59d5a8 100%);
+        }
+        .tb-insight-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 7px;
+        }
+        .tb-insight {
+            border-radius: 11px;
+            border: 1px solid rgba(136, 164, 211, 0.34);
+            background: linear-gradient(165deg, rgba(20, 33, 54, 0.82), rgba(10, 16, 28, 0.92));
+            padding: 8px 9px;
+            color: #dce9ff;
+            font-size: 0.7rem;
+            line-height: 1.32;
+        }
+        .tb-insight.good { border-color: rgba(91, 215, 161, 0.42); }
+        .tb-insight.warn { border-color: rgba(244, 187, 101, 0.42); }
+        .tb-insight.bad { border-color: rgba(244, 128, 128, 0.42); }
+        .tb-why-points {
+            margin-top: 8px;
+            display: grid;
+            gap: 6px;
+        }
+        .tb-why-point {
+            border-radius: 10px;
+            border: 1px solid rgba(138, 164, 208, 0.35);
+            background: linear-gradient(170deg, rgba(18, 31, 52, 0.82), rgba(10, 16, 29, 0.92));
+            color: #d9e8ff;
+            font-size: 0.72rem;
+            line-height: 1.34;
+            padding: 7px 9px;
         }
         .tb-family-card {
             border-radius: 12px;
@@ -6075,21 +6238,8 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
 
     confidence_counts = selected_df["confidence"].value_counts().to_dict()
     coverage_labels = sorted({tag for tags in selected_df["route_tags"] for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
-    health_notes = []
-    if len(selected_df) < 5:
-        health_notes.append("Depth is limited in this map-side pool, so the recommendation set stays compact.")
-    if selected_df["times_used"].sum() < 30:
-        health_notes.append("Selected set is sample-light; recommendations are tentative.")
-    if "Mid" not in selected_df["bucket"].values and not tactic_perf[tactic_perf["bucket"] == "Mid"].empty:
-        health_notes.append("Good core 5, but Mid coverage is missing.")
-    if "Ivy" not in selected_df["bucket"].values and not tactic_perf[tactic_perf["bucket"] == "Ivy"].empty:
-        health_notes.append("Ivy route exists but did not make the quality cutoff.")
-    if (selected_df["confidence"] == "Proven poor").any():
-        health_notes.append("One or more selected tactics are weak-confidence placeholders due to depth limits.")
-    if not health_notes:
-        health_notes.append("Set prioritises quality and reliability for this exact map + side context.")
 
-    st.markdown("<div class='panel-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='panel-card' style='margin-top:8px;'>", unsafe_allow_html=True)
     st.markdown(
         f"""
         <div class="panel-title">Recommended Set Summary</div>
@@ -6103,8 +6253,16 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         """,
         unsafe_allow_html=True,
     )
-    for note in health_notes:
-        st.markdown(f"- {note}")
+    st.markdown(
+        f"""
+        <div class="tb-badge-row">
+            <span class="tb-chip">{selected_map}</span>
+            <span class="tb-chip">{selected_side}</span>
+            <span class="tb-chip">Context baseline {float(selected_df["context_baseline_win_pct"].iloc[0]):.1f}%</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
     category_colors = {
@@ -6114,6 +6272,24 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         "Mid": "#f0be4f",
         "Ivy": "#5ad9ff",
     }
+    st.markdown(
+        """
+        <div class="tb-legend-strip">
+            <div class="panel-title">Colour guide</div>
+            <div class="panel-muted">Colours indicate tactic role/category and help show coverage across the recommended set.</div>
+            <div class="tb-legend-row">
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#f5c451;background:#f5c451;"></span>Pistol</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#5ccf86;background:#5ccf86;"></span>Eco</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#5ea9ff;background:#5ea9ff;"></span>Standard</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#f0be4f;background:#f0be4f;"></span>Mid</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#5ad9ff;background:#5ad9ff;"></span>Ivy</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#c8d9ff;background:#c8d9ff;"></span>Confidence/quality accents</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown("<div class='tb-section-title'>Recommended tactic cards</div>", unsafe_allow_html=True)
     for category in category_order:
         block = selected_df[selected_df["bucket"] == category]
@@ -6136,24 +6312,78 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             st.markdown(
                 f"""
                 <div class="tb-decision-card" style="--accent:{accent}; border-color:{accent}55;">
-                    <div class="tb-card-title">{category}: {row["tactic_name"]}</div>
+                    <div class="tb-card-head">
+                        <div class="tb-card-title">{row["tactic_name"]}</div>
+                        <div class="tb-category-pill">{category}</div>
+                    </div>
                     <div class="tb-card-sub">{row["map"]} • {row["side"]}</div>
-                    <div class="tb-card-meta">Score {row["recommendation_score"]:.1f} • {row["confidence"]} • Uses {int(row["times_used"])} • WR {row["win_pct"]:.1f}% • Δmap {row["delta_vs_baseline"]:+.1f}pp • Δcat {row["delta_vs_category_baseline"]:+.1f}pp</div>
+                    <div class="tb-card-meta">Score {row["recommendation_score"]:.1f} • WR {row["win_pct"]:.1f}% • Uses {int(row["times_used"])} • {row["confidence"]}<br/>Δmap {row["delta_vs_baseline"]:+.1f}pp • Δcat {row["delta_vs_category_baseline"]:+.1f}pp • Trend {row["trend_delta"]:+.1f}pp</div>
                     <div class="tb-card-reason">{reason}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-    st.markdown("<div class='tb-section-title'>Bench / alternatives</div>", unsafe_allow_html=True)
+    selected_route_tags = [tags if isinstance(tags, set) else set() for tags in selected_df["route_tags"]]
+    has_fast = any("fast" in tags for tags in selected_route_tags)
+    has_slow = any("slow" in tags for tags in selected_route_tags)
+    has_a = any("a" in tags for tags in selected_route_tags)
+    has_b = any("b" in tags for tags in selected_route_tags)
+    has_mid = "Mid" in selected_df["bucket"].values
+    has_ivy = "Ivy" in selected_df["bucket"].values
+    eco_depth_thin = int((selected_df["bucket"] == "Eco").sum()) <= 1
+    sample_light = int(selected_df["times_used"].sum()) < 30
+
+    balance_score = 40
+    balance_score += selected_df["bucket"].nunique() * 9
+    balance_score += 8 if has_fast and has_slow else 0
+    balance_score += 8 if has_a and has_b else 0
+    balance_score += 6 if has_mid else 0
+    balance_score += 4 if has_ivy else 0
+    balance_score -= 8 if eco_depth_thin else 0
+    balance_score -= 8 if sample_light else 0
+    balance_score = int(max(8, min(100, balance_score)))
+
+    route_coverage_labels = sorted({tag for tags in selected_route_tags for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
+    route_coverage_markup = "".join(f"<span class='tb-chip'>{label}</span>" for label in route_coverage_labels) or "<span class='tb-chip'>Core routes only</span>"
+    category_mix_markup = "".join(
+        f"<span class='tb-chip' style='border-color:{category_colors.get(bucket, '#7cb6ff')}66'>{bucket} {int((selected_df['bucket'] == bucket).sum())}</span>"
+        for bucket in category_order
+        if int((selected_df["bucket"] == bucket).sum()) > 0
+    )
+
+    def _alt_reason(row: pd.Series, overlap_with: str | None) -> str:
+        if overlap_with:
+            return f"Good option, but overlaps with stronger selected {row['bucket'].lower()} pick ({overlap_with})."
+        if int(row["times_used"]) <= 3:
+            return "Low sample, recommendation remains tentative."
+        if float(row["trend_delta"]) < -4:
+            return "Useful coverage, but weaker recent trend."
+        if row["confidence"] in {"Neutral / unproven", "Early negative signal", "Proven poor"}:
+            return "Lower confidence than selected pick."
+        return "Solid backup, but current set has stronger category-relative quality."
+
+    st.markdown("<div class='tb-module-grid'>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="tb-module">
+            <h4>Bench / Alternatives</h4>
+            <div class="tb-module-sub">Backups are shown by category with quick quality context and why they were left on the bench.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     for category in category_order:
         category_pool = tactic_perf[tactic_perf["bucket"] == category].copy()
-        if category_pool.empty:
-            continue
-        alternatives = category_pool[~category_pool["tactic_name"].isin(selected_names)].head(3)
+        alternatives = category_pool[~category_pool["tactic_name"].isin(selected_names)].head(3) if not category_pool.empty else pd.DataFrame()
+        accent = category_colors.get(category, "#5ea9ff")
+        st.markdown(f"<div class='tb-module tb-alt-group'><div class='tb-alt-group-head'>{category} alternatives</div>", unsafe_allow_html=True)
         if alternatives.empty:
+            st.markdown(
+                f"<div class='tb-empty' style='padding:11px 10px;'>No meaningful {category.lower()} alternatives in current sample.</div></div>",
+                unsafe_allow_html=True,
+            )
             continue
-        st.markdown(f"**{category} alternatives**")
         for _, row in alternatives.iterrows():
             overlap_with = next(
                 (
@@ -6168,34 +6398,81 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 ),
                 None,
             )
-            why_not = (
-                f"Not selected: overlaps too heavily with better option `{overlap_with}`."
-                if overlap_with
-                else ("Good sample, but weaker recent trend." if float(row["trend_delta"]) < 0 else "Useful option, but lower confidence than selected picks.")
-            )
+            why_not = _alt_reason(row, overlap_with)
             st.markdown(
-                f"- `{row['tactic_name']}` — Score {row['recommendation_score']:.1f}, WR {row['win_pct']:.1f}%, Uses {int(row['times_used'])}. {why_not}"
+                f"""
+                <div class="tb-alt-item" style="--accent:{accent};">
+                    <div class="tb-alt-item-top">
+                        <div class="tb-alt-name">{row["tactic_name"]}</div>
+                        <span class="tb-category-pill" style="--accent:{accent};">{category}</span>
+                    </div>
+                    <div class="tb-alt-meta">Score {row["recommendation_score"]:.1f} • WR {row["win_pct"]:.1f}% • Uses {int(row["times_used"])} • {row["confidence"]}</div>
+                    <div class="tb-alt-reason">{why_not}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div class='tb-section-title'>Coverage / balance panel</div>", unsafe_allow_html=True)
-    coverage_checks = {
-        "Opening tempo present": bool((selected_df["route_tags"].apply(lambda t: "fast" in t)).any()),
-        "Slower control present": bool((selected_df["route_tags"].apply(lambda t: "slow" in t)).any()),
-        "Site pressure variety (A/B)": bool((selected_df["route_tags"].apply(lambda t: "a" in t)).any() and (selected_df["route_tags"].apply(lambda t: "b" in t)).any()),
-        "Mid coverage": "Mid" in selected_df["bucket"].values,
-        "Ivy coverage": "Ivy" in selected_df["bucket"].values,
-    }
-    for label, ok in coverage_checks.items():
-        st.markdown(f"- {'✅' if ok else '⚠️'} {label}")
+    insights = []
+    insights.append(("Strong standard depth" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "Standard depth is currently limited", "good" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "warn"))
+    insights.append(("Only one eco option is currently trustworthy" if eco_depth_thin else "Eco depth has meaningful redundancy", "warn" if eco_depth_thin else "good"))
+    insights.append(("No Ivy coverage available in current sample" if not has_ivy else "Ivy coverage exists in the selected set", "warn" if not has_ivy else "good"))
+    insights.append(("Set leans slow-control heavy" if has_slow and not has_fast else "Good mix of fast and control profiles" if has_fast and has_slow else "Tempo profile is narrow", "warn" if (has_slow and not has_fast) or not (has_fast and has_slow) else "good"))
+    insights.append(("Selected set is sample-light, so confidence remains tentative" if sample_light else "Good mix of proven and early-positive tactics", "warn" if sample_light else "good"))
+    insight_markup = "".join(f"<div class='tb-insight {level}'>{text}</div>" for text, level in insights)
 
-    st.markdown("<div class='tb-section-title'>Copy recommended set</div>", unsafe_allow_html=True)
-    compact_lines = [f"{row['bucket']}: {row['tactic_name']}" for _, row in selected_df[["bucket", "tactic_name"]].iterrows()]
-    st.code("\n".join(compact_lines), language="text")
+    st.markdown(
+        f"""
+        <div class="tb-module">
+            <h4>Coverage &amp; Balance</h4>
+            <div class="tb-module-sub">Compact health view of category depth, route variety, tempo mix, and confidence risk.</div>
+            <div class="tb-badge-row">
+                <span class="tb-chip">Total selected {len(selected_df)} / 7</span>
+                <span class="tb-chip">Balanced score {balance_score}/100</span>
+                <span class="tb-chip">{'Balanced' if balance_score >= 72 else 'Moderately narrow' if balance_score >= 56 else 'Narrow profile'}</span>
+            </div>
+            <div class="tb-balance-strip"><span style="width:{balance_score}%;"></span></div>
+            <div class="tb-module-sub" style="margin-top:9px;">Category coverage</div>
+            <div class="tb-badge-row">{category_mix_markup}</div>
+            <div class="tb-module-sub" style="margin-top:8px;">Route coverage tags</div>
+            <div class="tb-badge-row">{route_coverage_markup}</div>
+            <div class="tb-insight-grid">{insight_markup}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     pistol_count = int((selected_df["bucket"] == "Pistol").sum())
     eco_count = int((selected_df["bucket"] == "Eco").sum())
     standard_count = int((selected_df["bucket"] == "Standard").sum())
     mid_count = int((selected_df["bucket"] == "Mid").sum())
     ivy_count = int((selected_df["bucket"] == "Ivy").sum())
+    why_points = [f"Set prioritises {pistol_count} stable pistol slot, {eco_count} eco option{'s' if eco_count != 1 else ''}, and {standard_count} above-baseline standard picks with distinct tactical value."]
+    if mid_count:
+        why_points.append("Mid coverage is included because it improves route diversity without dragging quality below category baseline.")
+    else:
+        why_points.append("Mid was not forced in because available Mid options did not clear the quality threshold for this exact map-side pool.")
+    if ivy_count:
+        why_points.append("Ivy coverage is kept because it contributes independent route pressure with acceptable confidence.")
+    else:
+        why_points.append("No Ivy tactic was promoted because current Ivy data is too weak or redundant to justify a slot.")
+    why_markup = "".join(f"<div class='tb-why-point'>{point}</div>" for point in why_points)
+    st.markdown(
+        f"""
+        <div class="tb-module">
+            <h4>Why this set works</h4>
+            <div class="tb-module-sub">Selection logic stays map-side specific, score-led, and coverage-aware without forcing low-quality fillers.</div>
+            <div class="tb-why-points">{why_markup}</div>
+        </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("<div class='tb-section-title'>Copy recommended set</div>", unsafe_allow_html=True)
+    compact_lines = [f"{row['bucket']}: {row['tactic_name']}" for _, row in selected_df[["bucket", "tactic_name"]].iterrows()]
+    st.code("\n".join(compact_lines), language="text")
     summary_line = (
         f"This set prioritises {pistol_count} pistol, {eco_count} eco option{'s' if eco_count != 1 else ''}, "
         f"{standard_count} strong standard option{'s' if standard_count != 1 else ''}"
