@@ -6181,7 +6181,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     )
     default_season = f"S{latest_season}" if latest_season is not None else "Lifetime"
 
-    st.markdown(
+    _render_html(
         """
         <section class="tb-console">
             <div class="tb-console-head">
@@ -6189,8 +6189,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                 <div class="tb-note">Filters and sample controls for map + side specific analysis (no cross-context transfer).</div>
             </div>
         </section>
-        """,
-        unsafe_allow_html=True,
+        """
     )
     with st.expander("Filters", expanded=False):
         filter_cols = st.columns(6)
@@ -6287,9 +6286,8 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         return
 
     min_sample = int(st.slider("Minimum sample (uses)", 1, max(int(tactic_perf["times_used"].max()), 1), 1, key="tactic_min_sample"))
-    st.markdown(
+    _render_html(
         f"<div class='tb-slider-note'>Minimum sample active: <strong>{min_sample}</strong> uses per tactic in the current map+side context.</div>",
-        unsafe_allow_html=True,
     )
     tactic_perf = tactic_perf[tactic_perf["times_used"] >= min_sample].copy()
     if tactic_perf.empty:
@@ -6458,7 +6456,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         st.warning("No tactic summaries available.")
         return
 
-    st.markdown("<div class='tb-section-title'>Tactical Action Board</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Tactical Action Board</div>")
     map_options = ["All Maps"] + sorted(tactic_perf["map"].dropna().astype(str).unique().tolist())
     side_options = ["Both Sides", "Red", "Blue"]
     filter_map_col, filter_side_col = st.columns(2)
@@ -6483,9 +6481,8 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     if selected_board_side != "Both Sides":
         filtered_tactic_perf = filtered_tactic_perf[filtered_tactic_perf["side"] == selected_board_side]
 
-    st.markdown(
+    _render_html(
         f"<div class='tb-note'><strong>Showing:</strong> {selected_board_map} • {selected_board_side}</div>",
-        unsafe_allow_html=True,
     )
 
     action_counts = filtered_tactic_perf["recommended_action"].value_counts().to_dict()
@@ -6499,7 +6496,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         f"<div class='tb-kpi'><div class='k'>{label}</div><div class='v'>{int(value)}</div></div>"
         for label, value in kpi_items
     )
-    st.markdown(f"<div class='tb-kpi-strip'>{kpi_strip_html}</div>", unsafe_allow_html=True)
+    _render_html(f"<div class='tb-kpi-strip'>{kpi_strip_html}</div>")
 
     action_order = ["Keep", "Use More", "Monitor", "Rework", "Drop"]
     action_class = {
@@ -6511,9 +6508,8 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     }
 
     if filtered_tactic_perf.empty:
-        st.markdown(
+        _render_html(
             "<div class='tb-empty'>No tactics match this map + side selection yet. Try <strong>All Maps</strong> or <strong>Both Sides</strong> to widen the context.</div>",
-            unsafe_allow_html=True,
         )
     else:
         board_cols = st.columns(len(action_order))
@@ -6539,7 +6535,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                             </div>
                             """,
                         )
-                st.markdown(
+                _render_html(
                     f"""
                     <div class="tb-action-col {cls_name}">
                         <div class="tb-action-head">
@@ -6548,8 +6544,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                         </div>
                         {''.join(action_cards_html)}
                     </div>
-                    """,
-                    unsafe_allow_html=True,
+                    """
                 )
 
     st.markdown("<div class='tb-section-title'>Main tactic table</div>", unsafe_allow_html=True)
@@ -7185,8 +7180,27 @@ def build_tournament_overview_metrics(summary_df: pd.DataFrame, match_rows: pd.D
     }
 
 
+def build_map_side_context_summary(match_rows: pd.DataFrame) -> pd.DataFrame:
+    if match_rows.empty:
+        return pd.DataFrame()
+    return (
+        match_rows.groupby(["map", "side"], as_index=False)
+        .agg(
+            matches=("match_id", "nunique"),
+            wins=("match_result", lambda s: int((s == "Win").sum())),
+            losses=("match_result", lambda s: int((s == "Loss").sum())),
+            round_diff=("round_diff", "sum"),
+        )
+        .assign(
+            win_rate_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+            context_label=lambda d: d["map"].astype(str) + " • " + d["side"].astype(str),
+        )
+        .sort_values(["win_rate_pct", "round_diff", "matches"], ascending=[False, False, False])
+    )
+
+
 def render_tournament_summary_page(match_rows: pd.DataFrame, summary_df: pd.DataFrame, image_index: dict[str, dict[str, Path]]) -> None:
-    st.markdown("<div class='tb-section-title'>Tournament Summary</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Tournament Summary</div>")
     st.caption("Campaign-by-campaign results, opponent quality, and matchup history.")
     overview = build_tournament_overview_metrics(summary_df, match_rows)
     if not overview:
@@ -7196,9 +7210,8 @@ def render_tournament_summary_page(match_rows: pd.DataFrame, summary_df: pd.Data
         f"<div class='kpi-card'><div class='kpi-label'>{html.escape(label)}</div><div class='kpi-value'>{html.escape(value)}</div></div>"
         for label, value in overview.items()
     )
-    st.markdown(
+    _render_html(
         f"<div class='panel-card'><div class='panel-muted'>Tournament overview strip</div><div class='kpi-grid'>{overview_html}</div></div>",
-        unsafe_allow_html=True,
     )
 
     for _, tournament in summary_df.iterrows():
@@ -7221,6 +7234,23 @@ def render_tournament_summary_page(match_rows: pd.DataFrame, summary_df: pd.Data
             f"</div><div class='tb-note' style='margin-top:8px;'>{html.escape(str(tournament['insight']))}</div></div>"
         )
         _render_html(header_html)
+        context_summary = build_map_side_context_summary(block_df)
+        if not context_summary.empty:
+            best_context = context_summary.iloc[0]
+            weakest_context = context_summary.sort_values(
+                ["win_rate_pct", "round_diff", "matches"],
+                ascending=[True, True, False],
+            ).iloc[0]
+            context_html = (
+                "<div class='panel-card'>"
+                "<div class='panel-muted'>Tactical context snapshot</div>"
+                f"<div style='display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;'>"
+                f"<span class='vs-pill'>Best context {html.escape(str(best_context['context_label']))} • WR {float(best_context['win_rate_pct']):.1f}%</span>"
+                f"<span class='vs-pill'>Pressure context {html.escape(str(weakest_context['context_label']))} • WR {float(weakest_context['win_rate_pct']):.1f}%</span>"
+                f"<span class='vs-pill'>Contexts tracked {int(context_summary['context_label'].nunique())}</span>"
+                "</div></div>"
+            )
+            _render_html(context_html)
         match_cards = []
         for _, row in block_df.head(8).iterrows():
             result = str(row.get("match_result", "Draw")).lower()
@@ -7373,7 +7403,7 @@ def _opponent_review_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, com
         active_page="opponent_review",
         subtitle="Single-team dossier: history, map split, trendline, and latest known opponent tier.",
     )
-    st.markdown("<div class='tb-section-title'>Opponent Review</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Opponent Review</div>")
     st.caption("Focus one opponent across all meetings and compare trajectory over time.")
 
     team_df = tactics_df[tactics_df["my_team"].astype(str).str.contains("ⓜ", regex=False, na=False)].copy()
@@ -7460,6 +7490,32 @@ def _opponent_review_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, com
     _render_html(
         f"<div class='panel-card'><div class='panel-muted'>Recent meetings</div><section class='match-card-grid'>{''.join(recent_cards)}</section></div>"
     )
+    context_summary = build_map_side_context_summary(filtered)
+    if not context_summary.empty:
+        best_context = context_summary.iloc[0]
+        weakest_context = context_summary.sort_values(
+            ["win_rate_pct", "round_diff", "matches"],
+            ascending=[True, True, False],
+        ).iloc[0]
+        recent_window = filtered.sort_values("date", ascending=False).head(3)
+        recent_trend = (
+            "Improving"
+            if int((recent_window["round_diff"] > 0).sum()) >= 2
+            else "Sliding"
+            if int((recent_window["round_diff"] < 0).sum()) >= 2
+            else "Mixed"
+        )
+        _render_html(
+            (
+                "<div class='panel-card'>"
+                "<div class='panel-muted'>Tactical context vs selected opponent</div>"
+                f"<div style='display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;'>"
+                f"<span class='vs-pill'>Best map-side {html.escape(str(best_context['context_label']))} • WR {float(best_context['win_rate_pct']):.1f}%</span>"
+                f"<span class='vs-pill'>Pressure map-side {html.escape(str(weakest_context['context_label']))} • WR {float(weakest_context['win_rate_pct']):.1f}%</span>"
+                f"<span class='vs-pill'>Recent 3-meeting signal {recent_trend}</span>"
+                "</div></div>"
+            )
+        )
 
     map_breakdown = (
         filtered.groupby("map", as_index=False)
