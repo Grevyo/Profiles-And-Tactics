@@ -2639,6 +2639,64 @@ def _inject_styles() -> None:
             line-height: 1.34;
             padding: 7px 9px;
         }
+        .tb-recent-summary {
+            margin-top: 6px;
+            border-radius: 14px;
+            border: 1px solid rgba(127, 167, 226, 0.36);
+            background: linear-gradient(155deg, rgba(17, 31, 51, 0.86), rgba(9, 15, 28, 0.92));
+            padding: 10px 12px;
+        }
+        .tb-recent-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .tb-recent-card {
+            grid-column: span 12;
+            border-radius: 12px;
+            border: 1px solid rgba(132, 163, 209, 0.34);
+            background: linear-gradient(165deg, rgba(16, 29, 49, 0.84), rgba(9, 16, 29, 0.92));
+            padding: 8px 10px;
+        }
+        .tb-recent-head { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+        .tb-recent-name { color:#f0f6ff; font-size:0.8rem; font-weight:810; }
+        .tb-recent-meta { margin-top:5px; color:#cfe0fb; font-size:0.69rem; line-height:1.35; }
+        .tb-recent-note {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(134, 166, 212, 0.22);
+            color: #bfd3f2;
+            font-size: 0.69rem;
+            line-height: 1.34;
+        }
+        .tb-wash-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .tb-wash-col {
+            border-radius: 14px;
+            border: 1px solid rgba(132, 162, 208, 0.35);
+            background: linear-gradient(160deg, rgba(16, 28, 47, 0.86), rgba(9, 15, 28, 0.94));
+            padding: 10px 11px;
+        }
+        .tb-wash-col.good { border-color: rgba(85, 212, 161, 0.5); box-shadow: inset 0 0 0 1px rgba(89, 229, 173, 0.08); }
+        .tb-wash-col.bad { border-color: rgba(241, 138, 122, 0.5); box-shadow: inset 0 0 0 1px rgba(243, 137, 120, 0.08); }
+        .tb-wash-item {
+            border-radius: 10px;
+            border: 1px solid rgba(137, 167, 211, 0.32);
+            background: linear-gradient(170deg, rgba(20, 33, 55, 0.82), rgba(10, 16, 29, 0.9));
+            padding: 7px 8px;
+            margin-top: 7px;
+        }
+        .tb-wash-item.good { border-color: rgba(80, 207, 156, 0.5); }
+        .tb-wash-item.bad { border-color: rgba(237, 127, 113, 0.5); }
+        .tb-wash-title { display:flex; justify-content:space-between; align-items:center; gap:7px; }
+        .tb-wash-name { color:#eff6ff; font-size:0.76rem; font-weight:800; }
+        .tb-wash-meta { margin-top:4px; color:#c7daf7; font-size:0.67rem; line-height:1.3; }
+        .tb-wash-reason { margin-top:5px; color:#b7cdf0; font-size:0.68rem; line-height:1.32; }
         .tb-family-card {
             border-radius: 12px;
             border: 1px solid rgba(136, 163, 212, 0.36);
@@ -2796,6 +2854,7 @@ def _inject_styles() -> None:
             .pv-portrait { min-height: 188px; }
             .pv-portrait img.player-headshot { min-height: 188px; }
             .pv-side-stack { grid-template-columns: 1fr; }
+            .tb-wash-grid { grid-template-columns: 1fr; }
         }
         </style>
         """,
@@ -4122,6 +4181,90 @@ def compute_tactical_recommendation_score(
     score += float(row.get("quality_of_results_component", 0.0))
     score += float(row.get("tier_adjusted_score_component", 0.0))
     return round(score, 1)
+
+
+def build_recent_tactic_window(
+    context_df: pd.DataFrame,
+    *,
+    lookback_days: int = 5,
+) -> tuple[pd.DataFrame, pd.Timestamp | None, pd.Timestamp | None]:
+    if context_df.empty or "date" not in context_df.columns:
+        return pd.DataFrame(), None, None
+    dated = context_df[context_df["date"].notna()].copy()
+    if dated.empty:
+        return pd.DataFrame(), None, None
+    latest_date = pd.to_datetime(dated["date"], errors="coerce").max()
+    if pd.isna(latest_date):
+        return pd.DataFrame(), None, None
+    window_start = latest_date - pd.Timedelta(days=max(int(lookback_days) - 1, 0))
+    window_df = dated[pd.to_datetime(dated["date"], errors="coerce") >= window_start].copy()
+    return window_df, pd.Timestamp(window_start), pd.Timestamp(latest_date)
+
+
+def classify_recent_tactic_status(
+    *,
+    tactic_name: str,
+    window_df: pd.DataFrame,
+    full_context_df: pd.DataFrame,
+) -> str:
+    recent_rows = window_df[window_df["tactic_name"] == tactic_name].copy()
+    if recent_rows.empty:
+        return "Recently active"
+    historic = full_context_df[full_context_df["tactic_name"] == tactic_name].copy()
+    first_recent = pd.to_datetime(recent_rows["date"], errors="coerce").min()
+    uses_window = int(recent_rows["wins"].fillna(0).sum() + recent_rows["losses"].fillna(0).sum())
+    uses_before = 0
+    if not historic.empty and pd.notna(first_recent):
+        historic_dates = pd.to_datetime(historic["date"], errors="coerce")
+        prior_rows = historic[historic_dates < first_recent]
+        uses_before = int(prior_rows["wins"].fillna(0).sum() + prior_rows["losses"].fillna(0).sum())
+    gap_days = 0
+    if uses_before > 0 and pd.notna(first_recent):
+        prior_dates = pd.to_datetime(historic["date"], errors="coerce")
+        prior_max = prior_dates[prior_dates < first_recent].max()
+        if pd.notna(prior_max):
+            gap_days = int((first_recent - prior_max).days)
+    if uses_before == 0:
+        return "New"
+    if uses_window >= 10:
+        return "Heavily tested"
+    if gap_days >= 14:
+        return "Reintroduced"
+    return "Recently active"
+
+
+def compute_recent_signal_label(uses: int, delta_vs_baseline: float) -> str:
+    if uses <= 2:
+        return "Very early signal"
+    if uses <= 4:
+        return "Low sample"
+    if delta_vs_baseline >= 5:
+        return "Encouraging early return"
+    if delta_vs_baseline <= -5:
+        return "Recently underperforming"
+    return "Needs more testing"
+
+
+def build_recent_tactic_note(row: pd.Series) -> str:
+    status = str(row.get("recent_status", "Recently active"))
+    uses = int(row.get("uses_last_5d", 0))
+    delta = float(row.get("delta_vs_baseline_recent", 0.0))
+    trend = float(row.get("trend_delta_recent", 0.0))
+    if status == "New":
+        return "Newly introduced in this map-side pool. Keep testing before locking it in."
+    if status == "Reintroduced":
+        return "Recently revived after a break; watch whether this return holds."
+    if status == "Heavily tested" and delta < 0:
+        return "Heavily tested lately but value is slipping; likely needs rework or dropping."
+    if status == "Heavily tested" and delta >= 0:
+        return "Heavily tested and still positive; looks worth keeping in active prep."
+    if uses <= 4:
+        return "Too early to trust fully; add reps before making a hard keep/drop call."
+    if trend >= 5:
+        return "Recent trend is improving; encouraging short-term return."
+    if trend <= -5:
+        return "Recent dip detected; monitor closely before committing."
+    return "Recently active with mixed signal; keep under review."
 
 
 def classify_keep_priority(score: float) -> tuple[str, str]:
@@ -6599,6 +6742,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         lambda row: "Use More" if float(row["delta_vs_baseline"]) >= 4 and float(row["usage_pct"]) <= float(row["context_usage_avg"]) else ("Drop" if float(row["delta_vs_baseline"]) <= -5 and int(row["times_used"]) >= 10 else "Keep"),
         axis=1,
     )
+    tactic_perf_all = tactic_perf.copy()
 
     if confidence_filter != "Any":
         allowed_conf = {"Early positive signal", "Proven good"} if confidence_filter == "Early positive signal" else {"Proven good"}
@@ -6991,6 +7135,175 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         """,
         unsafe_allow_html=True,
     )
+
+    st.markdown("<div class='tb-section-title'>Recently used tactics (Last 5 days)</div>", unsafe_allow_html=True)
+    recent_window_df, window_start, window_end = build_recent_tactic_window(context_df, lookback_days=5)
+    if recent_window_df.empty or window_start is None or window_end is None:
+        st.markdown(
+            "<div class='tb-empty'>No tactics used in the last 5 days for this map-side context.</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        recent_summary = (
+            recent_window_df.groupby("tactic_name", as_index=False)[["wins", "losses"]]
+            .sum()
+            .assign(
+                uses_last_5d=lambda d: d["wins"] + d["losses"],
+                win_pct_recent=lambda d: (d["wins"] / d["uses_last_5d"].clip(lower=1) * 100).round(1),
+                net_rounds_recent=lambda d: d["wins"] - d["losses"],
+            )
+        )
+        recent_summary = recent_summary.merge(
+            tactic_perf_all[
+                [
+                    "tactic_name",
+                    "bucket",
+                    "context_baseline_win_pct",
+                    "recommendation_score",
+                    "trend_delta",
+                    "quality_of_results_component",
+                    "confidence",
+                ]
+            ].drop_duplicates("tactic_name"),
+            on="tactic_name",
+            how="left",
+        )
+        recent_summary["bucket"] = recent_summary["bucket"].fillna(recent_summary["tactic_name"].apply(classify_recommendation_bucket))
+        recent_summary["delta_vs_baseline_recent"] = (
+            recent_summary["win_pct_recent"] - recent_summary["context_baseline_win_pct"].fillna(50.0)
+        ).round(1)
+        recent_dates = (
+            recent_window_df.groupby("tactic_name", as_index=False)["date"]
+            .agg(first_seen_window="min", last_seen_window="max")
+        )
+        recent_summary = recent_summary.merge(recent_dates, on="tactic_name", how="left")
+        recent_summary["recent_status"] = recent_summary["tactic_name"].apply(
+            lambda name: classify_recent_tactic_status(tactic_name=str(name), window_df=recent_window_df, full_context_df=context_df)
+        )
+        recent_summary["trend_delta_recent"] = recent_summary["trend_delta"].fillna(0.0)
+        recent_summary["recent_confidence"] = recent_summary.apply(
+            lambda row: compute_recent_signal_label(int(row["uses_last_5d"]), float(row["delta_vs_baseline_recent"])),
+            axis=1,
+        )
+        recent_summary["short_note"] = recent_summary.apply(build_recent_tactic_note, axis=1)
+        recent_summary = recent_summary.sort_values(
+            ["uses_last_5d", "recommendation_score", "win_pct_recent"],
+            ascending=[False, False, False],
+        ).reset_index(drop=True)
+
+        keep_count = int((recent_summary["delta_vs_baseline_recent"] >= 4).sum())
+        weak_count = int((recent_summary["delta_vs_baseline_recent"] <= -4).sum())
+        test_count = int(len(recent_summary) - keep_count - weak_count)
+        new_count = int((recent_summary["recent_status"] == "New").sum())
+
+        st.markdown(
+            f"""
+            <div class="tb-recent-summary">
+                <div class="panel-title">{len(recent_summary)} tactics used in the last 5 days for {selected_map} • {selected_side}</div>
+                <div class="panel-muted">Window anchored to latest filtered date: {window_start.strftime('%Y-%m-%d')} → {window_end.strftime('%Y-%m-%d')}.</div>
+                <div class="tb-badge-row">
+                    <span class="tb-chip">Looks worth keeping {keep_count}</span>
+                    <span class="tb-chip">Needs more testing {test_count}</span>
+                    <span class="tb-chip">Currently weak {weak_count}</span>
+                    <span class="tb-chip">Newly introduced {new_count}</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("<div class='tb-recent-grid'>", unsafe_allow_html=True)
+        for _, row in recent_summary.head(12).iterrows():
+            st.markdown(
+                f"""
+                <div class="tb-recent-card">
+                    <div class="tb-recent-head">
+                        <div class="tb-recent-name">{html.escape(str(row["tactic_name"]))}</div>
+                        <span class="tb-category-pill" style="--accent:#7ea7da;">{html.escape(str(row["bucket"]))}</span>
+                    </div>
+                    <div class="tb-recent-meta">
+                        Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Net rounds {int(row["net_rounds_recent"]):+d}<br/>
+                        Signal: {html.escape(str(row["recent_confidence"]))} • Status: {html.escape(str(row["recent_status"]))} • First/Last seen: {pd.to_datetime(row["first_seen_window"]).strftime('%m-%d')} → {pd.to_datetime(row["last_seen_window"]).strftime('%m-%d')}
+                    </div>
+                    <div class="tb-recent-note">{html.escape(str(row["short_note"]))}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='tb-section-title'>What’s working / What’s not</div>", unsafe_allow_html=True)
+        eval_df = recent_summary.copy()
+        eval_df["recent_eval_score"] = (
+            eval_df["delta_vs_baseline_recent"] * 1.4
+            + eval_df["trend_delta_recent"] * 0.35
+            + eval_df["quality_of_results_component"].fillna(0.0) * 0.8
+            + eval_df["recommendation_score"].fillna(50.0) * 0.22
+            + np.sqrt(eval_df["uses_last_5d"].clip(lower=1)) * 2.4
+        )
+        eval_df.loc[eval_df["uses_last_5d"] <= 2, "recent_eval_score"] -= 5.0
+        eval_df.loc[eval_df["uses_last_5d"] >= 8, "recent_eval_score"] += 2.0
+
+        working_df = eval_df[
+            (eval_df["recent_eval_score"] >= eval_df["recent_eval_score"].median()) | (eval_df["delta_vs_baseline_recent"] >= 4)
+        ].sort_values(["recent_eval_score", "uses_last_5d"], ascending=[False, False]).head(6)
+        not_working_df = eval_df[
+            (eval_df["recent_eval_score"] <= eval_df["recent_eval_score"].median()) | (eval_df["delta_vs_baseline_recent"] <= -4)
+        ].sort_values(["recent_eval_score", "uses_last_5d"], ascending=[True, False]).head(6)
+
+        def _working_reason(r: pd.Series) -> str:
+            if int(r["uses_last_5d"]) <= 3 and float(r["delta_vs_baseline_recent"]) > 0:
+                return "Encouraging early return, but still low sample."
+            if float(r["delta_vs_baseline_recent"]) >= 5 and int(r["uses_last_5d"]) >= 5:
+                return "Above local baseline with usable recent reps."
+            if float(r["trend_delta_recent"]) >= 5:
+                return "Recent trend is improving; looks worth keeping."
+            return "Positive recent signal in this map-side context."
+
+        def _not_working_reason(r: pd.Series) -> str:
+            if int(r["uses_last_5d"]) <= 3 and float(r["delta_vs_baseline_recent"]) < 0:
+                return "Poor early return; needs more testing before final drop."
+            if float(r["delta_vs_baseline_recent"]) <= -5 and int(r["uses_last_5d"]) >= 5:
+                return "Below local baseline with repeated weak outcomes."
+            if float(r["trend_delta_recent"]) <= -5:
+                return "Recent dip is clear; currently looks droppable."
+            return "Recently underperforming; monitor or reduce usage."
+
+        st.markdown("<div class='tb-wash-grid'>", unsafe_allow_html=True)
+        left_html = [
+            "<div class='tb-wash-col good'><div class='panel-title'>What’s working</div><div class='panel-muted'>Quick recent positives, not full-season truth.</div>"
+        ]
+        if working_df.empty:
+            left_html.append("<div class='tb-empty' style='margin-top:8px;'>No clear positive signal in this recent window.</div>")
+        for _, row in working_df.iterrows():
+            left_html.append(
+                f"""
+                <div class="tb-wash-item good">
+                    <div class="tb-wash-title"><div class="tb-wash-name">{html.escape(str(row["tactic_name"]))}</div><span class="tb-category-pill" style="--accent:#55cfa7;">{html.escape(str(row["bucket"]))}</span></div>
+                    <div class="tb-wash-meta">Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Signal {html.escape(str(row["recent_confidence"]))}</div>
+                    <div class="tb-wash-reason">{html.escape(_working_reason(row))}</div>
+                </div>
+                """
+            )
+        left_html.append("</div>")
+
+        right_html = [
+            "<div class='tb-wash-col bad'><div class='panel-title'>What’s not</div><div class='panel-muted'>Recent concerns to rework, reduce, or potentially drop.</div>"
+        ]
+        if not_working_df.empty:
+            right_html.append("<div class='tb-empty' style='margin-top:8px;'>No immediate recent concern stands out.</div>")
+        for _, row in not_working_df.iterrows():
+            right_html.append(
+                f"""
+                <div class="tb-wash-item bad">
+                    <div class="tb-wash-title"><div class="tb-wash-name">{html.escape(str(row["tactic_name"]))}</div><span class="tb-category-pill" style="--accent:#eb8b77;">{html.escape(str(row["bucket"]))}</span></div>
+                    <div class="tb-wash-meta">Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Signal {html.escape(str(row["recent_confidence"]))}</div>
+                    <div class="tb-wash-reason">{html.escape(_not_working_reason(row))}</div>
+                </div>
+                """
+            )
+        right_html.append("</div>")
+        st.markdown("".join(left_html) + "".join(right_html) + "</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='tb-section-title'>Copy recommended set</div>", unsafe_allow_html=True)
     compact_lines = [f"{row['bucket']}: {row['tactic_name']}" for _, row in selected_df[["bucket", "tactic_name"]].iterrows()]
