@@ -5904,7 +5904,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     )
     default_season = f"S{latest_season}" if latest_season is not None else "Lifetime"
 
-    st.markdown("<div class='tb-shell'>", unsafe_allow_html=True)
     st.markdown(
         """
         <section class="tb-console">
@@ -5912,6 +5911,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                 <div class="tb-section-title">Tactical Decision Console</div>
                 <div class="tb-note">Filters and sample controls for map + side specific analysis (no cross-context transfer).</div>
             </div>
+        </section>
         """,
         unsafe_allow_html=True,
     )
@@ -5956,7 +5956,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             placeholder="All (no filter)",
         )
         active_tactics = selected_tactics if selected_tactics else tactic_opts
-    st.markdown("</section>", unsafe_allow_html=True)
 
     df = apply_season_filter(df, selected_season, competition_source_col)
     if sides:
@@ -6219,13 +6218,11 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         ("High-confidence poor", int((filtered_tactic_perf["confidence"] == "Proven poor").sum())),
         ("Underused opportunities", int((filtered_tactic_perf["recommended_action"] == "Use More").sum())),
     ]
-    st.markdown("<div class='tb-kpi-strip'>", unsafe_allow_html=True)
-    for label, value in kpi_items:
-        st.markdown(
-            f"<div class='tb-kpi'><div class='k'>{label}</div><div class='v'>{int(value)}</div></div>",
-            unsafe_allow_html=True,
-        )
-    st.markdown("</div>", unsafe_allow_html=True)
+    kpi_strip_html = "".join(
+        f"<div class='tb-kpi'><div class='k'>{label}</div><div class='v'>{int(value)}</div></div>"
+        for label, value in kpi_items
+    )
+    st.markdown(f"<div class='tb-kpi-strip'>{kpi_strip_html}</div>", unsafe_allow_html=True)
 
     action_order = ["Keep", "Use More", "Monitor", "Rework", "Drop"]
     action_class = {
@@ -6246,25 +6243,16 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         for i, action_name in enumerate(action_order):
             with board_cols[i]:
                 cls_name, accent = action_class[action_name]
-                st.markdown(
-                    f"""
-                    <div class="tb-action-col {cls_name}">
-                        <div class="tb-action-head">
-                            <span>{action_name}</span>
-                            <span class="tb-action-pill" style="color:{accent};">{action_counts.get(action_name, 0)}</span>
-                        </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                action_cards_html: list[str] = []
                 action_df = filtered_tactic_perf[filtered_tactic_perf["recommended_action"] == action_name].sort_values(
                     ["delta_vs_baseline", "times_used"],
                     ascending=[False, False],
                 )
                 if action_df.empty:
-                    st.markdown("<div class='tb-empty'>No tactics in this bucket.</div>", unsafe_allow_html=True)
+                    action_cards_html.append("<div class='tb-empty'>No tactics in this bucket.</div>")
                 else:
                     for _, row in action_df.head(6).iterrows():
-                        st.markdown(
+                        action_cards_html.append(
                             f"""
                             <div class="tb-decision-card" style="--accent:{accent};">
                                 <div class="tb-card-title">{row["tactic_name"]}</div>
@@ -6273,9 +6261,19 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                                 <div class="tb-card-reason">{row["reason"]}</div>
                             </div>
                             """,
-                            unsafe_allow_html=True,
                         )
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"""
+                    <div class="tb-action-col {cls_name}">
+                        <div class="tb-action-head">
+                            <span>{action_name}</span>
+                            <span class="tb-action-pill" style="color:{accent};">{action_counts.get(action_name, 0)}</span>
+                        </div>
+                        {''.join(action_cards_html)}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
     st.markdown("<div class='tb-section-title'>Main tactic table</div>", unsafe_allow_html=True)
     perf_table = tactic_perf.rename(
@@ -6744,7 +6742,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     drill_cols = ["match_id", "opponent_team", "tier", "map", "side", "wins", "losses", competition_source_col, "date"]
     drill_df = drilldown[drill_cols].rename(columns={competition_source_col: "competition"})
     st.dataframe(drill_df.sort_values("date", ascending=False), use_container_width=True, hide_index=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def safe_select_columns(
@@ -7032,7 +7029,6 @@ def _tournament_summary_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, 
     season_options = ["Lifetime"] + [f"S{season}" for season in all_seasons]
     default_season = f"S{latest_season}" if latest_season is not None else "Lifetime"
 
-    st.markdown("<div class='compact-toolbar'>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5, c6 = st.columns([1.0, 1.7, 1.0, 0.9, 0.9, 1.4])
     with c1:
         selected_season = st.selectbox(
@@ -7067,7 +7063,6 @@ def _tournament_summary_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, 
             max_value=max_date.date() if pd.notna(max_date) else None,
             key="tournament_summary_date_range",
         )
-    st.markdown("</div>", unsafe_allow_html=True)
 
     filtered = base_df.copy()
     filtered["competition_display"] = filtered[comp_col]
@@ -7578,31 +7573,26 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     confidence_counts = selected_df["confidence"].value_counts().to_dict()
     coverage_labels = sorted({tag for tags in selected_df["route_tags"] for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
 
-    st.markdown("<div class='panel-card' style='margin-top:8px;'>", unsafe_allow_html=True)
     st.markdown(
         f"""
-        <div class="panel-title">Recommended Set Summary</div>
-        <div class="panel-muted">{selected_map} • {selected_side}</div>
-        <div class="stats-grid overview-grid">
-            <div class="stat-chip"><div class="stat-label">Recommended tactics</div><div class="stat-value">{len(selected_df)} / 7</div></div>
-            <div class="stat-chip"><div class="stat-label">Category coverage</div><div class="stat-value">{selected_df['bucket'].nunique()} categories</div></div>
-            <div class="stat-chip"><div class="stat-label">Confidence mix</div><div class="stat-value">Good {confidence_counts.get('Proven good', 0)} • Early+ {confidence_counts.get('Early positive signal', 0)}</div></div>
-            <div class="stat-chip"><div class="stat-label">Coverage tags</div><div class="stat-value">{", ".join(coverage_labels) if coverage_labels else "Core routes only"}</div></div>
+        <div class='panel-card' style='margin-top:8px;'>
+            <div class="panel-title">Recommended Set Summary</div>
+            <div class="panel-muted">{selected_map} • {selected_side}</div>
+            <div class="stats-grid overview-grid">
+                <div class="stat-chip"><div class="stat-label">Recommended tactics</div><div class="stat-value">{len(selected_df)} / 7</div></div>
+                <div class="stat-chip"><div class="stat-label">Category coverage</div><div class="stat-value">{selected_df['bucket'].nunique()} categories</div></div>
+                <div class="stat-chip"><div class="stat-label">Confidence mix</div><div class="stat-value">Good {confidence_counts.get('Proven good', 0)} • Early+ {confidence_counts.get('Early positive signal', 0)}</div></div>
+                <div class="stat-chip"><div class="stat-label">Coverage tags</div><div class="stat-value">{", ".join(coverage_labels) if coverage_labels else "Core routes only"}</div></div>
+            </div>
+            <div class="tb-badge-row">
+                <span class="tb-chip">{selected_map}</span>
+                <span class="tb-chip">{selected_side}</span>
+                <span class="tb-chip">Context baseline {float(selected_df["context_baseline_win_pct"].iloc[0]):.1f}%</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    st.markdown(
-        f"""
-        <div class="tb-badge-row">
-            <span class="tb-chip">{selected_map}</span>
-            <span class="tb-chip">{selected_side}</span>
-            <span class="tb-chip">Context baseline {float(selected_df["context_baseline_win_pct"].iloc[0]):.1f}%</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(
         """
@@ -7696,24 +7686,24 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             return "Bench but viable: confidence signal is lower than selected set."
         return "Coverage option with decent score, but current picks are stronger keeps."
 
-    st.markdown("<div class='tb-module-grid'>", unsafe_allow_html=True)
-    st.markdown(
+    module_sections = [
         """
         <div class="tb-module">
             <h4>Bench / Alternatives</h4>
             <div class="tb-module-sub">Backups are shown by category with quick quality context and why they were left on the bench.</div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+        """
+    ]
     for category in category_order:
         category_pool = tactic_perf[tactic_perf["bucket"] == category].copy()
         alternatives = category_pool[~category_pool["tactic_name"].isin(selected_names)].head(3) if not category_pool.empty else pd.DataFrame()
-        st.markdown(f"<div class='tb-module tb-alt-group'><div class='tb-alt-group-head'>{category} alternatives</div>", unsafe_allow_html=True)
+        alt_items: list[str] = []
         if alternatives.empty:
-            st.markdown(
-                f"<div class='tb-empty' style='padding:11px 10px;'>No meaningful {category.lower()} alternatives in current sample.</div></div>",
-                unsafe_allow_html=True,
+            alt_items.append(
+                f"<div class='tb-empty' style='padding:11px 10px;'>No meaningful {category.lower()} alternatives in current sample.</div>"
+            )
+            module_sections.append(
+                f"<div class='tb-module tb-alt-group'><div class='tb-alt-group-head'>{category} alternatives</div>{''.join(alt_items)}</div>"
             )
             continue
         for _, row in alternatives.iterrows():
@@ -7736,7 +7726,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             priority_label = str(row["keep_priority_label"])
             priority_tier = str(row["keep_priority_tier"])
             color_tokens = keep_priority_color_token(priority_tier)
-            st.markdown(
+            alt_items.append(
                 f"""
                 <div class="tb-alt-item" style="--accent:{color_tokens['accent']}; border-color:{color_tokens['accent']}55; background:linear-gradient(160deg, {color_tokens['bg']}, rgba(10, 16, 28, 0.9));">
                     <div class="tb-alt-item-top">
@@ -7753,9 +7743,10 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                     <div class="tb-alt-reason">{alt_reason}</div>
                 </div>
                 """,
-                unsafe_allow_html=True,
             )
-        st.markdown("</div>", unsafe_allow_html=True)
+        module_sections.append(
+            f"<div class='tb-module tb-alt-group'><div class='tb-alt-group-head'>{category} alternatives</div>{''.join(alt_items)}</div>"
+        )
 
     insights = []
     insights.append(("Strong standard depth" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "Standard depth is currently limited", "good" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "warn"))
@@ -7773,7 +7764,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         insights.append(set_explanation)
     insight_markup = "".join(f"<div class='tb-insight {level}'>{text}</div>" for text, level in insights)
 
-    st.markdown(
+    module_sections.append(
         f"""
         <div class="tb-module">
             <h4>Coverage &amp; Balance</h4>
@@ -7790,8 +7781,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             <div class="tb-badge-row">{route_coverage_markup}</div>
             <div class="tb-insight-grid">{insight_markup}</div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     pistol_count = int((selected_df["bucket"] == "Pistol").sum())
@@ -7809,17 +7799,16 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     else:
         why_points.append("No Ivy tactic was promoted because current Ivy data is too weak or redundant to justify a slot.")
     why_markup = "".join(f"<div class='tb-why-point'>{point}</div>" for point in why_points)
-    st.markdown(
+    module_sections.append(
         f"""
         <div class="tb-module">
             <h4>Why this set works</h4>
             <div class="tb-module-sub">Selection logic stays map-side specific, score-led, and coverage-aware without forcing low-quality fillers.</div>
             <div class="tb-why-points">{why_markup}</div>
         </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
+    st.markdown(f"<div class='tb-module-grid'>{''.join(module_sections)}</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='tb-section-title'>Recently used tactics (Last 5 days)</div>", unsafe_allow_html=True)
     recent_window_df, window_start, window_end = build_recent_tactic_window(context_df, lookback_days=5)
@@ -7906,9 +7895,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             unsafe_allow_html=True,
         )
 
-        st.markdown("<div class='tb-recent-grid'>", unsafe_allow_html=True)
+        recent_cards_html: list[str] = []
         for _, row in recent_summary.head(12).iterrows():
-            st.markdown(
+            recent_cards_html.append(
                 f"""
                 <div class="tb-recent-card">
                     <div class="tb-recent-head">
@@ -7922,9 +7911,8 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                     <div class="tb-recent-note">{html.escape(str(row["short_note"]))}</div>
                 </div>
                 """,
-                unsafe_allow_html=True,
             )
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='tb-recent-grid'>{''.join(recent_cards_html)}</div>", unsafe_allow_html=True)
 
         st.markdown("<div class='tb-section-title'>What’s working / What’s not</div>", unsafe_allow_html=True)
         eval_df = recent_summary.copy()
@@ -7963,7 +7951,6 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 return "Recent dip is clear; currently looks droppable."
             return "Recently underperforming; monitor or reduce usage."
 
-        st.markdown("<div class='tb-wash-grid'>", unsafe_allow_html=True)
         left_html = [
             "<div class='tb-wash-col good'><div class='panel-title'>What’s working</div><div class='panel-muted'>Quick recent positives, not full-season truth.</div>"
         ]
@@ -8001,7 +7988,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 ).strip()
             )
         right_html.append("</div>")
-        st.markdown("".join(left_html) + "".join(right_html) + "</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='tb-wash-grid'>{''.join(left_html)}{''.join(right_html)}</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='tb-section-title'>Copy recommended set</div>", unsafe_allow_html=True)
     compact_lines = [f"{row['bucket']}: {row['tactic_name']}" for _, row in selected_df[["bucket", "tactic_name"]].iterrows()]
@@ -8074,7 +8061,6 @@ def _medisports_vs_breakdown(
         competition_for_controls["competition_grouped"] if current_grouped_mode else competition_for_controls["competition_raw"]
     )
 
-    st.markdown("<div class='compact-toolbar'>", unsafe_allow_html=True)
     t1, t2, t3, t4, t5 = st.columns([0.9, 1.0, 1.7, 1.0, 1.0])
     with t1:
         min_matches = int(st.slider("Minimum matches", 1, 8, 2, key="medisports_min_matches"))
@@ -8113,7 +8099,6 @@ def _medisports_vs_breakdown(
         )
     with t5:
         grouped_competitions = st.toggle("Grouped competitions", value=False, key="medisports_grouped_competitions")
-    st.markdown("</div>", unsafe_allow_html=True)
 
     filtered = base_df.copy()
     filtered["competition_display"] = filtered["competition_grouped"] if grouped_competitions else filtered["competition_raw"]
