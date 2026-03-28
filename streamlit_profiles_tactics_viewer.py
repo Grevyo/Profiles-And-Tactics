@@ -289,24 +289,24 @@ def _inject_styles() -> None:
             gap: 8px;
         }
         .achievement-season {
-            z-index: 3;
-            height: 20px;
-            padding: 0 8px;
+            height: 22px;
+            padding: 0 10px;
             border-radius: 999px;
-            border: 1px solid rgba(160, 186, 233, 0.52);
-            background: rgba(7, 12, 20, 0.86);
-            color: #d7e8ff;
-            font-size: 0.54rem;
-            letter-spacing: 0.07em;
+            border: 1px solid rgba(166, 192, 236, 0.48);
+            background: linear-gradient(180deg, rgba(32, 50, 78, 0.9), rgba(14, 24, 40, 0.96));
+            color: #e3efff;
+            font-size: 0.53rem;
+            letter-spacing: 0.085em;
             text-transform: uppercase;
-            font-weight: 850;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+            font-weight: 860;
             white-space: nowrap;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             box-sizing: border-box;
             max-width: 100%;
+            line-height: 1;
+            box-shadow: inset 0 1px 0 rgba(229, 239, 255, 0.14);
         }
         .achievement-season-badge {
             justify-self: start;
@@ -323,47 +323,46 @@ def _inject_styles() -> None:
             justify-content: center;
         }
         .achievement-tier-icon {
-            width: 22px;
-            height: 22px;
-            min-width: 22px;
-            min-height: 22px;
+            width: 24px;
+            height: 24px;
+            min-width: 24px;
+            min-height: 24px;
             border-radius: 50%;
-            display: inline-grid;
-            place-items: center;
-            line-height: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             padding: 0;
-            font-size: 0.62rem;
+            font-size: 0.66rem;
             font-weight: 900;
-            letter-spacing: 0.03em;
-            border: 1px solid rgba(148, 173, 214, 0.36);
-            box-shadow: 0 0 0 1px rgba(3, 8, 17, 0.48) inset;
-            background: rgba(10, 15, 24, 0.94);
-            z-index: 4;
+            letter-spacing: 0.02em;
+            line-height: 1;
+            border: 1px solid rgba(148, 173, 214, 0.44);
+            box-shadow: 0 0 0 1px rgba(4, 9, 18, 0.64) inset;
+            background: radial-gradient(circle at 35% 30%, rgba(37, 57, 88, 0.92), rgba(12, 20, 33, 0.98));
             flex: 0 0 auto;
         }
         .achievement-position {
-            height: 22px;
-            min-height: 22px;
-            min-width: 30px;
+            height: 24px;
+            min-height: 24px;
+            min-width: 34px;
             max-width: 64px;
-            padding: 0 8px;
+            padding: 0 9px;
             border-radius: 999px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.55rem;
+            font-size: 0.56rem;
             font-weight: 860;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.055em;
             text-transform: uppercase;
-            z-index: 3;
             border: 1px solid rgba(156, 178, 215, 0.44);
             background: rgba(10, 16, 27, 0.92);
             color: #dbe8ff;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             flex: 0 1 auto;
+            line-height: 1;
         }
         .achievement-position.pos-gold {
             border-color: rgba(244, 199, 103, 0.7);
@@ -388,17 +387,18 @@ def _inject_styles() -> None:
         .achievement-inline-name {
             color: #ebf3ff;
             font-weight: 820;
-            line-height: 1.2;
+            line-height: 1.18;
             font-size: 0.53rem;
             letter-spacing: 0.045em;
             text-transform: uppercase;
             text-align: center;
-            z-index: 3;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
-            white-space: nowrap;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+            white-space: normal;
             overflow: hidden;
-            text-overflow: ellipsis;
             width: 100%;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
         }
         .quick-row {
             display: grid;
@@ -1159,7 +1159,6 @@ def _inject_styles() -> None:
             width: 108px;
             height: 140px;
             border-radius: 12px;
-            position: relative;
             overflow: hidden;
             border: 1px solid rgba(151, 166, 195, 0.32);
             background: linear-gradient(180deg, rgba(19, 28, 43, 0.95), rgba(9, 14, 24, 0.96));
@@ -1168,25 +1167,22 @@ def _inject_styles() -> None:
             grid-template-rows: auto 1fr auto;
         }
         .achievement-top-row {
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            right: 8px;
-            z-index: 4;
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
             align-items: center;
             gap: 8px;
-            pointer-events: none;
+            padding: 8px 8px 7px;
+            min-height: 40px;
+            background: linear-gradient(180deg, rgba(8, 14, 24, 0.9), rgba(10, 16, 28, 0.95));
+            border-bottom: 1px solid rgba(123, 148, 188, 0.28);
         }
         .achievement-badge-stack {
-            display: inline-flex;
+            display: flex;
             align-items: center;
             justify-content: flex-end;
             gap: 6px;
             min-width: 0;
             max-width: 100%;
-            pointer-events: auto;
         }
         .achievement-header-cluster {
             justify-self: end;
@@ -1194,9 +1190,9 @@ def _inject_styles() -> None:
         .achievement-premium .achievement-image-wrap {
             width: 100%;
             height: 100%;
-            padding: 38px 8px 34px;
+            padding: 10px 8px 8px;
             box-sizing: border-box;
-            background: linear-gradient(180deg, rgba(18, 27, 41, 0.55), rgba(9, 13, 22, 0.72));
+            background: radial-gradient(circle at 50% 42%, rgba(44, 63, 98, 0.4), rgba(10, 15, 24, 0.96));
         }
         .achievement-premium img {
             width: 100%;
@@ -1205,37 +1201,16 @@ def _inject_styles() -> None:
             object-position: center;
             display: block;
         }
-        .achievement-header-gradient {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 50px;
-            background: linear-gradient(180deg, rgba(4, 7, 12, 0.78), rgba(4, 7, 12, 0));
-            z-index: 1;
-            pointer-events: none;
-        }
-        .achievement-footer-gradient {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            height: 44px;
-            background: linear-gradient(180deg, rgba(4, 7, 12, 0), rgba(4, 7, 12, 0.86));
-            z-index: 1;
-            pointer-events: none;
-        }
+        .achievement-header-gradient,
+        .achievement-footer-gradient { display: none; }
         .achievement-footer {
-            position: absolute;
-            left: 8px;
-            right: 8px;
-            bottom: 8px;
-            z-index: 4;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 21px;
-            pointer-events: none;
+            min-height: 30px;
+            padding: 6px 8px 8px;
+            border-top: 1px solid rgba(118, 145, 186, 0.2);
+            background: linear-gradient(180deg, rgba(12, 18, 31, 0.85), rgba(9, 14, 24, 0.96));
         }
         .achievement-missing {
             color: #dce7ff;
@@ -2741,35 +2716,36 @@ def _inject_styles() -> None:
                 flex-basis: 82px;
             }
             .achievement-top-row {
-                grid-template-columns: 1fr;
-                align-items: start;
+                grid-template-columns: minmax(0, 1fr) auto;
                 gap: 5px;
-            }
-            .achievement-badge-stack {
-                justify-self: end;
+                padding: 6px 6px 5px;
+                min-height: 33px;
             }
             .achievement-premium .achievement-image-wrap {
-                padding: 42px 7px 30px;
+                padding: 6px 6px 6px;
             }
             .achievement-season {
-                height: 19px;
+                height: 18px;
                 font-size: 0.5rem;
-                padding: 0 7px;
+                padding: 0 6px;
             }
             .achievement-position {
-                height: 20px;
-                min-height: 20px;
+                height: 18px;
+                min-height: 18px;
                 max-width: 60px;
                 font-size: 0.5rem;
-                padding: 0 7px;
+                padding: 0 6px;
             }
             .achievement-tier-icon {
-                width: 20px;
-                height: 20px;
-                min-width: 20px;
-                min-height: 20px;
-                line-height: 20px;
-                font-size: 0.56rem;
+                width: 18px;
+                height: 18px;
+                min-width: 18px;
+                min-height: 18px;
+                font-size: 0.52rem;
+            }
+            .achievement-footer {
+                min-height: 24px;
+                padding: 4px 6px 6px;
             }
             .stats-tile-grid { gap: 7px; }
             .stats-tile { min-height: 82px; }
@@ -4517,6 +4493,17 @@ def _achievement_position_class(position_value: object) -> str:
     return "pos-ladder"
 
 
+def _achievement_season_display(ach_row: pd.Series) -> str:
+    season_num = ach_row.get("season_num")
+    if pd.notna(season_num):
+        return f"SEASON {int(season_num)}"
+    for key in ("season_name", "season_label_norm", "achievement_name"):
+        parsed_num = extract_season_number(ach_row.get(key))
+        if parsed_num is not None:
+            return f"SEASON {parsed_num}"
+    return "SEASON"
+
+
 def build_player_achievements(
     achievements_df: pd.DataFrame,
     image_index: dict[str, dict[str, Path]],
@@ -4566,11 +4553,9 @@ def build_player_achievements(
     matched["resolved_filename"] = resolved_details.apply(lambda details: details[1])
     matched["image_resolution_source"] = resolved_details.apply(lambda details: details[2])
     matched["image_missing"] = matched["achievement_image"].isna()
-    matched["season_display"] = matched["season_num"].apply(lambda v: f"SEASON {int(v)}" if pd.notna(v) else "SEASON ?")
-    matched["top_badge"] = matched.apply(
-        lambda row: (str(row.get("achievement_tier", "")).strip().upper()[:1] or str(row.get("position", "")).strip() or "?"),
-        axis=1,
-    )
+    matched["season_display"] = matched.apply(_achievement_season_display, axis=1)
+    matched["top_badge"] = matched["achievement_tier"].astype(str).str.strip().str.upper().str[:1]
+    matched.loc[~matched["top_badge"].isin(["S", "A", "B", "C"]), "top_badge"] = "—"
     tier_weight = {"S": 4, "A": 3, "B": 2, "C": 1}
     matched["_tier_score"] = matched["achievement_tier"].astype(str).str.strip().str.upper().map(tier_weight).fillna(0)
     matched["_position_score"] = matched["position_num"].fillna(999)
@@ -4768,16 +4753,13 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
     season = html.escape(str(ach_row.get("season_display", ach_row.get("season_name", "SEASON ?"))))
     label = html.escape(str(ach_row.get("achievement_title", ach_row.get("achievement_name", "-"))))
     finish = html.escape(str(ach_row.get("position", "")).strip())
-    top_badge = html.escape(str(ach_row.get("top_badge", ach_tier)))
+    top_badge = html.escape(str(ach_row.get("top_badge", ach_tier))) or "—"
     image_html = "<div class='achievement-missing'>Achievement image missing</div>"
     if isinstance(ach_image, Path) and ach_image.exists():
         image_html = f'<img src="{_image_to_data_uri(ach_image)}" alt="{label}">'
     position_badge_html = f"<span class='achievement-position {position_class}'>{finish}</span>" if finish else ""
     return (
         f"<div class='achievement-premium glow-{tier_class}'>"
-        "<div class='achievement-header-gradient'></div>"
-        "<div class='achievement-footer-gradient'></div>"
-        f"<div class='achievement-image-wrap'>{image_html}</div>"
         "<div class='achievement-top-row'>"
         f"<div class='achievement-season achievement-season-badge'>{season}</div>"
         "<div class='achievement-badge-stack achievement-header-cluster'>"
@@ -4785,6 +4767,7 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
         f"<span class='achievement-tier achievement-tier-icon tier-{tier_class}'>{top_badge}</span>"
         "</div>"
         "</div>"
+        f"<div class='achievement-image-wrap'>{image_html}</div>"
         f"<div class='achievement-footer'><div class='achievement-inline-name'>{label}</div></div>"
         "</div>"
     )
