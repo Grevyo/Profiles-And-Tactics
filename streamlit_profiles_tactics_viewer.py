@@ -7301,13 +7301,15 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             left_html.append("<div class='tb-empty' style='margin-top:8px;'>No clear positive signal in this recent window.</div>")
         for _, row in working_df.iterrows():
             left_html.append(
-                f"""
-                <div class="tb-wash-item good">
-                    <div class="tb-wash-title"><div class="tb-wash-name">{html.escape(str(row["tactic_name"]))}</div><span class="tb-category-pill" style="--accent:#55cfa7;">{html.escape(str(row["bucket"]))}</span></div>
-                    <div class="tb-wash-meta">Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Signal {html.escape(str(row["recent_confidence"]))}</div>
-                    <div class="tb-wash-reason">{html.escape(_working_reason(row))}</div>
-                </div>
-                """
+                textwrap.dedent(
+                    f"""
+                    <div class="tb-wash-item good">
+                        <div class="tb-wash-title"><div class="tb-wash-name">{html.escape(str(row["tactic_name"]))}</div><span class="tb-category-pill" style="--accent:#55cfa7;">{html.escape(str(row["bucket"]))}</span></div>
+                        <div class="tb-wash-meta">Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Signal {html.escape(str(row["recent_confidence"]))}</div>
+                        <div class="tb-wash-reason">{html.escape(_working_reason(row))}</div>
+                    </div>
+                    """
+                ).strip()
             )
         left_html.append("</div>")
 
@@ -7318,13 +7320,15 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             right_html.append("<div class='tb-empty' style='margin-top:8px;'>No immediate recent concern stands out.</div>")
         for _, row in not_working_df.iterrows():
             right_html.append(
-                f"""
-                <div class="tb-wash-item bad">
-                    <div class="tb-wash-title"><div class="tb-wash-name">{html.escape(str(row["tactic_name"]))}</div><span class="tb-category-pill" style="--accent:#eb8b77;">{html.escape(str(row["bucket"]))}</span></div>
-                    <div class="tb-wash-meta">Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Signal {html.escape(str(row["recent_confidence"]))}</div>
-                    <div class="tb-wash-reason">{html.escape(_not_working_reason(row))}</div>
-                </div>
-                """
+                textwrap.dedent(
+                    f"""
+                    <div class="tb-wash-item bad">
+                        <div class="tb-wash-title"><div class="tb-wash-name">{html.escape(str(row["tactic_name"]))}</div><span class="tb-category-pill" style="--accent:#eb8b77;">{html.escape(str(row["bucket"]))}</span></div>
+                        <div class="tb-wash-meta">Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Signal {html.escape(str(row["recent_confidence"]))}</div>
+                        <div class="tb-wash-reason">{html.escape(_not_working_reason(row))}</div>
+                    </div>
+                    """
+                ).strip()
             )
         right_html.append("</div>")
         st.markdown("".join(left_html) + "".join(right_html) + "</div>", unsafe_allow_html=True)
