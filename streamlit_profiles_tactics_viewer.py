@@ -289,9 +289,6 @@ def _inject_styles() -> None:
             gap: 8px;
         }
         .achievement-season {
-            position: absolute;
-            top: 7px;
-            left: 8px;
             z-index: 3;
             padding: 2px 7px;
             border-radius: 999px;
@@ -317,31 +314,29 @@ def _inject_styles() -> None:
             justify-content: center;
         }
         .achievement-tier-icon {
-            position: absolute;
-            top: 7px;
-            right: 7px;
-            min-width: 18px;
-            height: 18px;
-            padding: 0 6px;
-            border-radius: 999px;
-            display: flex;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            min-height: 20px;
+            border-radius: 50%;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.53rem;
+            line-height: 1;
+            padding: 0;
+            font-size: 0.58rem;
             font-weight: 900;
             letter-spacing: 0.03em;
             border: 1px solid rgba(148, 173, 214, 0.36);
             box-shadow: 0 0 0 1px rgba(3, 8, 17, 0.48) inset;
             background: rgba(10, 15, 24, 0.94);
-            z-index: 3;
+            z-index: 4;
+            flex: 0 0 auto;
         }
         .achievement-position {
-            position: absolute;
-            top: 7px;
-            right: 30px;
             min-height: 18px;
-            min-width: 26px;
-            max-width: 52px;
+            min-width: 30px;
+            max-width: 58px;
             padding: 0 7px;
             border-radius: 999px;
             display: inline-flex;
@@ -359,6 +354,7 @@ def _inject_styles() -> None:
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            flex: 0 1 auto;
         }
         .achievement-position.pos-gold {
             border-color: rgba(244, 199, 103, 0.7);
@@ -381,10 +377,6 @@ def _inject_styles() -> None:
             color: #d6fffa;
         }
         .achievement-inline-name {
-            position: absolute;
-            left: 6px;
-            right: 6px;
-            bottom: 5px;
             color: #ebf3ff;
             font-weight: 820;
             line-height: 1.15;
@@ -397,6 +389,7 @@ def _inject_styles() -> None:
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            width: 100%;
         }
         .quick-row {
             display: grid;
@@ -1162,14 +1155,33 @@ def _inject_styles() -> None:
             border: 1px solid rgba(151, 166, 195, 0.32);
             background: linear-gradient(180deg, rgba(19, 28, 43, 0.95), rgba(9, 14, 24, 0.96));
             flex: 0 0 108px;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+        }
+        .achievement-top-row {
+            position: absolute;
+            top: 7px;
+            left: 7px;
+            right: 7px;
+            z-index: 4;
             display: flex;
-            align-items: stretch;
-            justify-content: stretch;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 6px;
+            pointer-events: none;
+        }
+        .achievement-badge-stack {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 5px;
+            min-width: 0;
+            pointer-events: auto;
         }
         .achievement-premium .achievement-image-wrap {
             width: 100%;
             height: 100%;
-            padding: 20px 7px 24px;
+            padding: 30px 7px 28px;
             box-sizing: border-box;
             background: linear-gradient(180deg, rgba(18, 27, 41, 0.55), rgba(9, 13, 22, 0.72));
         }
@@ -1195,9 +1207,21 @@ def _inject_styles() -> None:
             left: 0;
             right: 0;
             bottom: 0;
-            height: 34px;
+            height: 36px;
             background: linear-gradient(180deg, rgba(4, 7, 12, 0), rgba(4, 7, 12, 0.86));
             z-index: 1;
+            pointer-events: none;
+        }
+        .achievement-footer {
+            position: absolute;
+            left: 6px;
+            right: 6px;
+            bottom: 5px;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 17px;
             pointer-events: none;
         }
         .achievement-missing {
@@ -1497,11 +1521,13 @@ def _inject_styles() -> None:
         .player-side .section-label { margin: 0; font-size: 0.72rem; }
         .grevscore-wrap {
             display: grid;
-            grid-template-rows: auto auto auto auto 1fr auto;
-            align-items: start;
-            text-align: left;
-            gap: 6px;
+            grid-template-rows: auto auto auto auto auto auto;
+            align-items: center;
+            justify-items: center;
+            text-align: center;
+            gap: 8px;
             height: 100%;
+            align-content: center;
         }
         .grevscore-card {
             position: relative;
@@ -1553,14 +1579,17 @@ def _inject_styles() -> None:
             text-transform: uppercase;
             font-weight: 900;
             text-shadow: 0 0 12px rgba(109, 185, 255, 0.24);
+            text-align: center;
         }
         .grevscore-value {
             font-size: clamp(4rem, 5.9vw, 5.8rem);
             font-weight: 940;
-            line-height: 0.84;
+            line-height: 0.9;
             letter-spacing: 0.008em;
             color: #f7fbff;
             text-shadow: 0 0 16px rgba(198, 222, 255, 0.35), 0 0 34px rgba(68, 222, 160, 0.24);
+            text-align: center;
+            width: 100%;
         }
         .grevscore-card.tier-very-poor .grevscore-value { color: #ffd8e0; text-shadow: 0 0 14px rgba(255, 147, 171, 0.42), 0 0 35px rgba(172, 33, 70, 0.4); }
         .grevscore-card.tier-poor .grevscore-value { color: #ffe4c4; text-shadow: 0 0 14px rgba(255, 177, 114, 0.4), 0 0 35px rgba(186, 87, 19, 0.36); }
@@ -1573,6 +1602,8 @@ def _inject_styles() -> None:
             letter-spacing: 0.02em;
             font-weight: 760;
             line-height: 1.25;
+            text-align: center;
+            max-width: 290px;
         }
         .grevscore-status .accent { font-weight: 860; color: #9fd7ff; }
         .grevscore-card.tier-very-poor .grevscore-status .accent { color: #ff9fb3; }
@@ -1613,6 +1644,7 @@ def _inject_styles() -> None:
             margin-top: 3px;
             display: grid;
             gap: 7px;
+            width: 100%;
         }
         .grevscore-meter-track {
             width: 100%;
@@ -1645,6 +1677,7 @@ def _inject_styles() -> None:
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 7px;
+            width: 100%;
         }
         .grevscore-meta span {
             border: 1px solid rgba(151, 166, 195, 0.34);
@@ -3182,6 +3215,31 @@ def normalize_opponent_name(value: str) -> str:
     return text
 
 
+def resolve_latest_opponent_tier(df: pd.DataFrame) -> pd.DataFrame:
+    """Resolve opponent tier from that opponent's most recent game in the current filtered context."""
+    if df.empty or "opponent_key" not in df.columns:
+        return pd.DataFrame(columns=["opponent_key", "latest_tier"])
+    frame = df.copy()
+    if "date" in frame.columns:
+        frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    else:
+        frame["date"] = pd.NaT
+    if "match_id" not in frame.columns:
+        frame["match_id"] = ""
+    if "tier" not in frame.columns:
+        frame["tier"] = pd.NA
+
+    frame["tier_clean"] = frame["tier"].apply(
+        lambda value: str(value).strip().upper()[:1]
+        if value is not None and not (isinstance(value, float) and pd.isna(value)) and str(value).strip()
+        else ""
+    )
+    frame = frame.sort_values(["opponent_key", "date", "match_id"], ascending=[True, False, False])
+    latest = frame.groupby("opponent_key", as_index=False).first()
+    latest["latest_tier"] = latest["tier_clean"].replace("", pd.NA)
+    return latest[["opponent_key", "latest_tier"]]
+
+
 def normalize_competition_label(value: str) -> str:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return ""
@@ -3933,6 +3991,9 @@ def build_recommendation_reason(row: pd.Series, *, include_base: bool = True) ->
     tier_reason = str(row.get("tier_weighting_note", "")).strip()
     if tier_reason:
         reason_parts.append(tier_reason)
+    eco_fallback_note = str(row.get("eco_fallback_note", "")).strip()
+    if eco_fallback_note:
+        reason_parts.append(eco_fallback_note)
     return " ".join(reason_parts).strip()
 
 
@@ -4673,10 +4734,14 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
         "<div class='achievement-header-gradient'></div>"
         "<div class='achievement-footer-gradient'></div>"
         f"<div class='achievement-image-wrap'>{image_html}</div>"
+        "<div class='achievement-top-row'>"
         f"<div class='achievement-season'>{season}</div>"
+        "<div class='achievement-badge-stack'>"
         f"{position_badge_html}"
         f"<span class='achievement-tier achievement-tier-icon tier-{tier_class}'>{top_badge}</span>"
-        f"<div class='achievement-inline-name'>{label}</div>"
+        "</div>"
+        "</div>"
+        f"<div class='achievement-footer'><div class='achievement-inline-name'>{label}</div></div>"
         "</div>"
     )
 
@@ -4707,6 +4772,44 @@ def _build_performance_summary(metrics: dict[str, float], trend_direction: str, 
         "form unstable recently" if trend_direction == "Rising" else "form currently dropping"
     )
     return f"{fragger_state}, {utility_state}, {form_state}"
+
+
+def build_player_profile_descriptor(metrics: dict[str, float], *, avg_acc: float, avg_hs: float, form_score: float) -> str:
+    kpr = float(metrics.get("kpr", 0.0))
+    impact = float(metrics.get("impact", 0.0))
+    if kpr < 0.58 and impact < 63:
+        lead = "Support-leaning profile with weak kill conversion"
+    elif kpr < 0.62 and avg_acc >= 56:
+        lead = "Low-output fragger with decent accuracy"
+    elif kpr < 0.62 and impact >= 67:
+        lead = "Fragging below average, but efficiency is holding"
+    elif avg_acc >= 58 and impact < 66:
+        lead = "Solid accuracy profile, but low pressure output"
+    elif kpr >= 0.71 and impact >= 74:
+        lead = "Aggressive impact profile with strong conversion"
+    else:
+        lead = "Balanced profile with moderate conversion pressure"
+
+    if form_score < 55:
+        tail = "Recent form unstable, impact remains low"
+    elif form_score >= 70 and impact >= 72:
+        tail = "Recent form is stable with dependable impact"
+    else:
+        tail = "Recent form is mixed across this filter window"
+    return f"{lead}. {tail}"
+
+
+def build_player_stat_insight(metrics: dict[str, float], *, avg_acc: float, avg_hs: float, recent10_delta: float) -> str:
+    kpr = float(metrics.get("kpr", 0.0))
+    if recent10_delta <= -0.07:
+        return "Output has cooled over the last 10 matches; prioritize cleaner conversion setups."
+    if avg_acc >= 57 and kpr < 0.62:
+        return "Aim fundamentals are stable, but final-frag conversion is trailing."
+    if avg_hs >= 37 and float(metrics.get("impact", 0.0)) < 66:
+        return "High headshot share is present, but round impact is not converting consistently."
+    if recent10_delta >= 0.08:
+        return "Recent trend is positive; keep current role responsibilities and tempo balance."
+    return "Profile is steady with no major single-stat outlier in this context."
 
 
 def _home() -> None:
@@ -4945,6 +5048,8 @@ def _hltv_profile_view(
 
     trend_icon, trend_class = _trend_icon_and_class(trend_direction)
     performance_summary = _build_performance_summary(metrics, trend_direction, form_score)
+    profile_descriptor = build_player_profile_descriptor(metrics, avg_acc=avg_acc, avg_hs=avg_hs, form_score=form_score)
+    stat_insight = build_player_stat_insight(metrics, avg_acc=avg_acc, avg_hs=avg_hs, recent10_delta=recent10_delta)
     streak_value_class = "up" if streak > 0 else ("down" if streak < 0 else "flat")
     delta_value_class = "up" if recent10_delta > 0 else ("down" if recent10_delta < 0 else "flat")
     stats_tiles = [
@@ -5002,6 +5107,7 @@ def _hltv_profile_view(
                             <span class="pv-meta-chip side">🧭 Best side: {html.escape(side_split)}</span>
                         </div>
                         <div class="pv-summary">"{html.escape(performance_summary)}"</div>
+                        <div class="pv-summary" style="margin-top:6px;opacity:0.95;">{html.escape(profile_descriptor)}</div>
                     </div>
                     <div class="pv-side-stack">
                         <div class="pv-side-tile rank"><div class="k">Team Rank</div><div class="v">#{team_rank}/{rank_total}</div></div>
@@ -5048,6 +5154,7 @@ def _hltv_profile_view(
         unsafe_allow_html=True,
     )
     st.markdown("<div class='section-block-title'>Core Performance</div>", unsafe_allow_html=True)
+    st.caption(f"Profile insight: {stat_insight}")
     st.markdown(
         f"<div class='core-grid'><div class='performance-grid'>{''.join(core_cards)}</div></div>",
         unsafe_allow_html=True,
@@ -6472,6 +6579,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     category_order = ["Pistol", "Eco", "Standard", "Mid", "Ivy"]
     selected_rows: list[pd.Series] = []
     selected_names: set[str] = set()
+    eco_fallback_used = False
+    eco_exists_in_context = not tactic_perf[tactic_perf["bucket"] == "Eco"].empty
+    eco_fallback_reason = "Best available eco option for this map-side; included to preserve eco coverage"
 
     def _is_duplicate_candidate(candidate: pd.Series) -> bool:
         cand_name = str(candidate["tactic_name"])
@@ -6527,6 +6637,32 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             selected_rows.append(row)
             selected_names.add(str(row["tactic_name"]))
 
+    eco_selected_count = int(sum(1 for row in selected_rows if str(row.get("bucket", "")) == "Eco"))
+    if eco_exists_in_context and eco_selected_count == 0:
+        eco_pool = tactic_perf[tactic_perf["bucket"] == "Eco"].copy()
+        if not eco_pool.empty:
+            best_eco = eco_pool.sort_values(["recommendation_score", "category_relative_score", "times_used"], ascending=[False, False, False]).iloc[0].copy()
+            best_eco["eco_fallback_note"] = eco_fallback_reason
+            if str(best_eco["tactic_name"]) not in selected_names:
+                if len(selected_rows) >= 7:
+                    drop_index = None
+                    weakest_score = float("inf")
+                    for idx, existing in enumerate(selected_rows):
+                        if str(existing.get("bucket", "")) in {"Pistol", "Eco"}:
+                            continue
+                        score = float(existing.get("recommendation_score", -9999))
+                        if score < weakest_score:
+                            weakest_score = score
+                            drop_index = idx
+                    if drop_index is not None:
+                        removed_name = str(selected_rows[drop_index]["tactic_name"])
+                        selected_rows.pop(drop_index)
+                        selected_names.discard(removed_name)
+                if len(selected_rows) < 7:
+                    selected_rows.append(best_eco)
+                    selected_names.add(str(best_eco["tactic_name"]))
+                    eco_fallback_used = True
+
     if len(selected_rows) > 7:
         selected_rows = selected_rows[:7]
 
@@ -6534,6 +6670,8 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     if selected_df.empty:
         st.info("No recommendation set could be built from current filters.")
         return
+    if "eco_fallback_note" not in selected_df.columns:
+        selected_df["eco_fallback_note"] = ""
 
     confidence_counts = selected_df["confidence"].value_counts().to_dict()
     coverage_labels = sorted({tag for tags in selected_df["route_tags"] for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
@@ -6719,7 +6857,12 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
 
     insights = []
     insights.append(("Strong standard depth" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "Standard depth is currently limited", "good" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "warn"))
-    insights.append(("Only one eco option is currently trustworthy" if eco_depth_thin else "Eco depth has meaningful redundancy", "warn" if eco_depth_thin else "good"))
+    if not eco_exists_in_context:
+        insights.append(("No Eco tactics recorded for this map-side context", "warn"))
+    elif eco_fallback_used:
+        insights.append(("Eco pool is weak, but the best available eco option was force-included for coverage.", "warn"))
+    else:
+        insights.append(("Only one eco option is currently trustworthy" if eco_depth_thin else "Eco depth has meaningful redundancy", "warn" if eco_depth_thin else "good"))
     insights.append(("No Ivy coverage available in current sample" if not has_ivy else "Ivy coverage exists in the selected set", "warn" if not has_ivy else "good"))
     insights.append(("Set leans slow-control heavy" if has_slow and not has_fast else "Good mix of fast and control profiles" if has_fast and has_slow else "Tempo profile is narrow", "warn" if (has_slow and not has_fast) or not (has_fast and has_slow) else "good"))
     insights.append(("Selected set is sample-light, so confidence remains tentative" if sample_light else "Good mix of proven and early-positive tactics", "warn" if sample_light else "good"))
@@ -6791,6 +6934,10 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         summary_line += " Multiple A-leaning standards are retained because they provide distinct usable profiles."
     if eco_count == 1:
         summary_line += " Eco depth is limited, so only one eco tactic is recommended."
+    if not eco_exists_in_context:
+        summary_line += " No Eco tactics recorded for this map-side context."
+    elif eco_fallback_used:
+        summary_line += " The eco slot is a forced coverage pick based on best available eco-relative profile."
     st.caption(summary_line)
     st.caption(
         "Why this set? The planner prioritises category-relative quality (especially eco vs eco), practical variety, and non-duplicate tactical value while allowing multiple strong tactics toward the same site."
@@ -6972,6 +7119,17 @@ def _medisports_vs_breakdown(
         return
     filtered["competition"] = filtered["competition_display"]
     filtered["opponent_team"] = filtered["opponent_raw"]
+    opponent_latest_tier = resolve_latest_opponent_tier(filtered)
+    filtered = filtered.merge(opponent_latest_tier, on="opponent_key", how="left")
+    filtered["opponent_tier"] = filtered["latest_tier"]
+    filtered["opponent_display"] = filtered.apply(
+        lambda row: (
+            f"{row['opponent_team']}  ·  Tier {row['latest_tier']}"
+            if str(row.get("latest_tier", "")).strip() not in {"", "<NA>", "nan", "None"}
+            else str(row["opponent_team"])
+        ),
+        axis=1,
+    )
     scope = "Lifetime" if form_window == "All time" else form_window
     selected_scope = "All tournaments" if not selected_comp else f"{len(selected_comp)} tournament(s)"
     status_html = (
@@ -6993,7 +7151,6 @@ def _medisports_vs_breakdown(
             draws=("match_result", lambda s: int((s == "Draw").sum())),
             round_wins=("round_wins", "sum"),
             round_losses=("round_losses", "sum"),
-            tier=("tier", lambda s: s.dropna().astype(str).mode().iloc[0] if not s.dropna().empty else "—"),
             most_played_map=("map", lambda s: s.dropna().astype(str).mode().iloc[0] if not s.dropna().empty else "—"),
         )
         .assign(
@@ -7018,6 +7175,13 @@ def _medisports_vs_breakdown(
             record=lambda d: d["wins"].astype(str) + "-" + d["losses"].astype(str) + "-" + d["draws"].astype(str),
         )
         .sort_values(["win_rate_pct", "round_diff", "matches", "opponent_team"], ascending=[False, False, False, True])
+    )
+    vs_summary = vs_summary.merge(opponent_latest_tier, on="opponent_key", how="left")
+    vs_summary["latest_tier"] = vs_summary["latest_tier"].fillna("—")
+    vs_summary["tier"] = vs_summary["latest_tier"]
+    vs_summary["opponent_display"] = vs_summary.apply(
+        lambda row: f"{row['opponent_team']}  ·  Tier {row['latest_tier']}" if str(row["latest_tier"]) not in {"", "—", "nan"} else str(row["opponent_team"]),
+        axis=1,
     )
 
     vs_summary["confidence"] = pd.cut(
@@ -7194,7 +7358,7 @@ def _medisports_vs_breakdown(
             rd_bar = go.Figure(
                 go.Bar(
                     x=chart_frame["round_diff"],
-                    y=chart_frame["opponent_team"],
+                    y=chart_frame["opponent_display"],
                     orientation="h",
                     marker=dict(
                         color=chart_frame["round_diff"],
@@ -7222,7 +7386,7 @@ def _medisports_vs_breakdown(
                 wr_class = "vs-pill-good" if float(row["win_rate_pct"]) >= 55 else ("vs-pill-mid" if float(row["win_rate_pct"]) >= 45 else "vs-pill-bad")
                 status = str(row["status"])
                 rows_html.append(
-                    f'<div class="ranked-row"><div class="vs-pill">#{idx}</div><div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["opponent_team"]))}</span></div><div class="stat-label">Matches <b>{int(row["matches"])}</b></div><div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div><div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div><div><span class="vs-pill {round_class}">RD {int(row["round_diff"]):+d}</span></div><div><span class="vs-pill">Map {html.escape(str(row["most_played_map"]))}</span></div><div><span class="vs-pill {status_class.get(status, "vs-pill-mid")}">{html.escape(status)}</span></div></div>'
+                    f'<div class="ranked-row"><div class="vs-pill">#{idx}</div><div class="rank-cell-main"><span class="rank-name">{html.escape(str(row["opponent_display"]))}</span></div><div class="stat-label">Matches <b>{int(row["matches"])}</b></div><div class="stat-label">Record <b>{html.escape(str(row["record"]))}</b></div><div><span class="vs-pill {wr_class}">WR {float(row["win_rate_pct"]):.1f}%</span></div><div><span class="vs-pill {round_class}">RD {int(row["round_diff"]):+d}</span></div><div><span class="vs-pill">Map {html.escape(str(row["most_played_map"]))}</span></div><div><span class="vs-pill {status_class.get(status, "vs-pill-mid")}">{html.escape(status)}</span></div></div>'
                 )
             return f"<div class='panel-card'><div class='panel-muted'>{html.escape(heading)}</div><div class='ranked-list'>{''.join(rows_html)}</div></div>"
 
@@ -7255,7 +7419,7 @@ def _medisports_vs_breakdown(
                     f"""
                     <div class="panel-card">
                         <div class="panel-muted">{label}</div>
-                        <div class="panel-title">{html.escape(str(row["opponent_team"]))}</div>
+                        <div class="panel-title">{html.escape(str(row["opponent_display"]))}</div>
                         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
                             <span class="vs-pill">{int(row["wins"])}W-{int(row["losses"])}L-{int(row["draws"])}D</span>
                             <span class="vs-pill {'vs-pill-good' if float(row["win_rate_pct"]) >= 55 else 'vs-pill-bad'}">WR {float(row["win_rate_pct"]):.1f}%</span>
@@ -7274,11 +7438,11 @@ def _medisports_vs_breakdown(
         st.markdown("#### Matchup strength (round differential)")
         diff_data = vs_summary[vs_summary["matches"] >= min_matches].sort_values("round_diff", ascending=False)
         if go is not None:
-            wrapped_labels = _wrap_labels(diff_data["opponent_team"], width=26)
+            wrapped_labels = _wrap_labels(diff_data["opponent_display"], width=26)
             bar_height = 30
             min_height = 340
             chart_height = max(min_height, len(diff_data) * bar_height + 80)
-            longest_label = max((len(name) for name in diff_data["opponent_team"].astype(str)), default=0)
+            longest_label = max((len(name) for name in diff_data["opponent_display"].astype(str)), default=0)
             left_margin = min(420, max(170, 80 + longest_label * 6))
 
             diff_chart = go.Figure(
@@ -7287,7 +7451,7 @@ def _medisports_vs_breakdown(
                     y=wrapped_labels,
                     orientation="h",
                     marker_color=["#44c06f" if value >= 0 else "#e85c6b" for value in diff_data["round_diff"]],
-                    customdata=diff_data[["opponent_team", "record", "matches", "round_diff_per_match"]],
+                    customdata=diff_data[["opponent_display", "record", "matches", "round_diff_per_match"]],
                     hovertemplate=(
                         "<b>%{customdata[0]}</b><br>"
                         "Record: %{customdata[1]}<br>"
@@ -7319,11 +7483,11 @@ def _medisports_vs_breakdown(
             .sort_values("match_diff", ascending=False)
         )
         if go is not None:
-            wrapped_labels = _wrap_labels(wl_data["opponent_team"], width=26)
+            wrapped_labels = _wrap_labels(wl_data["opponent_display"], width=26)
             bar_height = 30
             min_height = 340
             chart_height = max(min_height, len(wl_data) * bar_height + 80)
-            longest_label = max((len(name) for name in wl_data["opponent_team"].astype(str)), default=0)
+            longest_label = max((len(name) for name in wl_data["opponent_display"].astype(str)), default=0)
             left_margin = min(420, max(170, 80 + longest_label * 6))
 
             wl_chart = go.Figure(
@@ -7332,7 +7496,7 @@ def _medisports_vs_breakdown(
                     y=wrapped_labels,
                     orientation="h",
                     marker_color=["#44c06f" if value >= 0 else "#e85c6b" for value in wl_data["match_diff"]],
-                    customdata=wl_data[["opponent_team", "record", "matches", "win_loss_per_match"]],
+                    customdata=wl_data[["opponent_display", "record", "matches", "win_loss_per_match"]],
                     hovertemplate=(
                         "<b>%{customdata[0]}</b><br>"
                         "Record: %{customdata[1]}<br>"
@@ -7369,6 +7533,15 @@ def _medisports_vs_breakdown(
             record=lambda d: d["wins"].astype(str) + "-" + d["losses"].astype(str),
         )
     )
+    map_summary = map_summary.merge(opponent_latest_tier, on="opponent_key", how="left")
+    map_summary["opponent_display"] = map_summary.apply(
+        lambda row: (
+            f"{row['opponent_team']}  ·  Tier {row['latest_tier']}"
+            if str(row.get("latest_tier", "")).strip() not in {"", "<NA>", "nan", "None"}
+            else str(row["opponent_team"])
+        ),
+        axis=1,
+    )
     map_heat = map_summary[map_summary["matches"] >= min_matches]
     if map_heat.empty:
         st.info("No opponent-map pairs meet minimum matches.")
@@ -7377,18 +7550,18 @@ def _medisports_vs_breakdown(
             _render_plotly_unavailable()
         else:
             opponent_order = (
-                map_heat.groupby("opponent_team", as_index=False)["win_rate_pct"]
+                map_heat.groupby("opponent_display", as_index=False)["win_rate_pct"]
                 .mean()
-                .sort_values("win_rate_pct", ascending=False)["opponent_team"]
+                .sort_values("win_rate_pct", ascending=False)["opponent_display"]
                 .tolist()
             )
             map_order = sorted(map_heat["map"].astype(str).unique().tolist())
             z = (
-                map_heat.pivot(index="opponent_team", columns="map", values="win_rate_pct")
+                map_heat.pivot(index="opponent_display", columns="map", values="win_rate_pct")
                 .reindex(index=opponent_order, columns=map_order)
             )
             matches_text = (
-                map_heat.pivot(index="opponent_team", columns="map", values="matches")
+                map_heat.pivot(index="opponent_display", columns="map", values="matches")
                 .reindex(index=opponent_order, columns=map_order)
                 .fillna(0)
                 .astype(int)
@@ -7490,10 +7663,10 @@ def _medisports_vs_breakdown(
     opponent_table["status"] = opponent_table["status_dot"] + " " + opponent_table["status"].astype(str)
     st.dataframe(
         opponent_table[
-            ["opponent_team", "matches", "record", "win_rate_pct", "round_diff", "map_pill", "tier_pill", "confidence", "status"]
+            ["opponent_display", "matches", "record", "win_rate_pct", "round_diff", "map_pill", "tier_pill", "confidence", "status"]
         ].rename(
             columns={
-                "opponent_team": "Opponent",
+                "opponent_display": "Opponent",
                 "record": "Record",
                 "win_rate_pct": "WR %",
                 "round_diff": "RD",
@@ -7516,13 +7689,13 @@ def _medisports_vs_breakdown(
     )
     opp_filter = st.multiselect(
         "Opponent filter",
-        sorted(filtered["opponent_team"].dropna().astype(str).unique().tolist()),
+        sorted(filtered["opponent_display"].dropna().astype(str).unique().tolist()),
         default=[],
         key="medisports_opp_filter",
     )
     match_table = filtered[filtered["match_result"].isin(result_filter)].copy()
     if opp_filter:
-        match_table = match_table[match_table["opponent_team"].isin(opp_filter)]
+        match_table = match_table[match_table["opponent_display"].isin(opp_filter)]
     match_table["competition_logo"] = match_table["competition"].apply(lambda comp: _competition_logo_uri(image_index, comp))
     match_table["result_pill"] = match_table["match_result"].map({"Win": "🟢 Win", "Loss": "🔴 Loss", "Draw": "🟡 Draw"}).fillna("⚪ Unknown")
     match_table["map_badge"] = "🗺️ " + match_table["map"].astype(str)
@@ -7534,7 +7707,7 @@ def _medisports_vs_breakdown(
                 "date",
                 "competition_logo",
                 "competition",
-                "opponent_team",
+                "opponent_display",
                 "map_badge",
                 "tier_badge",
                 "round_wins",
@@ -7546,7 +7719,7 @@ def _medisports_vs_breakdown(
         column_config={
             "competition_logo": st.column_config.ImageColumn("Logo", width="small"),
             "competition": st.column_config.TextColumn("Competition", width="medium"),
-            "opponent_team": st.column_config.TextColumn("Opponent", width="medium"),
+            "opponent_display": st.column_config.TextColumn("Opponent", width="medium"),
             "map_badge": st.column_config.TextColumn("Map"),
             "tier_badge": st.column_config.TextColumn("Tier"),
             "result_pill": st.column_config.TextColumn("Result"),
