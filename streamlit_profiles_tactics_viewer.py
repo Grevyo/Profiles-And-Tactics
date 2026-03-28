@@ -132,7 +132,7 @@ def _render_plotly_unavailable() -> None:
 
 def _render_html(html_string: str) -> None:
     """Render trusted custom HTML blocks consistently."""
-    st.markdown(html_string, unsafe_allow_html=True)
+    st.markdown(textwrap.dedent(html_string).strip(), unsafe_allow_html=True)
 
 
 def _wrap_labels(labels: pd.Series, width: int = 26) -> list[str]:
@@ -6610,9 +6610,9 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         "Monitor": f"Monitor: mixed signal in {selected_row['map']} {selected_row['side']} needs more tracking",
         "Drop": f"Drop: sustained underperformance in {selected_row['map']} {selected_row['side']}",
     }
-    st.markdown(
+    _render_html(
         f"""
-            <div class="tb-feature">
+        <div class="tb-feature">
             <div class="panel-muted">Featured tactic insight</div>
             <div class="panel-title">{html.escape(str(selected_row["tactic_name"]))}</div>
             <div class="tb-badge-row">
@@ -6637,7 +6637,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             </div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
     _render_html("<div class='tb-section-title'>Opportunity swaps</div>")
@@ -6665,7 +6664,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                 alt_cols = st.columns(len(top_alts))
                 for idx, (_, alt_row) in enumerate(top_alts.iterrows()):
                     with alt_cols[idx]:
-                        st.markdown(
+                        _render_html(
                             f"""
                             <div class="tb-family-card">
                                 <div class="panel-title">{html.escape(str(alt_row["tactic_name"]))}</div>
@@ -6674,7 +6673,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                                 <div class="tb-note">WR {alt_row["win_pct"]:.1f}% • Uses {int(alt_row["times_used"])}</div>
                             </div>
                             """,
-                            unsafe_allow_html=True,
                         )
                 st.dataframe(
                     better_alts[
@@ -6703,10 +6701,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         & (rounds_long["side"] == selected_row["side"])
     ].sort_values(["date", "match_id"])
     if selected_rounds.empty:
-        st.markdown(
-            "<div class='tb-empty'>Insufficient trend sample for this exact map + side tactic context.</div>",
-            unsafe_allow_html=True,
-        )
+        _render_html("<div class='tb-empty'>Insufficient trend sample for this exact map + side tactic context.</div>")
     else:
         selected_rounds = selected_rounds.assign(
             use_idx=range(1, len(selected_rounds) + 1),
@@ -6720,10 +6715,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         )
         st.caption(f"Trend insight: **{insight_label}** for this exact {selected_row['map']} {selected_row['side']} context.")
         if len(selected_rounds) < 5:
-            st.markdown(
-                "<div class='tb-empty'>Not enough points for a reliable trend chart yet. Continue collecting rounds in this same map + side context.</div>",
-                unsafe_allow_html=True,
-            )
+            _render_html("<div class='tb-empty'>Not enough points for a reliable trend chart yet. Continue collecting rounds in this same map + side context.</div>")
             selected_rounds = pd.DataFrame()
         if selected_rounds.empty:
             pass
@@ -6894,7 +6886,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         tier_cols = st.columns(len(sel_tier))
         for idx, (_, row) in enumerate(sel_tier.iterrows()):
             with tier_cols[idx]:
-                st.markdown(
+                _render_html(
                     f"""
                     <div class="tb-family-card">
                         <div class="panel-title">Tier {html.escape(str(row["tier"]))}</div>
@@ -6903,7 +6895,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                         <div class="tb-note">Uses {int(row["tier_uses"])}</div>
                     </div>
                     """,
-                    unsafe_allow_html=True,
                 )
     else:
         sel_tier["tier_adjusted_score"] = sel_tier.apply(
@@ -6957,7 +6948,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             family_class = str(fam_row["family"]).strip().lower()
             if family_class not in {"pistol", "eco", "standard"}:
                 family_class = "standard"
-            st.markdown(
+            _render_html(
                 f"""
                 <div class="tb-family-card {family_class}">
                     <div class="panel-title">{html.escape(str(fam_row["family"]))}</div>
@@ -6966,7 +6957,6 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                     <div class="tb-note">Most used: {html.escape(str(fam_row["most_used_tactic"]))}</div>
                 </div>
                 """,
-                unsafe_allow_html=True,
             )
 
     def _render_family_breakdown(section_title: str, family_name: str, rounds_label: str) -> None:
