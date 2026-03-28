@@ -5317,27 +5317,29 @@ def _front_page(player_df: pd.DataFrame, tactics_df: pd.DataFrame, competition_s
             else "<div class='roster-photo' style='display:flex;align-items:center;justify-content:center;color:#9da7bd;'>N/A</div>"
         )
         card_html.append(
-            f"""
-            <article class='roster-card'>
-                <div class='roster-head'>
-                    {photo_html}
-                    <div>
-                        <div class='roster-name'>{html.escape(str(row["player"]))}</div>
-                        <div class='roster-meta'>{html.escape(str(row["flag"]))} {html.escape(str(row["nation"] or "Unknown"))} • {html.escape(str(row["role"]))}</div>
-                        <div class='roster-meta'>{trend_icon} {html.escape(trend)} • {html.escape(str(badge))}</div>
+            textwrap.dedent(
+                f"""
+                <article class='roster-card'>
+                    <div class='roster-head'>
+                        {photo_html}
+                        <div>
+                            <div class='roster-name'>{html.escape(str(row["player"]))}</div>
+                            <div class='roster-meta'>{html.escape(str(row["flag"]))} {html.escape(str(row["nation"] or "Unknown"))} • {html.escape(str(row["role"]))}</div>
+                            <div class='roster-meta'>{trend_icon} {html.escape(trend)} • {html.escape(str(badge))}</div>
+                        </div>
                     </div>
-                </div>
-                <div class='roster-kpis'>
-                    <div class='roster-kpi'><div class='k'>GrevScore</div><div class='v'>{float(row["grevscore"]):.2f}</div></div>
-                    <div class='roster-kpi'><div class='k'>Rating</div><div class='v'>{float(row["rating"]):.2f}</div></div>
-                    <div class='roster-kpi'><div class='k'>Impact</div><div class='v'>{float(row["impact"]):.1f}</div></div>
-                    <div class='roster-kpi'><div class='k'>Form</div><div class='v'>{float(row["form"]):.1f}</div></div>
-                    <div class='roster-kpi'><div class='k'>K/D</div><div class='v'>{float(row["kd"]):.2f}</div></div>
-                    <div class='roster-kpi'><div class='k'>Best map</div><div class='v'>{html.escape(str(row["best_map"]))}</div></div>
-                </div>
-                <div class='mini-note'>{html.escape(str(row["insight"]))}</div>
-            </article>
-            """
+                    <div class='roster-kpis'>
+                        <div class='roster-kpi'><div class='k'>GrevScore</div><div class='v'>{float(row["grevscore"]):.2f}</div></div>
+                        <div class='roster-kpi'><div class='k'>Rating</div><div class='v'>{float(row["rating"]):.2f}</div></div>
+                        <div class='roster-kpi'><div class='k'>Impact</div><div class='v'>{float(row["impact"]):.1f}</div></div>
+                        <div class='roster-kpi'><div class='k'>Form</div><div class='v'>{float(row["form"]):.1f}</div></div>
+                        <div class='roster-kpi'><div class='k'>K/D</div><div class='v'>{float(row["kd"]):.2f}</div></div>
+                        <div class='roster-kpi'><div class='k'>Best map</div><div class='v'>{html.escape(str(row["best_map"]))}</div></div>
+                    </div>
+                    <div class='mini-note'>{html.escape(str(row["insight"]))}</div>
+                </article>
+                """
+            ).strip()
         )
     st.markdown(f"<section class='roster-grid'>{''.join(card_html)}</section>", unsafe_allow_html=True)
 
