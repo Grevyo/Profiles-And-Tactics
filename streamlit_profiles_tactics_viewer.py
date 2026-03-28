@@ -6547,7 +6547,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                     """
                 )
 
-    st.markdown("<div class='tb-section-title'>Main tactic table</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Main tactic table</div>")
     perf_table = tactic_perf.rename(
         columns={
             "tactic_name": "Tactic",
@@ -6599,7 +6599,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             hide_index=True,
         )
 
-    st.markdown("<div class='tb-section-title'>Selected tactic summary panel</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Selected tactic summary panel</div>")
     selected_key = st.selectbox("Selected tactic summary", summary_options, key="selected_tactic_summary")
     selected_row = summary_key_df[summary_key_df["summary_key"] == selected_key].iloc[0]
     verdict = selected_row["recommended_action"]
@@ -6640,7 +6640,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         unsafe_allow_html=True,
     )
 
-    st.markdown("<div class='tb-section-title'>Opportunity swaps</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Opportunity swaps</div>")
     st.caption("Strict rule: only alternatives from the exact same map + side context are considered.")
     if bool(selected_row["insufficient_context_sample"]):
         st.info("Insufficient sample in this exact map+side pool to recommend alternatives.")
@@ -6696,7 +6696,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                     hide_index=True,
                 )
 
-    st.markdown("<div class='tb-section-title'>Trend over time</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Trend over time</div>")
     selected_rounds = rounds_long[
         (rounds_long["tactic_name"] == selected_row["tactic_name"])
         & (rounds_long["map"] == selected_row["map"])
@@ -6788,7 +6788,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             _apply_plotly_dark_style(trend_fig, height=500, hovermode="x unified")
             st.plotly_chart(trend_fig, use_container_width=True)
 
-    st.markdown("<div class='tb-section-title'>Map + side split heatmap</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Map + side split heatmap</div>")
     st.caption("Tabs preserve strict map context; side split is rendered independently within each map.")
     heatmap_data = tactic_perf.copy()
     if heatmap_data.empty:
@@ -6841,7 +6841,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                 _apply_plotly_dark_style(heatmap_fig, height=max(420, 40 * max(len(tactic_order), 8)))
                 st.plotly_chart(heatmap_fig, use_container_width=True)
 
-    st.markdown("<div class='tb-section-title'>Round share vs success</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Round share vs success</div>")
     if go is None:
         _render_plotly_unavailable()
     else:
@@ -6882,7 +6882,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         _apply_plotly_dark_style(scatter_fig, height=400)
         st.plotly_chart(scatter_fig, use_container_width=True)
 
-    st.markdown("<div class='tb-section-title'>By enemy tier</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>By enemy tier</div>")
     sel_tier = tier_perf[
         (tier_perf["tactic_name"] == selected_row["tactic_name"])
         & (tier_perf["map"] == selected_row["map"])
@@ -6939,7 +6939,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         if tier_context_note:
             st.caption(tier_context_note)
 
-    st.markdown("<div class='tb-section-title'>Family/category summaries</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Family/category summaries</div>")
     family_summary = (
         tactic_perf.groupby(["family", "map", "side"], as_index=False)
         .agg(
@@ -7005,7 +7005,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     _render_family_breakdown("Eco breakdown", "Eco", "Eco rounds")
     _render_family_breakdown("Standard rounds section", "Standard", "Standard rounds")
 
-    st.markdown("<div class='tb-section-title'>Match context drilldown</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Match context drilldown</div>")
     drilldown = df[
         (df["tactic_name"] == selected_row["tactic_name"])
         & (df["map"] == selected_row["map"])
@@ -7183,8 +7183,23 @@ def build_tournament_overview_metrics(summary_df: pd.DataFrame, match_rows: pd.D
 def build_map_side_context_summary(match_rows: pd.DataFrame) -> pd.DataFrame:
     if match_rows.empty:
         return pd.DataFrame()
+    required_defaults = {
+        "map": "Unknown map",
+        "side": "Unknown side",
+        "match_id": "",
+        "match_result": "Draw",
+        "round_diff": 0,
+    }
+    summary_source = match_rows.copy()
+    for col, default_value in required_defaults.items():
+        if col not in summary_source.columns:
+            summary_source[col] = default_value
+    summary_source["map"] = summary_source["map"].fillna("Unknown map").astype(str)
+    summary_source["side"] = summary_source["side"].fillna("Unknown side").astype(str)
+    summary_source["match_result"] = summary_source["match_result"].fillna("Draw").astype(str)
+    summary_source["round_diff"] = pd.to_numeric(summary_source["round_diff"], errors="coerce").fillna(0)
     return (
-        match_rows.groupby(["map", "side"], as_index=False)
+        summary_source.groupby(["map", "side"], as_index=False)
         .agg(
             matches=("match_id", "nunique"),
             wins=("match_result", lambda s: int((s == "Win").sum())),
@@ -7583,7 +7598,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         subtitle="Compact recommendation planner for map + side specific active tactic pools.",
     )
 
-    st.markdown("<div class='tb-section-title'>Tactical Set Recommendations</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Tactical Set Recommendations</div>")
     st.caption(
         "Build a compact 5–7 tactic pool for one exact map + side context. No cross-map or cross-side transfers are used."
     )
@@ -7907,7 +7922,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     confidence_counts = selected_df["confidence"].value_counts().to_dict()
     coverage_labels = sorted({tag for tags in selected_df["route_tags"] for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
 
-    st.markdown(
+    _render_html(
         f"""
         <div class='panel-card' style='margin-top:8px;'>
             <div class="panel-title">Recommended Set Summary</div>
@@ -7925,10 +7940,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             </div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
-    st.markdown(
+    _render_html(
         """
         <div class="tb-legend-strip">
             <div class="panel-title">Recommendation-strength colour guide</div>
@@ -7942,10 +7956,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             </div>
         </div>
         """,
-        unsafe_allow_html=True,
     )
 
-    st.markdown("<div class='tb-section-title'>Recommended tactic cards</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Recommended tactic cards</div>")
     for category in category_order:
         block = selected_df[selected_df["bucket"] == category]
         if block.empty:
@@ -7955,7 +7968,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             priority_tier = str(row["keep_priority_tier"])
             color_tokens = keep_priority_color_token(priority_tier)
             reason = build_recommendation_reason(row)
-            st.markdown(
+            _render_html(
                 f"""
                 <div class="tb-decision-card" style="--accent:{color_tokens['accent']}; --accent-text:{color_tokens['text']}; border-color:{color_tokens['accent']}66; background:linear-gradient(160deg, {color_tokens['bg']}, rgba(10, 17, 29, 0.92));">
                     <div class="tb-card-head">
@@ -7978,7 +7991,6 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                     <div class="tb-card-reason">{html.escape(str(reason))}</div>
                 </div>
                 """,
-                unsafe_allow_html=True,
             )
 
     selected_route_tags = [tags if isinstance(tags, set) else set() for tags in selected_df["route_tags"]]
@@ -8142,14 +8154,13 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         </div>
         """
     )
-    st.markdown(f"<div class='tb-module-grid'>{''.join(module_sections)}</div>", unsafe_allow_html=True)
+    _render_html(f"<div class='tb-module-grid'>{''.join(module_sections)}</div>")
 
-    st.markdown("<div class='tb-section-title'>Recently used tactics (Last 5 days)</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Recently used tactics (Last 5 days)</div>")
     recent_window_df, window_start, window_end = build_recent_tactic_window(context_df, lookback_days=5)
     if recent_window_df.empty or window_start is None or window_end is None:
-        st.markdown(
+        _render_html(
             "<div class='tb-empty'>No tactics used in the last 5 days for this map-side context.</div>",
-            unsafe_allow_html=True,
         )
     else:
         recent_summary = (
@@ -8213,7 +8224,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         test_count = int(len(recent_summary) - keep_count - weak_count)
         new_count = int((recent_summary["recent_status"] == "New").sum())
 
-        st.markdown(
+        _render_html(
             f"""
             <div class="tb-recent-summary">
                 <div class="panel-title">{len(recent_summary)} tactics used in the last 5 days for {selected_map} • {selected_side}</div>
@@ -8226,7 +8237,6 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 </div>
             </div>
             """,
-            unsafe_allow_html=True,
         )
 
         recent_cards_html: list[str] = []
@@ -8246,9 +8256,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 </div>
                 """,
             )
-        st.markdown(f"<div class='tb-recent-grid'>{''.join(recent_cards_html)}</div>", unsafe_allow_html=True)
+        _render_html(f"<div class='tb-recent-grid'>{''.join(recent_cards_html)}</div>")
 
-        st.markdown("<div class='tb-section-title'>What’s working / What’s not</div>", unsafe_allow_html=True)
+        _render_html("<div class='tb-section-title'>What’s working / What’s not</div>")
         eval_df = recent_summary.copy()
         eval_df["recent_eval_score"] = (
             eval_df["delta_vs_baseline_recent"] * 1.4
@@ -8322,9 +8332,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 ).strip()
             )
         right_html.append("</div>")
-        st.markdown(f"<div class='tb-wash-grid'>{''.join(left_html)}{''.join(right_html)}</div>", unsafe_allow_html=True)
+        _render_html(f"<div class='tb-wash-grid'>{''.join(left_html)}{''.join(right_html)}</div>")
 
-    st.markdown("<div class='tb-section-title'>Copy recommended set</div>", unsafe_allow_html=True)
+    _render_html("<div class='tb-section-title'>Copy recommended set</div>")
     compact_lines = [f"{row['bucket']}: {row['tactic_name']}" for _, row in selected_df[["bucket", "tactic_name"]].iterrows()]
     st.code("\n".join(compact_lines), language="text")
     summary_line = (
