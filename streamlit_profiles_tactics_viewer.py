@@ -14,6 +14,7 @@ import re
 import textwrap
 import unicodedata
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
