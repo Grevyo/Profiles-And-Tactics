@@ -3828,6 +3828,90 @@ def compute_category_relative_score(row: pd.Series, category_baselines: dict[str
     return round(score, 1)
 
 
+def compute_tier_strength_weight(tier: str | None) -> float:
+    tier_key = str(tier or "").strip().upper()
+    return {"S": 2.6, "A": 1.55, "B": 1.0, "C": 0.72}.get(tier_key, 1.0)
+
+
+def _compute_tier_expected_win_pct(tier: str | None) -> float:
+    tier_key = str(tier or "").strip().upper()
+    return {"S": 42.0, "A": 48.0, "B": 52.0, "C": 56.0}.get(tier_key, 50.0)
+
+
+def _compute_tier_negative_penalty_scale(tier: str | None) -> float:
+    tier_key = str(tier or "").strip().upper()
+    return {"S": 0.52, "A": 0.78, "B": 1.0, "C": 1.18}.get(tier_key, 1.0)
+
+
+def compute_tier_adjusted_tactic_score(
+    *,
+    tier: str | None,
+    win_pct: float,
+    wins: float,
+    losses: float,
+) -> float:
+    expected_win_pct = _compute_tier_expected_win_pct(tier)
+    delta_vs_expected = float(win_pct) - expected_win_pct
+    strength_weight = compute_tier_strength_weight(tier)
+    neg_scale = _compute_tier_negative_penalty_scale(tier)
+    signed_delta_weight = strength_weight if delta_vs_expected >= 0 else strength_weight * neg_scale
+    uses = max(float(wins) + float(losses), 1.0)
+    round_diff_per_100 = ((float(wins) - float(losses)) / uses) * 100.0
+    evidence_factor = np.sqrt(uses) / (np.sqrt(uses) + 2.4)
+    adjusted = 50.0 + ((delta_vs_expected * signed_delta_weight * 0.48) + (round_diff_per_100 * signed_delta_weight * 0.12)) * evidence_factor
+    return round(_clamp(adjusted, 5.0, 95.0), 2)
+
+
+def compute_quality_of_results_component(
+    tier_rows: pd.DataFrame,
+    *,
+    total_uses: float,
+) -> tuple[float, str]:
+    if tier_rows.empty:
+        return 0.0, "Tier weighting unavailable (insufficient split sample)."
+
+    total_uses = max(float(total_uses), 1.0)
+    component = 0.0
+    elite_positive = 0.0
+    weak_farm_pressure = 0.0
+    for row in tier_rows.itertuples(index=False):
+        tier = str(getattr(row, "tier", "")).upper().strip()
+        if tier not in {"S", "A", "B", "C"}:
+            continue
+        wins = float(getattr(row, "wins", 0.0))
+        losses = float(getattr(row, "losses", 0.0))
+        uses = max(wins + losses, 1.0)
+        share = uses / total_uses
+        adjusted_score = compute_tier_adjusted_tactic_score(
+            tier=tier,
+            win_pct=(wins / uses) * 100.0,
+            wins=wins,
+            losses=losses,
+        )
+        centered = adjusted_score - 50.0
+        tier_strength = compute_tier_strength_weight(tier)
+        evidence = np.sqrt(uses) / (np.sqrt(uses) + 2.0)
+        component += centered * share * evidence * (0.75 + (tier_strength - 1.0) * 0.25)
+        if tier == "S":
+            elite_positive += max(centered, 0.0) * evidence
+        if tier == "C":
+            weak_farm_pressure += max(centered, 0.0) * evidence
+
+    sample_stabilizer = np.sqrt(total_uses) / (np.sqrt(total_uses) + 3.5)
+    component *= sample_stabilizer
+    component = _clamp(component, -14.0, 22.0)
+
+    if elite_positive >= 3.5:
+        note = "Boosted by strong returns against S-tier opposition."
+    elif elite_positive >= 1.2:
+        note = "Held up well against elite teams."
+    elif weak_farm_pressure > 2.8 and component < 2.0:
+        note = "Results are inflated mostly by weaker-tier opposition."
+    else:
+        note = "Tier weighting applied: results against S-tier teams receive the strongest strength adjustment."
+    return round(component, 2), note
+
+
 def compute_tactical_recommendation_score(
     row: pd.Series,
     *,
@@ -3874,6 +3958,8 @@ def compute_tactical_recommendation_score(
     if action == "Rework":
         score -= 5
     score += float(row.get("route_bonus", 0.0))
+    score += float(row.get("quality_of_results_component", 0.0))
+    score += float(row.get("tier_adjusted_score_component", 0.0))
     return round(score, 1)
 
 
@@ -6003,7 +6089,15 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                     unsafe_allow_html=True,
                 )
     else:
-        sel_tier["tier_adjusted_score"] = sel_tier["tier_win_pct"] * sel_tier["tier"].map({"S": 1.35, "A": 1.15, "B": 1.0, "C": 0.85}).fillna(1.0)
+        sel_tier["tier_adjusted_score"] = sel_tier.apply(
+            lambda r: compute_tier_adjusted_tactic_score(
+                tier=r.get("tier"),
+                win_pct=float(r.get("tier_win_pct", 0.0)),
+                wins=float(r.get("wins", 0.0)),
+                losses=float(r.get("losses", 0.0)),
+            ),
+            axis=1,
+        )
         tier_palette_domain = ["S", "A", "B", "C"]
         tier_palette_range = [TIER_COLOR_MAP[t] for t in tier_palette_domain]
         if go is None:
@@ -6015,7 +6109,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
                     y=sel_tier["tier_win_pct"],
                     marker=dict(color=sel_tier["tier"].map(TIER_COLOR_MAP).fillna("#5ea9ff")),
                     customdata=sel_tier[["wins", "losses", "tier_adjusted_score"]],
-                    hovertemplate="Tier: %{x}<br>Wins: %{customdata[0]}<br>Losses: %{customdata[1]}<br>Win %: %{y:.1f}<br>Adjusted: %{customdata[2]:.1f}<extra></extra>",
+                    hovertemplate="Tier: %{x}<br>Wins: %{customdata[0]}<br>Losses: %{customdata[1]}<br>Win %: %{y:.1f}<br>Tier-adjusted score: %{customdata[2]:.1f}<extra></extra>",
                     showlegend=False,
                 )
             )
@@ -6024,6 +6118,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             tier_chart.update_yaxes(title_text="Win rate %")
             _apply_plotly_dark_style(tier_chart, height=320)
             st.plotly_chart(tier_chart, use_container_width=True)
+        st.caption("Tier weighting applied: results against S-tier teams receive the strongest strength adjustment.")
 
     st.markdown("<div class='tb-section-title'>Family/category summaries</div>", unsafe_allow_html=True)
     family_summary = (
@@ -6179,6 +6274,54 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     tactic_perf["usage_pct"] = (tactic_perf["times_used"] / tactic_perf["total_map_side_rounds"].clip(lower=1) * 100).round(1)
     tactic_perf["delta_vs_baseline"] = (tactic_perf["win_pct"] - tactic_perf["context_baseline_win_pct"]).round(1)
     tactic_perf["context_usage_avg"] = tactic_perf["usage_pct"].mean().round(1)
+
+    tier_perf = (
+        context_df.groupby(["tactic_name", "map", "side", "tier"], as_index=False)[["wins", "losses"]]
+        .sum()
+        .assign(
+            tier_uses=lambda d: d["wins"] + d["losses"],
+            tier_win_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+        )
+    )
+    tier_perf["tier"] = tier_perf["tier"].astype(str).str.upper().str.strip()
+    tier_perf = tier_perf[tier_perf["tier"].isin(["S", "A", "B", "C"])].copy()
+
+    quality_records: list[dict[str, object]] = []
+    if not tier_perf.empty:
+        for (tactic_name, map_name, side_name), group in tier_perf.groupby(["tactic_name", "map", "side"], as_index=False):
+            total_uses = float(group["tier_uses"].sum())
+            quality_component, quality_note = compute_quality_of_results_component(group, total_uses=total_uses)
+            weighted_strength = float((group["tier_uses"] * group["tier"].map(compute_tier_strength_weight).fillna(1.0)).sum() / max(total_uses, 1.0))
+            s_rows = group[group["tier"] == "S"]
+            s_uses = float(s_rows["tier_uses"].sum()) if not s_rows.empty else 0.0
+            s_win_pct = float((s_rows["wins"].sum() / max(s_uses, 1.0)) * 100.0) if s_uses > 0 else 0.0
+            s_evidence = np.sqrt(s_uses) / (np.sqrt(s_uses) + 2.6) if s_uses > 0 else 0.0
+            s_delta = s_win_pct - _compute_tier_expected_win_pct("S") if s_uses > 0 else 0.0
+            tier_adjusted_score_component = _clamp(s_delta * 0.16 * s_evidence, -4.5, 7.5)
+            quality_records.append(
+                {
+                    "tactic_name": tactic_name,
+                    "map": map_name,
+                    "side": side_name,
+                    "quality_of_results_component": round(float(quality_component), 2),
+                    "tier_adjusted_score_component": round(float(tier_adjusted_score_component), 2),
+                    "tier_weighted_strength": round(weighted_strength, 2),
+                    "tier_weighting_note": quality_note,
+                }
+            )
+    quality_df = pd.DataFrame(quality_records)
+    if not quality_df.empty:
+        tactic_perf = tactic_perf.merge(quality_df, on=["tactic_name", "map", "side"], how="left")
+    for col, fallback in (
+        ("quality_of_results_component", 0.0),
+        ("tier_adjusted_score_component", 0.0),
+        ("tier_weighted_strength", 1.0),
+        ("tier_weighting_note", "Tier weighting unavailable (insufficient split sample)."),
+    ):
+        if col not in tactic_perf.columns:
+            tactic_perf[col] = fallback
+        tactic_perf[col] = tactic_perf[col].fillna(fallback)
+
     tier_summary = compute_tactic_vs_tier_summary(context_df, min_tier_sample=max(2, min_sample))
     if not tier_summary.empty:
         tactic_perf = tactic_perf.merge(tier_summary, on=["tactic_name", "map", "side"], how="left")
@@ -6410,6 +6553,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 f"Selected because it rates as {priority_label.lower()} in this exact map + side pool, "
                 f"with score-led value and stable context fit."
             )
+            tier_reason = str(row.get("tier_weighting_note", "")).strip()
+            if tier_reason:
+                reason = f"{reason} {tier_reason}"
             st.markdown(
                 f"""
                 <div class="tb-decision-card" style="--accent:{color_tokens['accent']}; --accent-text:{color_tokens['text']}; border-color:{color_tokens['accent']}66; background:linear-gradient(160deg, {color_tokens['bg']}, rgba(10, 17, 29, 0.92));">
@@ -6422,6 +6568,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                     <div class="tb-card-chips">
                         <span class="tb-priority-pill" style="--accent:{color_tokens['accent']}; --accent-text:{color_tokens['text']};">{priority_label}</span>
                         <span class="tb-chip">{row["confidence"]}</span>
+                        <span class="tb-chip">TierQoR {float(row["quality_of_results_component"]):+.1f}</span>
                     </div>
                     <div class="tb-tier-row">
                         <div class="tb-tier-chip"><span class="tier-label">vs S</span>{row["vs_s_text"]}</div>
@@ -6526,7 +6673,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                         <div class="tb-tier-chip"><span class="tier-label">B</span>{row["vs_b_text"]}</div>
                         <div class="tb-tier-chip"><span class="tier-label">C</span>{row["vs_c_text"]}</div>
                     </div>
-                    <div class="tb-alt-reason">{why_not}</div>
+                    <div class="tb-alt-reason">{why_not} {str(row.get("tier_weighting_note", ""))}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -6539,6 +6686,11 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     insights.append(("No Ivy coverage available in current sample" if not has_ivy else "Ivy coverage exists in the selected set", "warn" if not has_ivy else "good"))
     insights.append(("Set leans slow-control heavy" if has_slow and not has_fast else "Good mix of fast and control profiles" if has_fast and has_slow else "Tempo profile is narrow", "warn" if (has_slow and not has_fast) or not (has_fast and has_slow) else "good"))
     insights.append(("Selected set is sample-light, so confidence remains tentative" if sample_light else "Good mix of proven and early-positive tactics", "warn" if sample_light else "good"))
+    elite_boost_count = int((selected_df["tier_weighting_note"].astype(str).str.contains("S-tier|elite", case=False, na=False)).sum())
+    if elite_boost_count >= 2:
+        insights.append(("This set is trusted partly because several tactics have held up against S-tier opposition.", "good"))
+    else:
+        insights.append(("Tier weighting is active: weak-tier farming is de-emphasized versus elite-proof evidence.", "warn"))
     insight_markup = "".join(f"<div class='tb-insight {level}'>{text}</div>" for text, level in insights)
 
     st.markdown(
