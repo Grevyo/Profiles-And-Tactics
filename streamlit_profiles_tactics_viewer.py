@@ -6562,6 +6562,21 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+def safe_select_columns(
+    df: pd.DataFrame,
+    desired_columns: list[str],
+    fill_defaults: dict[str, object] | None = None,
+) -> pd.DataFrame:
+    """Return a safe column subset without raising when columns are missing."""
+    safe_df = df.copy()
+    defaults = fill_defaults or {}
+    for column, default_value in defaults.items():
+        if column not in safe_df.columns:
+            safe_df[column] = default_value
+    existing_columns = [column for column in desired_columns if column in safe_df.columns]
+    return safe_df[existing_columns]
+
+
 def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFrame, competition_source_col: str) -> None:
     _inject_styles()
     _render_top_hero(
@@ -7154,7 +7169,8 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             )
         )
         recent_summary = recent_summary.merge(
-            tactic_perf_all[
+            safe_select_columns(
+                tactic_perf_all,
                 [
                     "tactic_name",
                     "bucket",
@@ -7163,8 +7179,16 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                     "trend_delta",
                     "quality_of_results_component",
                     "confidence",
-                ]
-            ].drop_duplicates("tactic_name"),
+                ],
+                fill_defaults={
+                    "bucket": "",
+                    "context_baseline_win_pct": 50.0,
+                    "recommendation_score": 50.0,
+                    "trend_delta": 0.0,
+                    "quality_of_results_component": 0.0,
+                    "confidence": "Neutral / unproven",
+                },
+            ).drop_duplicates("tactic_name"),
             on="tactic_name",
             how="left",
         )
