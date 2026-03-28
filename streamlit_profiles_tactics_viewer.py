@@ -2543,6 +2543,7 @@ def _render_top_hero(active_page: str, subtitle: str) -> None:
         "profiles": "👤 HLTV CPL Profile Viewer",
         "tactics": "📊 Teams Tactical Breakdown",
         "medisports_vs": "⚔️ Medisports Vs Breakdown",
+        "tactical_set": "🧠 Tactical Set Recommendations",
     }
     selected_nav = st.radio(
         "Dashboard View",
@@ -3554,6 +3555,99 @@ def _expand_tactics_by_round_type(df: pd.DataFrame) -> pd.DataFrame:
     expanded["round_type"] = round_types
     expanded = expanded.explode("round_type").reset_index(drop=True)
     return expanded
+
+
+def extract_route_tags(tactic_name: str) -> set[str]:
+    text = str(tactic_name or "").lower()
+    tag_map = {
+        "mid": [" mid", "middle", "connector", "con "],
+        "ivy": ["ivy"],
+        "a": [" a ", " a-", " a>", " main", " halls"],
+        "b": [" b ", " b-", " b>", " apps", " ap ", " aps"],
+        "fast": ["fast", "rush", "explode"],
+        "slow": ["default", "wait", "hold", "lurk", "slow"],
+    }
+    found: set[str] = set()
+    text_padded = f" {text} "
+    for tag, needles in tag_map.items():
+        if any(needle in text_padded for needle in needles):
+            found.add(tag)
+    return found
+
+
+def classify_recommendation_bucket(tactic_name: str) -> str:
+    name = str(tactic_name or "")
+    upper = name.upper()
+    tags = re.findall(r"[\(\[\{<]([^)\]}>]+)[\)\]\}>]", upper)
+    flat_tags = "".join(tags)
+    routes = extract_route_tags(name)
+
+    if "MID" in upper or "mid" in routes:
+        return "Mid"
+    if "IVY" in upper or "ivy" in routes:
+        return "Ivy"
+
+    prefix = re.sub(r"^\s*(?:[\(\[\{<][^)\]}>]+[\)\]\}>]\s*)+", "", upper).strip()
+    prefix_letter = prefix[:1]
+
+    is_pistol = "P" in flat_tags or prefix_letter == "P"
+    is_eco = "E" in flat_tags or prefix_letter == "E"
+
+    has_a = bool(re.search(r"(?:^|\W)A(?:$|\W)", upper))
+    has_b = bool(re.search(r"(?:^|\W)B(?:$|\W)", upper))
+    has_ab = "A/B" in upper or ("a" in routes and "b" in routes)
+
+    if is_pistol:
+        return "Pistol"
+    if is_eco:
+        if has_ab or (has_a and has_b):
+            return "Eco A"
+        if has_b:
+            return "Eco B"
+        return "Eco A"
+    if has_ab:
+        return "Standard A"
+    if has_b:
+        return "Standard B"
+    return "Standard A"
+
+
+def compute_tactical_recommendation_score(row: pd.Series, *, prefer_coverage: bool, prefer_proven: bool) -> float:
+    score = 50.0
+    score += float(row.get("delta_vs_baseline", 0.0)) * 1.8
+    score += max(min((float(row.get("times_used", 0.0)) - 3) * 1.2, 24), -6)
+    score += (float(row.get("last_10_usage_win_pct", row.get("win_pct", 0.0))) - 50) * 0.25
+    score += max(min((float(row.get("trend_delta", 0.0))) * 0.45, 8), -8)
+    score += max(min((float(row.get("usage_pct", 0.0)) - float(row.get("context_usage_avg", 0.0))) * -0.25, 4), -5)
+
+    confidence = str(row.get("confidence", "Neutral / unproven"))
+    confidence_bonus = {
+        "Proven good": 10,
+        "Early positive signal": 5,
+        "Neutral / unproven": 0,
+        "Early negative signal": -6,
+        "Proven poor": -12,
+    }
+    score += confidence_bonus.get(confidence, 0)
+
+    if str(row.get("recommended_action", "")) == "Use More":
+        score += 5
+    if str(row.get("recommended_action", "")) == "Drop":
+        score -= 10
+
+    route_tags = row.get("route_tags", set())
+    if prefer_coverage and isinstance(route_tags, set):
+        score += min(len(route_tags), 3) * 1.4
+    if prefer_proven:
+        score += min(float(row.get("times_used", 0.0)) / 2.8, 8)
+    return round(score, 1)
+
+
+def _tactic_overlap_key(tactic_name: str) -> str:
+    stripped = re.sub(r"\([^)]*\)", " ", str(tactic_name or "").lower())
+    stripped = re.sub(r"[^a-z0-9\s]+", " ", stripped)
+    tokens = [tok for tok in stripped.split() if tok not in {"a", "b", "mid", "ivy", "eco", "standard", "pistol"}]
+    return " ".join(tokens[:5]).strip()
 
 
 def _match_record_from_tactics(filtered_tactics: pd.DataFrame) -> dict[str, float]:
@@ -5688,6 +5782,296 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFrame, competition_source_col: str) -> None:
+    _inject_styles()
+    _render_top_hero(
+        active_page="tactical_set",
+        subtitle="Compact recommendation planner for map + side specific active tactic pools.",
+    )
+
+    st.markdown("<div class='tb-section-title'>Tactical Set Recommendations</div>", unsafe_allow_html=True)
+    st.caption(
+        "Build a compact 5–7 tactic pool for one exact map + side context. No cross-map or cross-side transfers are used."
+    )
+
+    tier_lookup = (
+        player_df.groupby("match_id", as_index=False)["tier"]
+        .agg(lambda s: s.dropna().iloc[0] if not s.dropna().empty else None)
+    )
+    df = tactics_df.merge(tier_lookup, on="match_id", how="left")
+    df = df[df["date"].notna()].copy()
+    df = df[(df["wins"].fillna(0) + df["losses"].fillna(0)) > 0]
+    if df.empty:
+        st.warning("No tactic data available.")
+        return
+
+    latest_season = detect_latest_season(df, competition_source_col)
+    all_seasons = sorted(df[competition_source_col].apply(extract_season_number).dropna().astype(int).unique().tolist(), reverse=True)
+    season_options = ["Lifetime"] + [f"S{season}" for season in all_seasons]
+    default_season = f"S{latest_season}" if latest_season is not None else "Lifetime"
+
+    maps = sorted(df["map"].dropna().astype(str).unique().tolist())
+    sides = sorted(df["side"].dropna().astype(str).unique().tolist())
+    if not maps or not sides:
+        st.warning("Missing map/side data needed for tactical set recommendations.")
+        return
+
+    filter_cols = st.columns(6)
+    with filter_cols[0]:
+        selected_season = st.selectbox("Season", season_options, index=season_options.index(default_season) if default_season in season_options else 0, key="tsr_season")
+    with filter_cols[1]:
+        selected_map = st.selectbox("Map", maps, key="tsr_map")
+    with filter_cols[2]:
+        selected_side = st.selectbox("Side", sides, key="tsr_side")
+    with filter_cols[3]:
+        min_sample = st.slider("Minimum sample", 1, 20, 3, key="tsr_min_sample")
+    with filter_cols[4]:
+        confidence_filter = st.selectbox("Confidence floor", ["Any", "Early positive signal", "Proven good"], key="tsr_conf_floor")
+    with filter_cols[5]:
+        prefer_coverage = st.toggle("Prefer wider coverage", value=True, key="tsr_coverage")
+        prefer_proven = st.toggle("Prefer proven sample", value=True, key="tsr_proven")
+
+    df = apply_season_filter(df, selected_season, competition_source_col)
+    context_df = df[(df["map"] == selected_map) & (df["side"] == selected_side)].copy()
+    if context_df.empty:
+        st.info("No rounds found in this exact map + side context for the selected filters.")
+        return
+
+    map_side_totals = (
+        context_df.groupby(["map", "side"], as_index=False)[["wins", "losses"]]
+        .sum()
+        .assign(
+            total_map_side_rounds=lambda d: d["wins"] + d["losses"],
+            context_baseline_win_pct=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1),
+        )
+    )
+    tactic_perf = (
+        context_df.groupby(["tactic_name", "map", "side"], as_index=False)[["wins", "losses"]]
+        .sum()
+        .assign(
+            times_used=lambda d: d["wins"] + d["losses"],
+            win_pct=lambda d: (d["wins"] / d["times_used"].clip(lower=1) * 100).round(1),
+            net_rounds=lambda d: d["wins"] - d["losses"],
+        )
+        .merge(map_side_totals[["map", "side", "total_map_side_rounds", "context_baseline_win_pct"]], on=["map", "side"], how="left")
+    )
+    tactic_perf["usage_pct"] = (tactic_perf["times_used"] / tactic_perf["total_map_side_rounds"].clip(lower=1) * 100).round(1)
+    tactic_perf["delta_vs_baseline"] = (tactic_perf["win_pct"] - tactic_perf["context_baseline_win_pct"]).round(1)
+    tactic_perf["context_usage_avg"] = tactic_perf["usage_pct"].mean().round(1)
+
+    round_rows: list[dict[str, object]] = []
+    for row in context_df.sort_values(["date", "match_id", "tactic_name"]).itertuples(index=False):
+        row_dict = row._asdict()
+        for _ in range(int(max(row_dict.get("wins", 0), 0))):
+            round_rows.append({**row_dict, "round_result": 1})
+        for _ in range(int(max(row_dict.get("losses", 0), 0))):
+            round_rows.append({**row_dict, "round_result": -1})
+    rounds_long = pd.DataFrame(round_rows)
+    last10_records = []
+    if not rounds_long.empty:
+        for _, g in rounds_long.groupby(["tactic_name", "map", "side"], as_index=False):
+            g = g.sort_values(["date", "match_id"]).copy()
+            wins_last_10 = int((g["round_result"].tail(10) > 0).sum())
+            uses_last_10 = int(min(10, len(g)))
+            wins_last_5 = int((g["round_result"].tail(5) > 0).sum())
+            uses_last_5 = int(min(5, len(g)))
+            last10_records.append(
+                {
+                    "tactic_name": g["tactic_name"].iloc[0],
+                    "map": g["map"].iloc[0],
+                    "side": g["side"].iloc[0],
+                    "last_10_usage_win_pct": round((wins_last_10 / max(uses_last_10, 1)) * 100, 1),
+                    "trend_delta": round(((wins_last_5 / max(uses_last_5, 1)) - (wins_last_10 / max(uses_last_10, 1))) * 100, 1),
+                }
+            )
+    last10_df = pd.DataFrame(last10_records)
+    tactic_perf = tactic_perf.merge(last10_df, on=["tactic_name", "map", "side"], how="left")
+    tactic_perf["last_10_usage_win_pct"] = tactic_perf["last_10_usage_win_pct"].fillna(tactic_perf["win_pct"])
+    tactic_perf["trend_delta"] = tactic_perf["trend_delta"].fillna(0.0)
+
+    def _confidence_label(row: pd.Series) -> str:
+        uses = int(row["times_used"])
+        delta = float(row["delta_vs_baseline"])
+        if uses >= 14 and delta >= 5:
+            return "Proven good"
+        if uses >= 14 and delta <= -5:
+            return "Proven poor"
+        if uses < 6 and delta >= 4:
+            return "Early positive signal"
+        if uses < 6 and delta <= -4:
+            return "Early negative signal"
+        return "Neutral / unproven"
+
+    tactic_perf["confidence"] = tactic_perf.apply(_confidence_label, axis=1)
+    tactic_perf["recommended_action"] = tactic_perf.apply(
+        lambda row: "Use More" if float(row["delta_vs_baseline"]) >= 4 and float(row["usage_pct"]) <= float(row["context_usage_avg"]) else ("Drop" if float(row["delta_vs_baseline"]) <= -5 and int(row["times_used"]) >= 10 else "Keep"),
+        axis=1,
+    )
+
+    if confidence_filter != "Any":
+        allowed_conf = {"Early positive signal", "Proven good"} if confidence_filter == "Early positive signal" else {"Proven good"}
+        tactic_perf = tactic_perf[tactic_perf["confidence"].isin(allowed_conf)].copy()
+
+    tactic_perf = tactic_perf[tactic_perf["times_used"] >= min_sample].copy()
+    if tactic_perf.empty:
+        st.info("No tactics meet the sample/confidence settings in this exact map + side context.")
+        return
+
+    tactic_perf["bucket"] = tactic_perf["tactic_name"].apply(classify_recommendation_bucket)
+    tactic_perf["route_tags"] = tactic_perf["tactic_name"].apply(extract_route_tags)
+    tactic_perf["recommendation_score"] = tactic_perf.apply(
+        lambda row: compute_tactical_recommendation_score(row, prefer_coverage=prefer_coverage, prefer_proven=prefer_proven),
+        axis=1,
+    )
+    tactic_perf = tactic_perf.sort_values(["recommendation_score", "times_used", "win_pct"], ascending=[False, False, False])
+
+    category_order = ["Pistol", "Eco A", "Eco B", "Standard A", "Standard B", "Mid", "Ivy"]
+    required_categories = category_order[:5]
+    selected_rows: list[pd.Series] = []
+    selected_names: set[str] = set()
+    selected_overlap_keys: set[str] = set()
+
+    for cat in required_categories:
+        cat_df = tactic_perf[tactic_perf["bucket"] == cat].copy()
+        if cat_df.empty:
+            continue
+        picked = None
+        for _, row in cat_df.iterrows():
+            overlap_key = _tactic_overlap_key(row["tactic_name"])
+            if overlap_key and overlap_key in selected_overlap_keys:
+                continue
+            picked = row
+            break
+        if picked is None:
+            picked = cat_df.iloc[0]
+        selected_rows.append(picked)
+        selected_names.add(str(picked["tactic_name"]))
+        selected_overlap_keys.add(_tactic_overlap_key(picked["tactic_name"]))
+
+    for optional_cat in ["Mid", "Ivy"]:
+        if len(selected_rows) >= 7:
+            break
+        cat_df = tactic_perf[tactic_perf["bucket"] == optional_cat].copy()
+        if cat_df.empty:
+            continue
+        top_row = cat_df.iloc[0]
+        meaningful = int(top_row["times_used"]) >= min_sample and float(top_row["recommendation_score"]) >= 48
+        if meaningful and str(top_row["tactic_name"]) not in selected_names:
+            selected_rows.append(top_row)
+            selected_names.add(str(top_row["tactic_name"]))
+
+    selected_df = pd.DataFrame(selected_rows).head(7).copy()
+    if selected_df.empty:
+        st.info("No recommendation set could be built from current filters.")
+        return
+
+    confidence_counts = selected_df["confidence"].value_counts().to_dict()
+    coverage_labels = sorted({tag for tags in selected_df["route_tags"] for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
+    health_notes = []
+    if len(selected_df) < 5:
+        health_notes.append("Core 5 coverage is incomplete for this map-side; recommendations are provisional.")
+    if selected_df["times_used"].sum() < 30:
+        health_notes.append("Selected set is sample-light; recommendations are tentative.")
+    if "Mid" not in selected_df["bucket"].values and not tactic_perf[tactic_perf["bucket"] == "Mid"].empty:
+        health_notes.append("Good core 5, but Mid coverage is missing.")
+    if "Ivy" not in selected_df["bucket"].values and not tactic_perf[tactic_perf["bucket"] == "Ivy"].empty:
+        health_notes.append("Ivy route exists but did not make the quality cutoff.")
+    if (selected_df["confidence"] == "Proven poor").any():
+        health_notes.append("One or more selected tactics are weak-confidence placeholders due to depth limits.")
+    if not health_notes:
+        health_notes.append("Set is balanced with stable signal for this exact map + side context.")
+
+    st.markdown("<div class='panel-card'>", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="panel-title">Recommended Set Summary</div>
+        <div class="panel-muted">{selected_map} • {selected_side}</div>
+        <div class="stats-grid overview-grid">
+            <div class="stat-chip"><div class="stat-label">Recommended tactics</div><div class="stat-value">{len(selected_df)} / 7</div></div>
+            <div class="stat-chip"><div class="stat-label">Category coverage</div><div class="stat-value">{selected_df['bucket'].nunique()} categories</div></div>
+            <div class="stat-chip"><div class="stat-label">Confidence mix</div><div class="stat-value">Good {confidence_counts.get('Proven good', 0)} • Early+ {confidence_counts.get('Early positive signal', 0)}</div></div>
+            <div class="stat-chip"><div class="stat-label">Coverage tags</div><div class="stat-value">{", ".join(coverage_labels) if coverage_labels else "Core routes only"}</div></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    for note in health_notes:
+        st.markdown(f"- {note}")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    category_colors = {
+        "Pistol": "#f5c451",
+        "Eco A": "#5ccf86",
+        "Eco B": "#36d1b8",
+        "Standard A": "#5ea9ff",
+        "Standard B": "#9c6df6",
+        "Mid": "#f0be4f",
+        "Ivy": "#5ad9ff",
+    }
+    st.markdown("<div class='tb-section-title'>Recommended tactic cards</div>", unsafe_allow_html=True)
+    for category in category_order:
+        block = selected_df[selected_df["bucket"] == category]
+        if block.empty:
+            continue
+        row = block.iloc[0]
+        accent = category_colors.get(category, "#5ea9ff")
+        reason = {
+            "Pistol": "Best-performing pistol with stable sample.",
+            "Eco A": "Strong eco A option with above-baseline returns.",
+            "Eco B": "Best eco B entry for this exact map-side context.",
+            "Standard A": "Best standard A anchor for this map-side.",
+            "Standard B": "Best standard B anchor for this map-side.",
+            "Mid": "Adds Mid coverage without sacrificing quality.",
+            "Ivy": "Adds Ivy route coverage and tactical variety.",
+        }.get(category, "Selected for high score and contextual fit.")
+        st.markdown(
+            f"""
+            <div class="tb-decision-card" style="--accent:{accent}; border-color:{accent}55;">
+                <div class="tb-card-title">{category}: {row["tactic_name"]}</div>
+                <div class="tb-card-sub">{row["map"]} • {row["side"]}</div>
+                <div class="tb-card-meta">Score {row["recommendation_score"]:.1f} • {row["confidence"]} • Uses {int(row["times_used"])} • WR {row["win_pct"]:.1f}% • Δ {row["delta_vs_baseline"]:+.1f}pp</div>
+                <div class="tb-card-reason">{reason}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div class='tb-section-title'>Bench / alternatives</div>", unsafe_allow_html=True)
+    for category in category_order:
+        category_pool = tactic_perf[tactic_perf["bucket"] == category].copy()
+        if category_pool.empty:
+            continue
+        alternatives = category_pool[~category_pool["tactic_name"].isin(selected_names)].head(3)
+        if alternatives.empty:
+            continue
+        st.markdown(f"**{category} alternatives**")
+        for _, row in alternatives.iterrows():
+            why_not = "Strong, but overlaps with selected tactic." if _tactic_overlap_key(row["tactic_name"]) in selected_overlap_keys else (
+                "Good sample, but weaker recent trend." if float(row["trend_delta"]) < 0 else "Useful option, but lower confidence than main pick."
+            )
+            st.markdown(
+                f"- `{row['tactic_name']}` — Score {row['recommendation_score']:.1f}, WR {row['win_pct']:.1f}%, Uses {int(row['times_used'])}. {why_not}"
+            )
+
+    st.markdown("<div class='tb-section-title'>Coverage / balance panel</div>", unsafe_allow_html=True)
+    coverage_checks = {
+        "Opening tempo present": bool((selected_df["route_tags"].apply(lambda t: "fast" in t)).any()),
+        "Slower control present": bool((selected_df["route_tags"].apply(lambda t: "slow" in t)).any()),
+        "Site pressure variety (A/B)": bool((selected_df["route_tags"].apply(lambda t: "a" in t)).any() and (selected_df["route_tags"].apply(lambda t: "b" in t)).any()),
+        "Mid coverage": "Mid" in selected_df["bucket"].values,
+        "Ivy coverage": "Ivy" in selected_df["bucket"].values,
+    }
+    for label, ok in coverage_checks.items():
+        st.markdown(f"- {'✅' if ok else '⚠️'} {label}")
+
+    st.markdown("<div class='tb-section-title'>Copy recommended set</div>", unsafe_allow_html=True)
+    compact_lines = [f"{row['bucket']}: {row['tactic_name']}" for _, row in selected_df[["bucket", "tactic_name"]].iterrows()]
+    st.code("\n".join(compact_lines), language="text")
+    st.caption(
+        "Why this set? The planner selects one best tactic per core category, then optionally adds Mid/Ivy only when meaningful in this map-side data and still under the 7-tactic cap."
+    )
+
+
 def _medisports_vs_breakdown(
     tactics_df: pd.DataFrame,
     player_df: pd.DataFrame,
@@ -6456,7 +6840,7 @@ def main() -> None:
 
     page = st.session_state["page"]
     competition_source_col = "competition"
-    if page in {"profiles", "tactics", "medisports_vs"}:
+    if page in {"profiles", "tactics", "medisports_vs", "tactical_set"}:
         competition_view = st.radio(
             "Competition View",
             ["Raw competition names", "Grouped competition names"],
@@ -6472,6 +6856,8 @@ def main() -> None:
         _teams_tactical_breakdown(tactics_df, player_df, competition_source_col)
     elif page == "medisports_vs":
         _medisports_vs_breakdown(tactics_df, player_df, competition_source_col)
+    elif page == "tactical_set":
+        _tactical_set_recommendations(tactics_df, player_df, competition_source_col)
     else:
         _home()
 
