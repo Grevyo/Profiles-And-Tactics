@@ -4603,106 +4603,6 @@ def _ratio_to_index(ratio: float, *, center: float = 50.0, swing: float = 40.0, 
     return _clamp(center + normalized * swing, 0.0, 100.0)
 
 
-def _inject_tactical_set_native_styles() -> None:
-    st.markdown(
-        """
-        <style>
-        div[class*="st-key-tsr-filter-bar"] {
-            border: 1px solid rgba(120, 154, 220, 0.26);
-            border-radius: 14px;
-            background: linear-gradient(165deg, rgba(19, 28, 45, 0.88), rgba(10, 15, 26, 0.92));
-            padding: 0.8rem 0.85rem 0.35rem 0.85rem;
-            margin-bottom: 0.65rem;
-        }
-        div[class*="st-key-tsr-summary-strip"],
-        div[class*="st-key-tsr-legend-strip"],
-        div[class*="st-key-tsr-bench-module"],
-        div[class*="st-key-tsr-recent-summary"],
-        div[class*="st-key-tsr-working-col"],
-        div[class*="st-key-tsr-not-working-col"] {
-            border: 1px solid rgba(122, 156, 216, 0.24);
-            border-radius: 14px;
-            background: linear-gradient(165deg, rgba(18, 27, 43, 0.84), rgba(10, 14, 24, 0.9));
-            padding: 0.7rem 0.85rem 0.8rem 0.85rem;
-            margin-bottom: 0.7rem;
-        }
-        div[class*="st-key-tsr-reco-card-"] {
-            border-left: 4px solid rgba(99, 168, 255, 0.62);
-            border: 1px solid rgba(120, 154, 220, 0.28);
-            border-radius: 14px;
-            background: linear-gradient(160deg, rgba(18, 27, 43, 0.87), rgba(9, 14, 24, 0.93));
-            padding: 0.45rem 0.7rem 0.65rem 0.7rem;
-            margin-bottom: 0.58rem;
-        }
-        div[class*="st-key-tsr-reco-card-"] [data-testid="stMetric"] {
-            background: rgba(11, 17, 31, 0.72);
-            border: 1px solid rgba(118, 150, 207, 0.24);
-            border-radius: 10px;
-            padding: 0.45rem 0.5rem;
-            min-height: 86px;
-        }
-        div[class*="st-key-tsr-tier-box-"] {
-            border-radius: 10px;
-            border: 1px solid rgba(129, 150, 184, 0.3);
-            background: rgba(29, 39, 58, 0.48);
-            padding: 0.35rem 0.4rem;
-            text-align: center;
-            min-height: 58px;
-        }
-        div[class*="st-key-tsr-tier-box-"] p { margin-bottom: 0.12rem; }
-        div[class*="st-key-tsr-tier-strong-"] { background: linear-gradient(160deg, rgba(37, 114, 79, 0.5), rgba(17, 44, 33, 0.74)); border-color: rgba(77, 200, 139, 0.5); }
-        div[class*="st-key-tsr-tier-decent-"] { background: linear-gradient(160deg, rgba(28, 86, 115, 0.5), rgba(16, 41, 61, 0.74)); border-color: rgba(86, 178, 220, 0.5); }
-        div[class*="st-key-tsr-tier-average-"] { background: linear-gradient(160deg, rgba(118, 87, 34, 0.5), rgba(58, 39, 17, 0.74)); border-color: rgba(217, 168, 80, 0.52); }
-        div[class*="st-key-tsr-tier-poor-"] { background: linear-gradient(160deg, rgba(120, 58, 33, 0.52), rgba(63, 29, 18, 0.76)); border-color: rgba(234, 129, 86, 0.5); }
-        div[class*="st-key-tsr-tier-na-"] { background: rgba(31, 40, 55, 0.48); border-color: rgba(133, 148, 172, 0.34); }
-        div[class*="st-key-tsr-bench-card-"],
-        div[class*="st-key-tsr-recent-card-"],
-        div[class*="st-key-tsr-wash-item-"] {
-            border: 1px solid rgba(115, 145, 198, 0.24);
-            border-radius: 12px;
-            background: rgba(14, 21, 35, 0.76);
-            padding: 0.5rem 0.6rem 0.55rem 0.6rem;
-            margin-bottom: 0.45rem;
-        }
-        div[class*="st-key-tsr-cat-pistol-"] { border-left-color: #e8b95a; }
-        div[class*="st-key-tsr-cat-eco-"] { border-left-color: #44c9a5; }
-        div[class*="st-key-tsr-cat-standard-"] { border-left-color: #66a8ff; }
-        div[class*="st-key-tsr-cat-mid-"] { border-left-color: #e9a450; }
-        div[class*="st-key-tsr-cat-ivy-"] { border-left-color: #63d7e9; }
-        div[class*="st-key-tsr-cat-flex-"] { border-left-color: #ae84ff; }
-        div[class*="st-key-tsr-priority-core-"] { box-shadow: 0 0 0 1px rgba(59, 209, 136, 0.15) inset; }
-        div[class*="st-key-tsr-priority-strong-"] { box-shadow: 0 0 0 1px rgba(58, 189, 165, 0.14) inset; }
-        div[class*="st-key-tsr-priority-useful-"] { box-shadow: 0 0 0 1px rgba(88, 153, 245, 0.14) inset; }
-        div[class*="st-key-tsr-priority-situational-"] { box-shadow: 0 0 0 1px rgba(231, 176, 77, 0.14) inset; }
-        div[class*="st-key-tsr-priority-tentative-"] { box-shadow: 0 0 0 1px rgba(234, 115, 86, 0.14) inset; }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _slug_token(value: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", str(value).strip().lower())
-    return slug.strip("-") or "x"
-
-
-def _tier_style_from_text(value: str) -> str:
-    clean = str(value).strip().lower()
-    if clean in {"", "n/a", "na", "none", "nan"}:
-        return "na"
-    match = re.search(r"(-?\d+(?:\.\d+)?)", clean)
-    if match is None:
-        return "na"
-    pct = float(match.group(1))
-    if pct >= 62:
-        return "strong"
-    if pct >= 53:
-        return "decent"
-    if pct >= 47:
-        return "average"
-    return "poor"
-
-
 def _build_metric_baseline(pool_rows: pd.DataFrame) -> dict[str, float]:
     if pool_rows.empty:
         return {
@@ -7589,7 +7489,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         subtitle="Compact recommendation planner for map + side specific active tactic pools.",
     )
 
-    st.subheader("Tactical Set Recommendations")
+    _render_html("<div class='tb-section-title'>Tactical Set Recommendations</div>")
     st.caption(
         "Build a compact 5–7 tactic pool for one exact map + side context. No cross-map or cross-side transfers are used."
     )
@@ -7910,93 +7810,76 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     if "eco_fallback_note" not in selected_df.columns:
         selected_df["eco_fallback_note"] = ""
 
-    _inject_tactical_set_native_styles()
-
     confidence_counts = selected_df["confidence"].value_counts().to_dict()
     coverage_labels = sorted({tag for tags in selected_df["route_tags"] for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
 
-    with st.container(key="tsr-filter-bar"):
-        st.caption("Map-side exact context filters are active. Recommendations never transfer across map or side.")
+    _render_html(
+        f"""
+        <div class='panel-card' style='margin-top:8px;'>
+            <div class="panel-title">Recommended Set Summary</div>
+            <div class="panel-muted">{selected_map} • {selected_side}</div>
+            <div class="stats-grid overview-grid">
+                <div class="stat-chip"><div class="stat-label">Recommended tactics</div><div class="stat-value">{len(selected_df)} / 7</div></div>
+                <div class="stat-chip"><div class="stat-label">Category coverage</div><div class="stat-value">{selected_df['bucket'].nunique()} categories</div></div>
+                <div class="stat-chip"><div class="stat-label">Confidence mix</div><div class="stat-value">Good {confidence_counts.get('Proven good', 0)} • Early+ {confidence_counts.get('Early positive signal', 0)}</div></div>
+                <div class="stat-chip"><div class="stat-label">Coverage tags</div><div class="stat-value">{", ".join(coverage_labels) if coverage_labels else "Core routes only"}</div></div>
+            </div>
+            <div class="tb-badge-row">
+                <span class="tb-chip">{selected_map}</span>
+                <span class="tb-chip">{selected_side}</span>
+                <span class="tb-chip">Context baseline {float(selected_df["context_baseline_win_pct"].iloc[0]):.1f}%</span>
+            </div>
+        </div>
+        """,
+    )
 
-    with st.container(key="tsr-summary-strip"):
-        st.markdown("#### Recommended set summary")
-        st.caption(f"{selected_map} • {selected_side}")
-        sum_cols = st.columns(4)
-        with sum_cols[0]:
-            st.metric("Recommended tactics", f"{len(selected_df)} / 7")
-        with sum_cols[1]:
-            st.metric("Category coverage", f"{selected_df['bucket'].nunique()} groups")
-        with sum_cols[2]:
-            st.metric("Confidence mix", f"Good {confidence_counts.get('Proven good', 0)} • Early+ {confidence_counts.get('Early positive signal', 0)}")
-        with sum_cols[3]:
-            st.metric("Context baseline", f"{float(selected_df['context_baseline_win_pct'].iloc[0]):.1f}%")
-        chip_cols = st.columns(2)
-        with chip_cols[0]:
-            st.caption(f"Coverage tags: {', '.join(coverage_labels) if coverage_labels else 'Core routes only'}")
-        with chip_cols[1]:
-            st.caption(f"Map/Side: {selected_map} • {selected_side}")
-
-    with st.container(key="tsr-legend-strip"):
-        st.markdown("##### Recommendation-strength guide")
-        st.caption("Card accents show recommendation strength. Category identity is indicated through subtle accent colors.")
-        legend_cols = st.columns(5)
-        for idx, item in enumerate([
-            ("Core", "Green"),
-            ("Strong", "Teal"),
-            ("Useful", "Blue"),
-            ("Situational", "Amber"),
-            ("Tentative", "Orange"),
-        ]):
-            with legend_cols[idx]:
-                st.caption(f"{item[0]} • {item[1]}")
+    _render_html(
+        """
+        <div class="tb-legend-strip">
+            <div class="panel-title">Recommendation-strength colour guide</div>
+            <div class="panel-muted">Card accents show how strongly each tactic should be kept in your active pool. Category is shown by chip label only.</div>
+            <div class="tb-legend-row">
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#1fd27d;background:#1fd27d;"></span>Core pick (green)</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#1fbca4;background:#1fbca4;"></span>Strong keep (teal)</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#4e97ff;background:#4e97ff;"></span>Useful keep (blue)</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#e4b44d;background:#e4b44d;"></span>Situational (amber)</span>
+                <span class="tb-legend-item"><span class="tb-legend-swatch" style="color:#ef6d4e;background:#ef6d4e;"></span>Tentative (orange/red)</span>
+            </div>
+        </div>
+        """,
+    )
 
     st.subheader("Recommended tactic cards")
-
     for category in category_order:
         block = selected_df[selected_df["bucket"] == category]
         if block.empty:
             continue
         st.markdown(f"**{category}**")
-        for row_idx, (_, row) in enumerate(block.iterrows()):
-            cat_slug = _slug_token(str(category))
-            prio_slug = _slug_token(str(row.get("keep_priority_tier", "useful")))
-            card_key = f"tsr-reco-card-tsr-cat-{cat_slug}-tsr-priority-{prio_slug}-{row_idx}"
-            with st.container(key=card_key):
-                head_left, head_mid, head_right = st.columns([4.2, 1.4, 1.6])
-                with head_left:
-                    st.markdown(f"**{str(row['tactic_name'])}**")
-                    st.caption(f"{str(row['map'])} • {str(row['side'])} • {str(category)}")
-                with head_mid:
-                    st.metric("Priority", str(row["keep_priority_label"]))
-                with head_right:
-                    st.metric("Confidence", str(row["confidence"]))
-
-                stats = [
-                    ("Score", f"{float(row['recommendation_score']):.1f}"),
-                    ("WR", f"{float(row['win_pct']):.1f}%"),
-                    ("Uses", f"{int(row['times_used'])}"),
-                    ("Trend", f"{float(row['trend_delta']):+.1f}pp"),
-                    ("Δmap", f"{float(row['delta_vs_baseline']):+.1f}pp"),
-                    ("Δcat", f"{float(row['delta_vs_category_baseline']):+.1f}pp"),
-                    ("TierQoR", f"{float(row['quality_of_results_component']):+.1f}"),
-                ]
-                stat_cols = st.columns(len(stats))
-                for idx, (label, value) in enumerate(stats):
-                    with stat_cols[idx]:
-                        st.metric(label, value)
-
-                st.caption("vs-tier performance")
+        for _, row in block.iterrows():
+            priority_label = str(row["keep_priority_label"])
+            reason = build_recommendation_reason(row)
+            with st.container(border=True):
+                st.markdown(f"**{str(row['tactic_name'])}**")
+                st.caption(f"{str(row['map'])} • {str(row['side'])} • {str(category)}")
+                stats_col_1, stats_col_2 = st.columns(2)
+                with stats_col_1:
+                    st.markdown(
+                        f"Score {float(row['recommendation_score']):.1f} • WR {float(row['win_pct']):.1f}% • Uses {int(row['times_used'])}"
+                    )
+                    st.markdown(
+                        f"Δmap {float(row['delta_vs_baseline']):+.1f}pp • Δcat {float(row['delta_vs_category_baseline']):+.1f}pp"
+                    )
+                with stats_col_2:
+                    st.markdown(f"Trend {float(row['trend_delta']):+.1f}pp")
+                    st.markdown(f"{priority_label} • {str(row['confidence'])}")
+                    st.markdown(f"TierQoR {float(row['quality_of_results_component']):+.1f}")
                 tier_cols = st.columns(4)
-                tier_pairs = [("S", row["vs_s_text"]), ("A", row["vs_a_text"]), ("B", row["vs_b_text"]), ("C", row["vs_c_text"])]
-                for tier_idx, (tier_name, tier_val) in enumerate(tier_pairs):
-                    tier_style = _tier_style_from_text(str(tier_val))
+                for tier_idx, (tier_name, tier_val) in enumerate(
+                    [("vs S", row["vs_s_text"]), ("vs A", row["vs_a_text"]), ("vs B", row["vs_b_text"]), ("vs C", row["vs_c_text"])]
+                ):
                     with tier_cols[tier_idx]:
-                        with st.container(key=f"tsr-tier-box-{tier_style}-{cat_slug}-{row_idx}-{tier_name.lower()}"):
-                            st.caption(f"Tier {tier_name}")
-                            st.markdown(f"**{tier_val}**")
-
-                reason = build_recommendation_reason(row)
-                st.caption(f"Reason: {reason}")
+                        st.metric(tier_name, str(tier_val))
+                st.markdown(f"Reason: {str(reason)}")
 
     selected_route_tags = [tags if isinstance(tags, set) else set() for tags in selected_df["route_tags"]]
     has_fast = any("fast" in tags for tags in selected_route_tags)
@@ -8037,18 +7920,17 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         return "Coverage option with decent score, but current picks are stronger keeps."
 
     st.subheader("Bench / Alternatives")
-    st.caption("Grouped alternatives with compact comparison and explicit reasons for benching.")
+    st.caption("Backups are shown by category with quick quality context and why they were left on the bench.")
     for category in category_order:
         category_pool = tactic_perf[tactic_perf["bucket"] == category].copy()
         alternatives = category_pool[~category_pool["tactic_name"].isin(selected_names)].head(3) if not category_pool.empty else pd.DataFrame()
-        cat_slug = _slug_token(str(category))
         with st.expander(f"{category} alternatives", expanded=False):
-            with st.container(key=f"tsr-bench-module-{cat_slug}"):
-                if alternatives.empty:
-                    st.caption(f"No meaningful {category.lower()} alternatives in current sample.")
-                    continue
-                for alt_idx, (_, row) in enumerate(alternatives.iterrows()):
-                    overlap_with = next((
+            if alternatives.empty:
+                st.caption(f"No meaningful {category.lower()} alternatives in current sample.")
+                continue
+            for _, row in alternatives.iterrows():
+                overlap_with = next(
+                    (
                         str(sel["tactic_name"])
                         for _, sel in selected_df.iterrows()
                         if _tactics_are_near_duplicate(
@@ -8057,29 +7939,30 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                             row["route_tags"] if isinstance(row["route_tags"], set) else set(),
                             sel["route_tags"] if isinstance(sel["route_tags"], set) else set(),
                         )
-                    ), None)
-                    why_not = _alt_reason(row, overlap_with)
-                    tier_note = build_recommendation_reason(row, include_base=False)
-                    alt_reason = f"{why_not} {tier_note}".strip() if tier_note else why_not
-                    with st.container(key=f"tsr-bench-card-{cat_slug}-{alt_idx}"):
-                        st.markdown(f"**{str(row['tactic_name'])}**")
-                        mcols = st.columns(4)
-                        with mcols[0]:
-                            st.metric("Score", f"{float(row['recommendation_score']):.1f}")
-                        with mcols[1]:
-                            st.metric("WR", f"{float(row['win_pct']):.1f}%")
-                        with mcols[2]:
-                            st.metric("Uses", f"{int(row['times_used'])}")
-                        with mcols[3]:
-                            st.metric("Confidence", str(row['confidence']))
-                        tcols = st.columns(4)
-                        for tier_idx, (tier_name, tier_val) in enumerate([("S", row["vs_s_text"]), ("A", row["vs_a_text"]), ("B", row["vs_b_text"]), ("C", row["vs_c_text"])]):
-                            tier_style = _tier_style_from_text(str(tier_val))
-                            with tcols[tier_idx]:
-                                with st.container(key=f"tsr-tier-box-{tier_style}-bench-{cat_slug}-{alt_idx}-{tier_name.lower()}"):
-                                    st.caption(f"vs {tier_name}")
-                                    st.markdown(f"**{tier_val}**")
-                        st.caption(f"Reason: {alt_reason}")
+                    ),
+                    None,
+                )
+                why_not = _alt_reason(row, overlap_with)
+                tier_note = build_recommendation_reason(row, include_base=False)
+                alt_reason = f"{why_not} {tier_note}".strip() if tier_note else why_not
+                with st.container(border=True):
+                    st.markdown(f"**{str(row['tactic_name'])}**")
+                    st.caption(f"Category: {category}")
+                    top_cols = st.columns(3)
+                    with top_cols[0]:
+                        st.metric("Score", f"{float(row['recommendation_score']):.1f}")
+                    with top_cols[1]:
+                        st.metric("WR", f"{float(row['win_pct']):.1f}%")
+                    with top_cols[2]:
+                        st.metric("Uses", int(row["times_used"]))
+                    st.markdown(f"Confidence: {str(row['confidence'])}")
+                    st.markdown(f"Reason: {str(alt_reason)}")
+                    tier_cols = st.columns(4)
+                    for tier_idx, (tier_name, tier_val) in enumerate(
+                        [("S", row["vs_s_text"]), ("A", row["vs_a_text"]), ("B", row["vs_b_text"]), ("C", row["vs_c_text"])]
+                    ):
+                        with tier_cols[tier_idx]:
+                            st.metric(f"vs {tier_name}", str(tier_val))
 
     insights = []
     insights.append(("Strong standard depth" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "Standard depth is currently limited", "good" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "warn"))
@@ -8095,8 +7978,8 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     set_explanation = build_set_explanation(selected_df)
     if set_explanation:
         insights.append(set_explanation)
-
     st.subheader("Coverage & Balance")
+    st.caption("Compact health view of category depth, route variety, tempo mix, and confidence risk.")
     balance_cols = st.columns(3)
     with balance_cols[0]:
         st.metric("Total selected", f"{len(selected_df)} / 7")
@@ -8105,8 +7988,8 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     with balance_cols[2]:
         st.metric("Profile", "Balanced" if balance_score >= 72 else "Moderately narrow" if balance_score >= 56 else "Narrow profile")
     st.progress(balance_score / 100)
-    st.caption(f"Category coverage: {', '.join(category_mix) if category_mix else 'None'}")
-    st.caption(f"Route coverage tags: {', '.join(route_coverage_labels) if route_coverage_labels else 'Core routes only'}")
+    st.markdown(f"Category coverage: {', '.join(category_mix) if category_mix else 'None'}")
+    st.markdown(f"Route coverage tags: {', '.join(route_coverage_labels) if route_coverage_labels else 'Core routes only'}")
     for insight_text, insight_level in insights:
         prefix = "✅" if insight_level == "good" else "⚠️"
         st.markdown(f"{prefix} {insight_text}")
@@ -8116,7 +7999,6 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     standard_count = int((selected_df["bucket"] == "Standard").sum())
     mid_count = int((selected_df["bucket"] == "Mid").sum())
     ivy_count = int((selected_df["bucket"] == "Ivy").sum())
-
     why_points = [f"Set prioritises {pistol_count} stable pistol slot, {eco_count} eco option{'s' if eco_count != 1 else ''}, and {standard_count} above-baseline standard picks with distinct tactical value."]
     if mid_count:
         why_points.append("Mid coverage is included because it improves route diversity without dragging quality below category baseline.")
@@ -8126,15 +8008,17 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         why_points.append("Ivy coverage is kept because it contributes independent route pressure with acceptable confidence.")
     else:
         why_points.append("No Ivy tactic was promoted because current Ivy data is too weak or redundant to justify a slot.")
-
     st.subheader("Why this set works")
+    st.caption("Selection logic stays map-side specific, score-led, and coverage-aware without forcing low-quality fillers.")
     for point in why_points:
         st.markdown(f"- {point}")
 
-    st.subheader("Recently used tactics (Last 5 days)")
+    _render_html("<div class='tb-section-title'>Recently used tactics (Last 5 days)</div>")
     recent_window_df, window_start, window_end = build_recent_tactic_window(context_df, lookback_days=5)
     if recent_window_df.empty or window_start is None or window_end is None:
-        st.info("No tactics used in the last 5 days for this map-side context.")
+        _render_html(
+            "<div class='tb-empty'>No tactics used in the last 5 days for this map-side context.</div>",
+        )
     else:
         recent_summary = (
             recent_window_df.groupby("tactic_name", as_index=False)[["wins", "losses"]]
@@ -8148,47 +8032,90 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         recent_summary = recent_summary.merge(
             safe_select_columns(
                 tactic_perf_all,
-                ["tactic_name", "bucket", "context_baseline_win_pct", "recommendation_score", "trend_delta", "quality_of_results_component", "confidence"],
-                fill_defaults={"bucket": "", "context_baseline_win_pct": 50.0, "recommendation_score": 50.0, "trend_delta": 0.0, "quality_of_results_component": 0.0, "confidence": "Neutral / unproven"},
+                [
+                    "tactic_name",
+                    "bucket",
+                    "context_baseline_win_pct",
+                    "recommendation_score",
+                    "trend_delta",
+                    "quality_of_results_component",
+                    "confidence",
+                ],
+                fill_defaults={
+                    "bucket": "",
+                    "context_baseline_win_pct": 50.0,
+                    "recommendation_score": 50.0,
+                    "trend_delta": 0.0,
+                    "quality_of_results_component": 0.0,
+                    "confidence": "Neutral / unproven",
+                },
             ).drop_duplicates("tactic_name"),
             on="tactic_name",
             how="left",
         )
         recent_summary["bucket"] = recent_summary["bucket"].fillna(recent_summary["tactic_name"].apply(classify_recommendation_bucket))
-        recent_summary["delta_vs_baseline_recent"] = (recent_summary["win_pct_recent"] - recent_summary["context_baseline_win_pct"].fillna(50.0)).round(1)
-        recent_dates = recent_window_df.groupby("tactic_name", as_index=False)["date"].agg(first_seen_window="min", last_seen_window="max")
+        recent_summary["delta_vs_baseline_recent"] = (
+            recent_summary["win_pct_recent"] - recent_summary["context_baseline_win_pct"].fillna(50.0)
+        ).round(1)
+        recent_dates = (
+            recent_window_df.groupby("tactic_name", as_index=False)["date"]
+            .agg(first_seen_window="min", last_seen_window="max")
+        )
         recent_summary = recent_summary.merge(recent_dates, on="tactic_name", how="left")
-        recent_summary["recent_status"] = recent_summary["tactic_name"].apply(lambda name: classify_recent_tactic_status(tactic_name=str(name), window_df=recent_window_df, full_context_df=context_df))
+        recent_summary["recent_status"] = recent_summary["tactic_name"].apply(
+            lambda name: classify_recent_tactic_status(tactic_name=str(name), window_df=recent_window_df, full_context_df=context_df)
+        )
         recent_summary["trend_delta_recent"] = recent_summary["trend_delta"].fillna(0.0)
-        recent_summary["recent_confidence"] = recent_summary.apply(lambda row: compute_recent_signal_label(int(row["uses_last_5d"]), float(row["delta_vs_baseline_recent"])), axis=1)
+        recent_summary["recent_confidence"] = recent_summary.apply(
+            lambda row: compute_recent_signal_label(int(row["uses_last_5d"]), float(row["delta_vs_baseline_recent"])),
+            axis=1,
+        )
         recent_summary["short_note"] = recent_summary.apply(build_recent_tactic_note, axis=1)
-        recent_summary = recent_summary.sort_values(["uses_last_5d", "recommendation_score", "win_pct_recent"], ascending=[False, False, False]).reset_index(drop=True)
+        recent_summary = recent_summary.sort_values(
+            ["uses_last_5d", "recommendation_score", "win_pct_recent"],
+            ascending=[False, False, False],
+        ).reset_index(drop=True)
 
         keep_count = int((recent_summary["delta_vs_baseline_recent"] >= 4).sum())
         weak_count = int((recent_summary["delta_vs_baseline_recent"] <= -4).sum())
         test_count = int(len(recent_summary) - keep_count - weak_count)
         new_count = int((recent_summary["recent_status"] == "New").sum())
 
-        with st.container(key="tsr-recent-summary"):
-            st.caption(f"Window anchored to latest filtered date: {window_start.strftime('%Y-%m-%d')} → {window_end.strftime('%Y-%m-%d')}")
-            rcols = st.columns(4)
-            with rcols[0]:
-                st.metric("Looks worth keeping", keep_count)
-            with rcols[1]:
-                st.metric("Needs testing", test_count)
-            with rcols[2]:
-                st.metric("Currently weak", weak_count)
-            with rcols[3]:
-                st.metric("Newly introduced", new_count)
+        _render_html(
+            f"""
+            <div class="tb-recent-summary">
+                <div class="panel-title">{len(recent_summary)} tactics used in the last 5 days for {selected_map} • {selected_side}</div>
+                <div class="panel-muted">Window anchored to latest filtered date: {window_start.strftime('%Y-%m-%d')} → {window_end.strftime('%Y-%m-%d')}.</div>
+                <div class="tb-badge-row">
+                    <span class="tb-chip">Looks worth keeping {keep_count}</span>
+                    <span class="tb-chip">Needs more testing {test_count}</span>
+                    <span class="tb-chip">Currently weak {weak_count}</span>
+                    <span class="tb-chip">Newly introduced {new_count}</span>
+                </div>
+            </div>
+            """,
+        )
 
-        for idx, (_, row) in enumerate(recent_summary.head(12).iterrows()):
-            with st.container(key=f"tsr-recent-card-{idx}"):
-                st.markdown(f"**{str(row['tactic_name'])}**")
-                st.caption(f"{str(row['bucket'])} • Uses {int(row['uses_last_5d'])} • WR {float(row['win_pct_recent']):.1f}% • Δbaseline {float(row['delta_vs_baseline_recent']):+.1f}pp")
-                st.caption(f"Signal: {str(row['recent_confidence'])} • Status: {str(row['recent_status'])}")
-                st.caption(str(row['short_note']))
+        recent_cards_html: list[str] = []
+        for _, row in recent_summary.head(12).iterrows():
+            recent_cards_html.append(
+                f"""
+                <div class="tb-recent-card">
+                    <div class="tb-recent-head">
+                        <div class="tb-recent-name">{html.escape(str(row["tactic_name"]))}</div>
+                        <span class="tb-category-pill" style="--accent:#7ea7da;">{html.escape(str(row["bucket"]))}</span>
+                    </div>
+                    <div class="tb-recent-meta">
+                        Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Net rounds {int(row["net_rounds_recent"]):+d}<br/>
+                        Signal: {html.escape(str(row["recent_confidence"]))} • Status: {html.escape(str(row["recent_status"]))} • First/Last seen: {pd.to_datetime(row["first_seen_window"]).strftime('%m-%d')} → {pd.to_datetime(row["last_seen_window"]).strftime('%m-%d')}
+                    </div>
+                    <div class="tb-recent-note">{html.escape(str(row["short_note"]))}</div>
+                </div>
+                """,
+            )
+        _render_html(f"<div class='tb-recent-grid'>{''.join(recent_cards_html)}</div>")
 
-        st.markdown("#### What’s working / What’s not")
+        _render_html("<div class='tb-section-title'>What’s working / What’s not</div>")
         eval_df = recent_summary.copy()
         eval_df["recent_eval_score"] = (
             eval_df["delta_vs_baseline_recent"] * 1.4
@@ -8200,8 +8127,12 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         eval_df.loc[eval_df["uses_last_5d"] <= 2, "recent_eval_score"] -= 5.0
         eval_df.loc[eval_df["uses_last_5d"] >= 8, "recent_eval_score"] += 2.0
 
-        working_df = eval_df[((eval_df["recent_eval_score"] >= eval_df["recent_eval_score"].median()) | (eval_df["delta_vs_baseline_recent"] >= 4))].sort_values(["recent_eval_score", "uses_last_5d"], ascending=[False, False]).head(6)
-        not_working_df = eval_df[((eval_df["recent_eval_score"] <= eval_df["recent_eval_score"].median()) | (eval_df["delta_vs_baseline_recent"] <= -4))].sort_values(["recent_eval_score", "uses_last_5d"], ascending=[True, False]).head(6)
+        working_df = eval_df[
+            (eval_df["recent_eval_score"] >= eval_df["recent_eval_score"].median()) | (eval_df["delta_vs_baseline_recent"] >= 4)
+        ].sort_values(["recent_eval_score", "uses_last_5d"], ascending=[False, False]).head(6)
+        not_working_df = eval_df[
+            (eval_df["recent_eval_score"] <= eval_df["recent_eval_score"].median()) | (eval_df["delta_vs_baseline_recent"] <= -4)
+        ].sort_values(["recent_eval_score", "uses_last_5d"], ascending=[True, False]).head(6)
 
         def _working_reason(r: pd.Series) -> str:
             if int(r["uses_last_5d"]) <= 3 and float(r["delta_vs_baseline_recent"]) > 0:
@@ -8221,29 +8152,46 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 return "Recent dip is clear; currently looks droppable."
             return "Recently underperforming; monitor or reduce usage."
 
-        wash_cols = st.columns(2)
-        with wash_cols[0]:
-            with st.container(key="tsr-working-col"):
-                st.markdown("##### What’s working")
-                if working_df.empty:
-                    st.caption("No clear positive signal in this recent window.")
-                for idx, (_, row) in enumerate(working_df.iterrows()):
-                    with st.container(key=f"tsr-wash-item-good-{idx}"):
-                        st.markdown(f"**{str(row['tactic_name'])}**")
-                        st.caption(f"Uses {int(row['uses_last_5d'])} • WR {float(row['win_pct_recent']):.1f}% • Δbaseline {float(row['delta_vs_baseline_recent']):+.1f}pp")
-                        st.caption(_working_reason(row))
-        with wash_cols[1]:
-            with st.container(key="tsr-not-working-col"):
-                st.markdown("##### What’s not")
-                if not_working_df.empty:
-                    st.caption("No immediate recent concern stands out.")
-                for idx, (_, row) in enumerate(not_working_df.iterrows()):
-                    with st.container(key=f"tsr-wash-item-bad-{idx}"):
-                        st.markdown(f"**{str(row['tactic_name'])}**")
-                        st.caption(f"Uses {int(row['uses_last_5d'])} • WR {float(row['win_pct_recent']):.1f}% • Δbaseline {float(row['delta_vs_baseline_recent']):+.1f}pp")
-                        st.caption(_not_working_reason(row))
+        left_html = [
+            "<div class='tb-wash-col good'><div class='panel-title'>What’s working</div><div class='panel-muted'>Quick recent positives, not full-season truth.</div>"
+        ]
+        if working_df.empty:
+            left_html.append("<div class='tb-empty' style='margin-top:8px;'>No clear positive signal in this recent window.</div>")
+        for _, row in working_df.iterrows():
+            left_html.append(
+                textwrap.dedent(
+                    f"""
+                    <div class="tb-wash-item good">
+                        <div class="tb-wash-title"><div class="tb-wash-name">{html.escape(str(row["tactic_name"]))}</div><span class="tb-category-pill" style="--accent:#55cfa7;">{html.escape(str(row["bucket"]))}</span></div>
+                        <div class="tb-wash-meta">Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Signal {html.escape(str(row["recent_confidence"]))}</div>
+                        <div class="tb-wash-reason">{html.escape(_working_reason(row))}</div>
+                    </div>
+                    """
+                ).strip()
+            )
+        left_html.append("</div>")
 
-    st.subheader("Copy recommended set")
+        right_html = [
+            "<div class='tb-wash-col bad'><div class='panel-title'>What’s not</div><div class='panel-muted'>Recent concerns to rework, reduce, or potentially drop.</div>"
+        ]
+        if not_working_df.empty:
+            right_html.append("<div class='tb-empty' style='margin-top:8px;'>No immediate recent concern stands out.</div>")
+        for _, row in not_working_df.iterrows():
+            right_html.append(
+                textwrap.dedent(
+                    f"""
+                    <div class="tb-wash-item bad">
+                        <div class="tb-wash-title"><div class="tb-wash-name">{html.escape(str(row["tactic_name"]))}</div><span class="tb-category-pill" style="--accent:#eb8b77;">{html.escape(str(row["bucket"]))}</span></div>
+                        <div class="tb-wash-meta">Uses {int(row["uses_last_5d"])} • WR {float(row["win_pct_recent"]):.1f}% • Δbaseline {float(row["delta_vs_baseline_recent"]):+.1f}pp • Signal {html.escape(str(row["recent_confidence"]))}</div>
+                        <div class="tb-wash-reason">{html.escape(_not_working_reason(row))}</div>
+                    </div>
+                    """
+                ).strip()
+            )
+        right_html.append("</div>")
+        _render_html(f"<div class='tb-wash-grid'>{''.join(left_html)}{''.join(right_html)}</div>")
+
+    _render_html("<div class='tb-section-title'>Copy recommended set</div>")
     compact_lines = [f"{row['bucket']}: {row['tactic_name']}" for _, row in selected_df[["bucket", "tactic_name"]].iterrows()]
     st.code("\n".join(compact_lines), language="text")
     summary_line = (
@@ -8263,7 +8211,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     elif eco_fallback_used:
         summary_line += " The eco slot is a forced coverage pick based on best available eco-relative profile."
     st.caption(summary_line)
-    st.caption("Why this set? The planner prioritises category-relative quality (especially eco vs eco), practical variety, and non-duplicate tactical value while allowing multiple strong tactics toward the same site.")
+    st.caption(
+        "Why this set? The planner prioritises category-relative quality (especially eco vs eco), practical variety, and non-duplicate tactical value while allowing multiple strong tactics toward the same site."
+    )
 
 
 def _medisports_vs_breakdown(
