@@ -2385,25 +2385,6 @@ def _inject_styles() -> None:
         .tb-action-col.monitor { border-color: rgba(235, 192, 103, 0.44); box-shadow: inset 0 0 0 1px rgba(245, 201, 109, 0.1); }
         .tb-action-col.rework { border-color: rgba(247, 158, 95, 0.45); box-shadow: inset 0 0 0 1px rgba(246, 157, 86, 0.11); }
         .tb-action-col.drop { border-color: rgba(241, 108, 128, 0.44); box-shadow: inset 0 0 0 1px rgba(244, 114, 136, 0.1); }
-        .tb-decision-card {
-            border-radius: 11px;
-            border: 1px solid rgba(136, 160, 204, 0.33);
-            background: linear-gradient(165deg, rgba(17, 30, 49, 0.88), rgba(10, 17, 29, 0.92));
-            padding: 8px 10px;
-            margin-bottom: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-        .tb-decision-card::before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: var(--accent, rgba(132, 201, 255, 0.8));
-            box-shadow: 0 0 12px var(--accent, rgba(132, 201, 255, 0.45));
-        }
         .tb-card-head {
             margin-left: 6px;
             display: flex;
@@ -2516,30 +2497,6 @@ def _inject_styles() -> None:
             box-shadow: 0 0 8px currentColor;
             flex-shrink: 0;
         }
-        .tb-tier-row {
-            margin-left: 6px;
-            margin-top: 7px;
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 6px;
-        }
-        .tb-tier-chip {
-            border-radius: 7px;
-            border: 1px solid rgba(141, 170, 214, 0.34);
-            background: linear-gradient(180deg, rgba(26, 40, 66, 0.74), rgba(9, 16, 30, 0.8));
-            padding: 4px 6px;
-            text-align: center;
-            color: #daebff;
-            font-size: 0.64rem;
-            line-height: 1.22;
-        }
-        .tb-tier-chip .tier-label {
-            color: #a9c6ef;
-            font-size: 0.58rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            display: block;
-        }
         .tb-module-grid {
             display: grid;
             grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -2568,36 +2525,6 @@ def _inject_styles() -> None:
             color: #a9c3e8;
             font-size: 0.72rem;
             line-height: 1.35;
-        }
-        .tb-alt-group { margin-top: 10px; }
-        .tb-alt-group-head {
-            color: #dbe9ff;
-            font-size: 0.75rem;
-            font-weight: 810;
-            margin-bottom: 6px;
-        }
-        .tb-alt-item {
-            border-radius: 12px;
-            border: 1px solid rgba(131, 160, 206, 0.34);
-            border-left: 3px solid var(--accent, #7cb6ff);
-            background: linear-gradient(155deg, rgba(17, 29, 48, 0.8), rgba(10, 16, 28, 0.9));
-            padding: 8px 10px;
-            margin-bottom: 6px;
-        }
-        .tb-alt-item-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-        }
-        .tb-alt-name { color: #f0f6ff; font-size: 0.79rem; font-weight: 790; }
-        .tb-alt-meta { color: #c4d8f5; font-size: 0.69rem; margin-top: 4px; line-height: 1.35; }
-        .tb-alt-reason {
-            color: #afc4e4;
-            font-size: 0.69rem;
-            margin-top: 5px;
-            padding-top: 5px;
-            border-top: 1px solid rgba(135, 163, 208, 0.24);
         }
         .tb-balance-strip {
             margin-top: 9px;
@@ -6456,7 +6383,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         st.warning("No tactic summaries available.")
         return
 
-    _render_html("<div class='tb-section-title'>Tactical Action Board</div>")
+    st.subheader("Tactical Action Board")
     map_options = ["All Maps"] + sorted(tactic_perf["map"].dropna().astype(str).unique().tolist())
     side_options = ["Both Sides", "Red", "Blue"]
     filter_map_col, filter_side_col = st.columns(2)
@@ -6481,9 +6408,7 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
     if selected_board_side != "Both Sides":
         filtered_tactic_perf = filtered_tactic_perf[filtered_tactic_perf["side"] == selected_board_side]
 
-    _render_html(
-        f"<div class='tb-note'><strong>Showing:</strong> {selected_board_map} • {selected_board_side}</div>",
-    )
+    st.caption(f"Showing: {selected_board_map} • {selected_board_side}")
 
     action_counts = filtered_tactic_perf["recommended_action"].value_counts().to_dict()
     kpi_items = [
@@ -6492,60 +6417,36 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
         ("High-confidence poor", int((filtered_tactic_perf["confidence"] == "Proven poor").sum())),
         ("Underused opportunities", int((filtered_tactic_perf["recommended_action"] == "Use More").sum())),
     ]
-    kpi_strip_html = "".join(
-        f"<div class='tb-kpi'><div class='k'>{label}</div><div class='v'>{int(value)}</div></div>"
-        for label, value in kpi_items
-    )
-    _render_html(f"<div class='tb-kpi-strip'>{kpi_strip_html}</div>")
+    kpi_cols = st.columns(len(kpi_items))
+    for idx, (label, value) in enumerate(kpi_items):
+        with kpi_cols[idx]:
+            st.metric(label, int(value))
 
     action_order = ["Keep", "Use More", "Monitor", "Rework", "Drop"]
-    action_class = {
-        "Keep": ("keep", "#3fd18b"),
-        "Use More": ("use-more", "#5eb6ff"),
-        "Monitor": ("monitor", "#f0be4f"),
-        "Rework": ("rework", "#f39b54"),
-        "Drop": ("drop", "#f16c80"),
-    }
 
     if filtered_tactic_perf.empty:
-        _render_html(
-            "<div class='tb-empty'>No tactics match this map + side selection yet. Try <strong>All Maps</strong> or <strong>Both Sides</strong> to widen the context.</div>",
-        )
+        st.info("No tactics match this map + side selection yet. Try All Maps or Both Sides to widen the context.")
     else:
         board_cols = st.columns(len(action_order))
         for i, action_name in enumerate(action_order):
             with board_cols[i]:
-                cls_name, accent = action_class[action_name]
-                action_cards_html: list[str] = []
                 action_df = filtered_tactic_perf[filtered_tactic_perf["recommended_action"] == action_name].sort_values(
                     ["delta_vs_baseline", "times_used"],
                     ascending=[False, False],
                 )
+                st.markdown(f"**{action_name} ({action_counts.get(action_name, 0)})**")
                 if action_df.empty:
-                    action_cards_html.append("<div class='tb-empty'>No tactics in this bucket.</div>")
-                else:
-                    for _, row in action_df.head(6).iterrows():
-                        action_cards_html.append(
-                            f"""
-                            <div class="tb-decision-card" style="--accent:{accent};">
-                                <div class="tb-card-title">{html.escape(str(row["tactic_name"]))}</div>
-                                <div class="tb-card-sub">{html.escape(str(row["map"]))} • {html.escape(str(row["side"]))}</div>
-                                <div class="tb-card-meta">{html.escape(str(row["confidence_badge"]))} • Δ {row["delta_vs_baseline"]:+.1f}pp • WR {row["win_pct"]:.1f}%</div>
-                                <div class="tb-card-reason">{html.escape(str(row["reason"]))}</div>
-                            </div>
-                            """,
+                    st.caption("No tactics in this bucket.")
+                    continue
+                for _, row in action_df.head(6).iterrows():
+                    with st.container(border=True):
+                        st.markdown(f"**{str(row['tactic_name'])}**")
+                        st.caption(f"{str(row['map'])} • {str(row['side'])}")
+                        st.markdown(
+                            f"{str(row['confidence_badge'])} • Δ {float(row['delta_vs_baseline']):+.1f}pp • WR {float(row['win_pct']):.1f}%"
                         )
-                _render_html(
-                    f"""
-                    <div class="tb-action-col {cls_name}">
-                        <div class="tb-action-head">
-                            <span>{action_name}</span>
-                            <span class="tb-action-pill" style="color:{accent};">{action_counts.get(action_name, 0)}</span>
-                        </div>
-                        {''.join(action_cards_html)}
-                    </div>
-                    """
-                )
+                        st.markdown(f"Signal: {str(row['confidence'])}")
+                        st.markdown(f"Reason: {str(row['reason'])}")
 
     _render_html("<div class='tb-section-title'>Main tactic table</div>")
     perf_table = tactic_perf.rename(
@@ -7948,40 +7849,37 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         """,
     )
 
-    _render_html("<div class='tb-section-title'>Recommended tactic cards</div>")
+    st.subheader("Recommended tactic cards")
     for category in category_order:
         block = selected_df[selected_df["bucket"] == category]
         if block.empty:
             continue
+        st.markdown(f"**{category}**")
         for _, row in block.iterrows():
             priority_label = str(row["keep_priority_label"])
-            priority_tier = str(row["keep_priority_tier"])
-            color_tokens = keep_priority_color_token(priority_tier)
             reason = build_recommendation_reason(row)
-            _render_html(
-                f"""
-                <div class="tb-decision-card" style="--accent:{color_tokens['accent']}; --accent-text:{color_tokens['text']}; border-color:{color_tokens['accent']}66; background:linear-gradient(160deg, {color_tokens['bg']}, rgba(10, 17, 29, 0.92));">
-                    <div class="tb-card-head">
-                        <div class="tb-card-title">{html.escape(str(row["tactic_name"]))}</div>
-                        <div class="tb-category-pill" style="--accent:#7ea7da;">{html.escape(str(category))}</div>
-                    </div>
-                    <div class="tb-card-sub">{html.escape(str(row["map"]))} • {html.escape(str(row["side"]))}</div>
-                    <div class="tb-card-meta">Score {row["recommendation_score"]:.1f} • WR {row["win_pct"]:.1f}% • Uses {int(row["times_used"])}<br/>Δmap {row["delta_vs_baseline"]:+.1f}pp • Δcat {row["delta_vs_category_baseline"]:+.1f}pp • Trend {row["trend_delta"]:+.1f}pp</div>
-                    <div class="tb-card-chips">
-                        <span class="tb-priority-pill" style="--accent:{color_tokens['accent']}; --accent-text:{color_tokens['text']};">{priority_label}</span>
-                        <span class="tb-chip">{html.escape(str(row["confidence"]))}</span>
-                        <span class="tb-chip">TierQoR {float(row["quality_of_results_component"]):+.1f}</span>
-                    </div>
-                    <div class="tb-tier-row">
-                        <div class="tb-tier-chip"><span class="tier-label">vs S</span>{row["vs_s_text"]}</div>
-                        <div class="tb-tier-chip"><span class="tier-label">vs A</span>{row["vs_a_text"]}</div>
-                        <div class="tb-tier-chip"><span class="tier-label">vs B</span>{row["vs_b_text"]}</div>
-                        <div class="tb-tier-chip"><span class="tier-label">vs C</span>{row["vs_c_text"]}</div>
-                    </div>
-                    <div class="tb-card-reason">{html.escape(str(reason))}</div>
-                </div>
-                """,
-            )
+            with st.container(border=True):
+                st.markdown(f"**{str(row['tactic_name'])}**")
+                st.caption(f"{str(row['map'])} • {str(row['side'])} • {str(category)}")
+                stats_col_1, stats_col_2 = st.columns(2)
+                with stats_col_1:
+                    st.markdown(
+                        f"Score {float(row['recommendation_score']):.1f} • WR {float(row['win_pct']):.1f}% • Uses {int(row['times_used'])}"
+                    )
+                    st.markdown(
+                        f"Δmap {float(row['delta_vs_baseline']):+.1f}pp • Δcat {float(row['delta_vs_category_baseline']):+.1f}pp"
+                    )
+                with stats_col_2:
+                    st.markdown(f"Trend {float(row['trend_delta']):+.1f}pp")
+                    st.markdown(f"{priority_label} • {str(row['confidence'])}")
+                    st.markdown(f"TierQoR {float(row['quality_of_results_component']):+.1f}")
+                tier_cols = st.columns(4)
+                for tier_idx, (tier_name, tier_val) in enumerate(
+                    [("vs S", row["vs_s_text"]), ("vs A", row["vs_a_text"]), ("vs B", row["vs_b_text"]), ("vs C", row["vs_c_text"])]
+                ):
+                    with tier_cols[tier_idx]:
+                        st.metric(tier_name, str(tier_val))
+                st.markdown(f"Reason: {str(reason)}")
 
     selected_route_tags = [tags if isinstance(tags, set) else set() for tags in selected_df["route_tags"]]
     has_fast = any("fast" in tags for tags in selected_route_tags)
@@ -8004,12 +7902,11 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     balance_score = int(max(8, min(100, balance_score)))
 
     route_coverage_labels = sorted({tag for tags in selected_route_tags for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
-    route_coverage_markup = "".join(f"<span class='tb-chip'>{label}</span>" for label in route_coverage_labels) or "<span class='tb-chip'>Core routes only</span>"
-    category_mix_markup = "".join(
-        f"<span class='tb-chip'>{bucket} {int((selected_df['bucket'] == bucket).sum())}</span>"
+    category_mix = [
+        f"{bucket} {int((selected_df['bucket'] == bucket).sum())}"
         for bucket in category_order
         if int((selected_df["bucket"] == bucket).sum()) > 0
-    )
+    ]
 
     def _alt_reason(row: pd.Series, overlap_with: str | None) -> str:
         if overlap_with:
@@ -8022,67 +7919,50 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             return "Bench but viable: confidence signal is lower than selected set."
         return "Coverage option with decent score, but current picks are stronger keeps."
 
-    module_sections = [
-        """
-        <div class="tb-module">
-            <h4>Bench / Alternatives</h4>
-            <div class="tb-module-sub">Backups are shown by category with quick quality context and why they were left on the bench.</div>
-        </div>
-        """
-    ]
+    st.subheader("Bench / Alternatives")
+    st.caption("Backups are shown by category with quick quality context and why they were left on the bench.")
     for category in category_order:
         category_pool = tactic_perf[tactic_perf["bucket"] == category].copy()
         alternatives = category_pool[~category_pool["tactic_name"].isin(selected_names)].head(3) if not category_pool.empty else pd.DataFrame()
-        alt_items: list[str] = []
-        if alternatives.empty:
-            alt_items.append(
-                f"<div class='tb-empty' style='padding:11px 10px;'>No meaningful {category.lower()} alternatives in current sample.</div>"
-            )
-            module_sections.append(
-                f"<div class='tb-module tb-alt-group'><div class='tb-alt-group-head'>{category} alternatives</div>{''.join(alt_items)}</div>"
-            )
-            continue
-        for _, row in alternatives.iterrows():
-            overlap_with = next(
-                (
-                    str(sel["tactic_name"])
-                    for _, sel in selected_df.iterrows()
-                    if _tactics_are_near_duplicate(
-                        str(row["tactic_name"]),
-                        str(sel["tactic_name"]),
-                        row["route_tags"] if isinstance(row["route_tags"], set) else set(),
-                        sel["route_tags"] if isinstance(sel["route_tags"], set) else set(),
-                    )
-                ),
-                None,
-            )
-            why_not = _alt_reason(row, overlap_with)
-            tier_note = build_recommendation_reason(row, include_base=False)
-            alt_reason = f"{why_not} {tier_note}".strip() if tier_note else why_not
-            priority_label = str(row["keep_priority_label"])
-            priority_tier = str(row["keep_priority_tier"])
-            color_tokens = keep_priority_color_token(priority_tier)
-            alt_items.append(
-                f"""
-                <div class="tb-alt-item" style="--accent:{color_tokens['accent']}; border-color:{color_tokens['accent']}55; background:linear-gradient(160deg, {color_tokens['bg']}, rgba(10, 16, 28, 0.9));">
-                    <div class="tb-alt-item-top">
-                        <div class="tb-alt-name">{html.escape(str(row["tactic_name"]))}</div>
-                        <span class="tb-category-pill" style="--accent:#7ea7da;">{html.escape(str(category))}</span>
-                    </div>
-                    <div class="tb-alt-meta">Score {row["recommendation_score"]:.1f} • WR {row["win_pct"]:.1f}% • Uses {int(row["times_used"])} • {html.escape(str(row["confidence"]))} • {html.escape(str(priority_label))}</div>
-                    <div class="tb-tier-row" style="margin-left:0; margin-top:6px;">
-                        <div class="tb-tier-chip"><span class="tier-label">S</span>{row["vs_s_text"]}</div>
-                        <div class="tb-tier-chip"><span class="tier-label">A</span>{row["vs_a_text"]}</div>
-                        <div class="tb-tier-chip"><span class="tier-label">B</span>{row["vs_b_text"]}</div>
-                        <div class="tb-tier-chip"><span class="tier-label">C</span>{row["vs_c_text"]}</div>
-                    </div>
-                    <div class="tb-alt-reason">{html.escape(str(alt_reason))}</div>
-                </div>
-                """,
-            )
-        module_sections.append(
-            f"<div class='tb-module tb-alt-group'><div class='tb-alt-group-head'>{category} alternatives</div>{''.join(alt_items)}</div>"
-        )
+        with st.expander(f"{category} alternatives", expanded=False):
+            if alternatives.empty:
+                st.caption(f"No meaningful {category.lower()} alternatives in current sample.")
+                continue
+            for _, row in alternatives.iterrows():
+                overlap_with = next(
+                    (
+                        str(sel["tactic_name"])
+                        for _, sel in selected_df.iterrows()
+                        if _tactics_are_near_duplicate(
+                            str(row["tactic_name"]),
+                            str(sel["tactic_name"]),
+                            row["route_tags"] if isinstance(row["route_tags"], set) else set(),
+                            sel["route_tags"] if isinstance(sel["route_tags"], set) else set(),
+                        )
+                    ),
+                    None,
+                )
+                why_not = _alt_reason(row, overlap_with)
+                tier_note = build_recommendation_reason(row, include_base=False)
+                alt_reason = f"{why_not} {tier_note}".strip() if tier_note else why_not
+                with st.container(border=True):
+                    st.markdown(f"**{str(row['tactic_name'])}**")
+                    st.caption(f"Category: {category}")
+                    top_cols = st.columns(3)
+                    with top_cols[0]:
+                        st.metric("Score", f"{float(row['recommendation_score']):.1f}")
+                    with top_cols[1]:
+                        st.metric("WR", f"{float(row['win_pct']):.1f}%")
+                    with top_cols[2]:
+                        st.metric("Uses", int(row["times_used"]))
+                    st.markdown(f"Confidence: {str(row['confidence'])}")
+                    st.markdown(f"Reason: {str(alt_reason)}")
+                    tier_cols = st.columns(4)
+                    for tier_idx, (tier_name, tier_val) in enumerate(
+                        [("S", row["vs_s_text"]), ("A", row["vs_a_text"]), ("B", row["vs_b_text"]), ("C", row["vs_c_text"])]
+                    ):
+                        with tier_cols[tier_idx]:
+                            st.metric(f"vs {tier_name}", str(tier_val))
 
     insights = []
     insights.append(("Strong standard depth" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "Standard depth is currently limited", "good" if int((selected_df["bucket"] == "Standard").sum()) >= 2 else "warn"))
@@ -8098,27 +7978,21 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     set_explanation = build_set_explanation(selected_df)
     if set_explanation:
         insights.append(set_explanation)
-    insight_markup = "".join(f"<div class='tb-insight {level}'>{html.escape(str(text))}</div>" for text, level in insights)
-
-    module_sections.append(
-        f"""
-        <div class="tb-module">
-            <h4>Coverage &amp; Balance</h4>
-            <div class="tb-module-sub">Compact health view of category depth, route variety, tempo mix, and confidence risk.</div>
-            <div class="tb-badge-row">
-                <span class="tb-chip">Total selected {len(selected_df)} / 7</span>
-                <span class="tb-chip">Balanced score {balance_score}/100</span>
-                <span class="tb-chip">{'Balanced' if balance_score >= 72 else 'Moderately narrow' if balance_score >= 56 else 'Narrow profile'}</span>
-            </div>
-            <div class="tb-balance-strip"><span style="width:{balance_score}%;"></span></div>
-            <div class="tb-module-sub" style="margin-top:9px;">Category coverage</div>
-            <div class="tb-badge-row">{category_mix_markup}</div>
-            <div class="tb-module-sub" style="margin-top:8px;">Route coverage tags</div>
-            <div class="tb-badge-row">{route_coverage_markup}</div>
-            <div class="tb-insight-grid">{insight_markup}</div>
-        </div>
-        """
-    )
+    st.subheader("Coverage & Balance")
+    st.caption("Compact health view of category depth, route variety, tempo mix, and confidence risk.")
+    balance_cols = st.columns(3)
+    with balance_cols[0]:
+        st.metric("Total selected", f"{len(selected_df)} / 7")
+    with balance_cols[1]:
+        st.metric("Balanced score", f"{balance_score}/100")
+    with balance_cols[2]:
+        st.metric("Profile", "Balanced" if balance_score >= 72 else "Moderately narrow" if balance_score >= 56 else "Narrow profile")
+    st.progress(balance_score / 100)
+    st.markdown(f"Category coverage: {', '.join(category_mix) if category_mix else 'None'}")
+    st.markdown(f"Route coverage tags: {', '.join(route_coverage_labels) if route_coverage_labels else 'Core routes only'}")
+    for insight_text, insight_level in insights:
+        prefix = "✅" if insight_level == "good" else "⚠️"
+        st.markdown(f"{prefix} {insight_text}")
 
     pistol_count = int((selected_df["bucket"] == "Pistol").sum())
     eco_count = int((selected_df["bucket"] == "Eco").sum())
@@ -8134,17 +8008,10 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         why_points.append("Ivy coverage is kept because it contributes independent route pressure with acceptable confidence.")
     else:
         why_points.append("No Ivy tactic was promoted because current Ivy data is too weak or redundant to justify a slot.")
-    why_markup = "".join(f"<div class='tb-why-point'>{point}</div>" for point in why_points)
-    module_sections.append(
-        f"""
-        <div class="tb-module">
-            <h4>Why this set works</h4>
-            <div class="tb-module-sub">Selection logic stays map-side specific, score-led, and coverage-aware without forcing low-quality fillers.</div>
-            <div class="tb-why-points">{why_markup}</div>
-        </div>
-        """
-    )
-    _render_html(f"<div class='tb-module-grid'>{''.join(module_sections)}</div>")
+    st.subheader("Why this set works")
+    st.caption("Selection logic stays map-side specific, score-led, and coverage-aware without forcing low-quality fillers.")
+    for point in why_points:
+        st.markdown(f"- {point}")
 
     _render_html("<div class='tb-section-title'>Recently used tactics (Last 5 days)</div>")
     recent_window_df, window_start, window_end = build_recent_tactic_window(context_df, lookback_days=5)
