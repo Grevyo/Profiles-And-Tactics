@@ -289,27 +289,18 @@ def _inject_styles() -> None:
             gap: 8px;
         }
         .achievement-season {
-            height: 22px;
-            padding: 0 10px;
-            border-radius: 999px;
-            border: 1px solid rgba(166, 192, 236, 0.48);
-            background: linear-gradient(180deg, rgba(32, 50, 78, 0.9), rgba(14, 24, 40, 0.96));
-            color: #e3efff;
-            font-size: 0.53rem;
-            letter-spacing: 0.085em;
+            color: #9eb2d7;
+            font-size: 0.5rem;
+            letter-spacing: 0.09em;
             text-transform: uppercase;
-            font-weight: 860;
+            font-weight: 760;
+            line-height: 1.1;
             white-space: nowrap;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            box-sizing: border-box;
-            max-width: 100%;
-            line-height: 1;
-            box-shadow: inset 0 1px 0 rgba(229, 239, 255, 0.14);
+            text-align: center;
+            opacity: 0.95;
         }
         .achievement-season-badge {
-            justify-self: start;
+            justify-self: center;
         }
         .achievement-image-wrap {
             position: relative;
@@ -408,6 +399,11 @@ def _inject_styles() -> None:
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
+        }
+        .achievement-footer .achievement-season {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .quick-row {
             display: grid;
@@ -1173,45 +1169,51 @@ def _inject_styles() -> None:
             background: linear-gradient(180deg, rgba(19, 28, 43, 0.95), rgba(9, 14, 24, 0.96));
             flex: 0 0 110px;
             display: grid;
-            grid-template-rows: auto 1fr auto;
+            grid-template-rows: 1fr auto;
+            position: relative;
+            box-shadow: inset 0 1px 0 rgba(210, 225, 247, 0.08), 0 10px 24px rgba(2, 6, 12, 0.28);
         }
         .achievement-top-row {
+            position: absolute;
+            top: 6px;
+            left: 8px;
+            right: 8px;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            gap: 9px;
-            padding: 9px 10px 7px;
-            min-height: 38px;
-            background: linear-gradient(180deg, rgba(8, 14, 24, 0.9), rgba(10, 16, 28, 0.95));
-            border-bottom: 1px solid rgba(123, 148, 188, 0.28);
+            gap: 6px;
+            min-height: 24px;
+            z-index: 3;
+            pointer-events: none;
         }
         .achievement-top-left {
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            min-width: 0;
-            flex: 1 1 auto;
-            padding-left: 2px;
+            display: none;
         }
         .achievement-top-right,
         .achievement-badge-stack {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            justify-content: flex-end;
+            justify-content: center;
             gap: 6px;
             min-width: 0;
             max-width: 100%;
             flex: 0 0 auto;
         }
         .achievement-header-cluster {
-            justify-self: end;
+            justify-self: center;
         }
         .achievement-premium .achievement-image-wrap {
             width: 100%;
             height: 100%;
-            padding: 8px 10px 8px;
+            padding: 22px 10px 6px;
             box-sizing: border-box;
-            background: radial-gradient(circle at 50% 42%, rgba(44, 63, 98, 0.4), rgba(10, 15, 24, 0.96));
+            background:
+                radial-gradient(circle at 50% 38%, rgba(62, 90, 132, 0.42), rgba(12, 18, 30, 0.88) 70%),
+                linear-gradient(180deg, rgba(21, 32, 49, 0.55), rgba(8, 14, 24, 0.94));
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .achievement-premium img {
             width: 100%;
@@ -1223,31 +1225,29 @@ def _inject_styles() -> None:
         .achievement-header-gradient,
         .achievement-footer-gradient { display: none; }
         .achievement-footer {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 31px;
-            padding: 6px 9px 8px;
-            border-top: 1px solid rgba(118, 145, 186, 0.2);
-            background: linear-gradient(180deg, rgba(12, 18, 31, 0.85), rgba(9, 14, 24, 0.96));
+            display: grid;
+            align-content: end;
+            justify-items: center;
+            min-height: 38px;
+            gap: 2px;
+            padding: 6px 8px 8px;
+            background: linear-gradient(180deg, rgba(13, 20, 33, 0.22), rgba(10, 16, 27, 0.88) 32%, rgba(8, 13, 22, 0.97));
         }
         @media (min-width: 1100px) {
             .achievement-top-row {
-                padding: 10px 11px 8px;
-                min-height: 40px;
-                gap: 10px;
-            }
-            .achievement-top-left {
-                padding-left: 4px;
+                top: 7px;
+                left: 9px;
+                right: 9px;
+                gap: 7px;
             }
             .achievement-badge-stack {
                 gap: 7px;
             }
             .achievement-premium .achievement-image-wrap {
-                padding: 9px 11px 9px;
+                padding: 24px 11px 7px;
             }
             .achievement-footer {
-                padding: 6px 10px 8px;
+                padding: 6px 9px 9px;
             }
         }
         .achievement-missing {
@@ -2749,32 +2749,30 @@ def _inject_styles() -> None:
                 gap: 6px;
             }
             .achievement-premium {
-                width: 82px;
-                height: 112px;
-                flex-basis: 82px;
+                width: 88px;
+                height: 118px;
+                flex-basis: 88px;
             }
             .achievement-top-row {
-                gap: 5px;
-                padding: 6px 6px 5px;
-                min-height: 33px;
-            }
-            .achievement-top-left {
-                padding-left: 0;
+                top: 5px;
+                left: 6px;
+                right: 6px;
+                min-height: 18px;
+                gap: 4px;
             }
             .achievement-premium .achievement-image-wrap {
-                padding: 6px 6px 6px;
+                padding: 17px 6px 4px;
             }
             .achievement-season {
-                height: 18px;
-                font-size: 0.5rem;
-                padding: 0 6px;
+                font-size: 0.44rem;
             }
             .achievement-position {
                 height: 18px;
                 min-height: 18px;
-                max-width: 60px;
-                font-size: 0.5rem;
-                padding: 0 6px;
+                min-width: 28px;
+                max-width: 56px;
+                font-size: 0.46rem;
+                padding: 0 5px;
             }
             .achievement-tier-badge {
                 width: 18px;
@@ -2786,7 +2784,8 @@ def _inject_styles() -> None:
                 font-size: 0.52rem;
             }
             .achievement-footer {
-                min-height: 24px;
+                min-height: 32px;
+                gap: 1px;
                 padding: 4px 6px 6px;
             }
             .stats-tile-grid { gap: 7px; }
@@ -4800,17 +4799,22 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
     if isinstance(ach_image, Path) and ach_image.exists():
         image_html = f'<img src="{_image_to_data_uri(ach_image)}" alt="{label}">'
     position_badge_html = f"<span class='achievement-position {position_class}'>{finish}</span>" if finish else ""
+    position_or_placeholder = position_badge_html or "<span class='achievement-position'>—</span>"
     return (
         f"<div class='achievement-premium glow-{tier_class}'>"
+        "<div class='achievement-image-wrap'>"
         "<div class='achievement-top-row'>"
-        f"<div class='achievement-top-left'><div class='achievement-season achievement-season-badge'>{season}</div></div>"
         "<div class='achievement-top-right achievement-badge-stack achievement-header-cluster'>"
-        f"{position_badge_html}"
-        f"<span class='achievement-tier-badge tier-{tier_class}'><span class='achievement-tier-badge__text'>{top_badge}</span></span>"
+        f"{position_or_placeholder}"
+        f"<span class='achievement-tier-badge tier-{tier_class}' aria-label='Tier {top_badge}'><span class='achievement-tier-badge__text'>{top_badge}</span></span>"
         "</div>"
         "</div>"
-        f"<div class='achievement-image-wrap'>{image_html}</div>"
-        f"<div class='achievement-footer'><div class='achievement-inline-name'>{label}</div></div>"
+        f"{image_html}"
+        "</div>"
+        "<div class='achievement-footer'>"
+        f"<div class='achievement-inline-name'>{label}</div>"
+        f"<div class='achievement-season achievement-season-badge'>{season}</div>"
+        "</div>"
         "</div>"
     )
 
