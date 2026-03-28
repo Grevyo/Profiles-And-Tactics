@@ -322,24 +322,33 @@ def _inject_styles() -> None:
             align-items: center;
             justify-content: center;
         }
-        .achievement-tier-icon {
+        .achievement-tier-badge {
             width: 24px;
             height: 24px;
             min-width: 24px;
             min-height: 24px;
-            border-radius: 50%;
+            border-radius: 999px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             padding: 0;
-            font-size: 0.66rem;
-            font-weight: 900;
-            letter-spacing: 0.02em;
-            line-height: 1;
+            margin: 0;
             border: 1px solid rgba(148, 173, 214, 0.44);
             box-shadow: 0 0 0 1px rgba(4, 9, 18, 0.64) inset;
             background: radial-gradient(circle at 35% 30%, rgba(37, 57, 88, 0.92), rgba(12, 20, 33, 0.98));
             flex: 0 0 auto;
+            vertical-align: middle;
+        }
+        .achievement-tier-badge__text {
+            display: block;
+            margin: 0;
+            padding: 0;
+            font-size: 0.66rem;
+            font-weight: 900;
+            letter-spacing: 0;
+            line-height: 1;
+            text-transform: uppercase;
+            transform: none;
         }
         .achievement-position {
             height: 24px;
@@ -2736,11 +2745,13 @@ def _inject_styles() -> None:
                 font-size: 0.5rem;
                 padding: 0 6px;
             }
-            .achievement-tier-icon {
+            .achievement-tier-badge {
                 width: 18px;
                 height: 18px;
                 min-width: 18px;
                 min-height: 18px;
+            }
+            .achievement-tier-badge__text {
                 font-size: 0.52rem;
             }
             .achievement-footer {
@@ -4764,7 +4775,7 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
         f"<div class='achievement-season achievement-season-badge'>{season}</div>"
         "<div class='achievement-badge-stack achievement-header-cluster'>"
         f"{position_badge_html}"
-        f"<span class='achievement-tier achievement-tier-icon tier-{tier_class}'>{top_badge}</span>"
+        f"<span class='achievement-tier-badge tier-{tier_class}'><span class='achievement-tier-badge__text'>{top_badge}</span></span>"
         "</div>"
         "</div>"
         f"<div class='achievement-image-wrap'>{image_html}</div>"
