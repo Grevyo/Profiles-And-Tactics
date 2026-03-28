@@ -3600,25 +3600,49 @@ def classify_recommendation_bucket(tactic_name: str) -> str:
     if is_pistol:
         return "Pistol"
     if is_eco:
-        if has_ab or (has_a and has_b):
-            return "Eco A"
-        if has_b:
-            return "Eco B"
-        return "Eco A"
-    if has_ab:
-        return "Standard A"
-    if has_b:
-        return "Standard B"
-    return "Standard A"
+        return "Eco"
+    return "Standard"
 
 
-def compute_tactical_recommendation_score(row: pd.Series, *, prefer_coverage: bool, prefer_proven: bool) -> float:
+def compute_category_relative_score(row: pd.Series, category_baselines: dict[str, dict[str, float]]) -> float:
+    bucket = str(row.get("bucket", "Standard"))
+    base = category_baselines.get(bucket, {})
+    baseline_wr = float(base.get("baseline_win_pct", float(row.get("context_baseline_win_pct", 50.0))))
+    baseline_uses = float(base.get("avg_uses", float(row.get("times_used", 1.0))))
+    baseline_delta = float(base.get("avg_delta", 0.0))
+
+    wr_edge = float(row.get("win_pct", 0.0)) - baseline_wr
+    use_ratio = float(row.get("times_used", 0.0)) / max(baseline_uses, 1.0)
+    delta_edge = float(row.get("delta_vs_baseline", 0.0)) - baseline_delta
+
     score = 50.0
-    score += float(row.get("delta_vs_baseline", 0.0)) * 1.8
+    score += max(min(wr_edge * 1.8, 18), -18)
+    score += max(min(delta_edge * 1.2, 12), -12)
+    score += max(min((use_ratio - 1.0) * 10, 8), -6)
+    return round(score, 1)
+
+
+def compute_tactical_recommendation_score(
+    row: pd.Series,
+    *,
+    prefer_coverage: bool,
+    prefer_proven: bool,
+) -> float:
+    score = 50.0
+    score += (float(row.get("category_relative_score", 50.0)) - 50.0) * 1.05
+    score += float(row.get("delta_vs_baseline", 0.0)) * 0.8
     score += max(min((float(row.get("times_used", 0.0)) - 3) * 1.2, 24), -6)
     score += (float(row.get("last_10_usage_win_pct", row.get("win_pct", 0.0))) - 50) * 0.25
     score += max(min((float(row.get("trend_delta", 0.0))) * 0.45, 8), -8)
     score += max(min((float(row.get("usage_pct", 0.0)) - float(row.get("context_usage_avg", 0.0))) * -0.25, 4), -5)
+    bucket = str(row.get("bucket", "Standard"))
+    category_delta = float(row.get("delta_vs_category_baseline", 0.0))
+    if bucket == "Eco":
+        score += max(min(category_delta * 1.8, 12), -8)
+    elif bucket == "Pistol":
+        score += max(min(category_delta * 1.4, 10), -8)
+    else:
+        score += max(min(category_delta * 1.6, 12), -9)
 
     confidence = str(row.get("confidence", "Neutral / unproven"))
     confidence_bonus = {
@@ -3640,6 +3664,10 @@ def compute_tactical_recommendation_score(row: pd.Series, *, prefer_coverage: bo
         score += min(len(route_tags), 3) * 1.4
     if prefer_proven:
         score += min(float(row.get("times_used", 0.0)) / 2.8, 8)
+    action = str(row.get("recommended_action", "Keep"))
+    if action == "Rework":
+        score -= 5
+    score += float(row.get("route_bonus", 0.0))
     return round(score, 1)
 
 
@@ -3648,6 +3676,30 @@ def _tactic_overlap_key(tactic_name: str) -> str:
     stripped = re.sub(r"[^a-z0-9\s]+", " ", stripped)
     tokens = [tok for tok in stripped.split() if tok not in {"a", "b", "mid", "ivy", "eco", "standard", "pistol"}]
     return " ".join(tokens[:5]).strip()
+
+
+def _tactics_are_near_duplicate(
+    tactic_a: str,
+    tactic_b: str,
+    tags_a: set[str] | None = None,
+    tags_b: set[str] | None = None,
+) -> bool:
+    if not tactic_a or not tactic_b:
+        return False
+    key_a = _tactic_overlap_key(tactic_a)
+    key_b = _tactic_overlap_key(tactic_b)
+    if not key_a or not key_b:
+        return False
+    token_a = set(key_a.split())
+    token_b = set(key_b.split())
+    if not token_a or not token_b:
+        return False
+    jaccard = len(token_a & token_b) / len(token_a | token_b)
+    tags_a = tags_a or set()
+    tags_b = tags_b or set()
+    same_tempo = ("fast" in tags_a and "fast" in tags_b) or ("slow" in tags_a and "slow" in tags_b)
+    same_routes = ({k for k in tags_a if k in {"a", "b", "mid", "ivy"}} == {k for k in tags_b if k in {"a", "b", "mid", "ivy"}})
+    return jaccard >= 0.72 and same_tempo and same_routes
 
 
 def _match_record_from_tactics(filtered_tactics: pd.DataFrame) -> dict[str, float]:
@@ -5919,46 +5971,101 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
 
     tactic_perf["bucket"] = tactic_perf["tactic_name"].apply(classify_recommendation_bucket)
     tactic_perf["route_tags"] = tactic_perf["tactic_name"].apply(extract_route_tags)
+    category_baselines = (
+        tactic_perf.groupby("bucket", as_index=False)
+        .apply(
+            lambda g: pd.Series(
+                {
+                    "baseline_win_pct": np.average(g["win_pct"], weights=g["times_used"].clip(lower=1)),
+                    "avg_uses": g["times_used"].mean(),
+                    "avg_delta": g["delta_vs_baseline"].mean(),
+                }
+            )
+        )
+        .to_dict(orient="records")
+    )
+    category_baselines_map = {str(row["bucket"]): row for row in category_baselines}
+    tactic_perf["category_baseline_win_pct"] = tactic_perf["bucket"].map(
+        lambda b: float(category_baselines_map.get(str(b), {}).get("baseline_win_pct", tactic_perf["context_baseline_win_pct"].mean()))
+    )
+    tactic_perf["delta_vs_category_baseline"] = (tactic_perf["win_pct"] - tactic_perf["category_baseline_win_pct"]).round(1)
+    tactic_perf["category_relative_score"] = tactic_perf.apply(
+        lambda row: compute_category_relative_score(row, category_baselines_map),
+        axis=1,
+    )
+    tactic_perf["route_bonus"] = tactic_perf["route_tags"].apply(
+        lambda tags: float(("mid" in tags) * 1.6 + ("ivy" in tags) * 1.6 + ("fast" in tags and "slow" in tags) * 1.2)
+    )
     tactic_perf["recommendation_score"] = tactic_perf.apply(
-        lambda row: compute_tactical_recommendation_score(row, prefer_coverage=prefer_coverage, prefer_proven=prefer_proven),
+        lambda row: compute_tactical_recommendation_score(
+            row,
+            prefer_coverage=prefer_coverage,
+            prefer_proven=prefer_proven,
+        ),
         axis=1,
     )
     tactic_perf = tactic_perf.sort_values(["recommendation_score", "times_used", "win_pct"], ascending=[False, False, False])
 
-    category_order = ["Pistol", "Eco A", "Eco B", "Standard A", "Standard B", "Mid", "Ivy"]
-    required_categories = category_order[:5]
+    category_order = ["Pistol", "Eco", "Standard", "Mid", "Ivy"]
     selected_rows: list[pd.Series] = []
     selected_names: set[str] = set()
-    selected_overlap_keys: set[str] = set()
 
-    for cat in required_categories:
-        cat_df = tactic_perf[tactic_perf["bucket"] == cat].copy()
-        if cat_df.empty:
-            continue
-        picked = None
-        for _, row in cat_df.iterrows():
-            overlap_key = _tactic_overlap_key(row["tactic_name"])
-            if overlap_key and overlap_key in selected_overlap_keys:
+    def _is_duplicate_candidate(candidate: pd.Series) -> bool:
+        cand_name = str(candidate["tactic_name"])
+        cand_tags = candidate["route_tags"] if isinstance(candidate["route_tags"], set) else set()
+        for existing in selected_rows:
+            if _tactics_are_near_duplicate(
+                cand_name,
+                str(existing["tactic_name"]),
+                cand_tags,
+                existing["route_tags"] if isinstance(existing["route_tags"], set) else set(),
+            ):
+                return True
+        return False
+
+    def _pick_from_bucket(bucket: str, min_count: int, max_count: int, min_score: float) -> None:
+        nonlocal selected_rows, selected_names
+        current = int(sum(1 for row in selected_rows if str(row["bucket"]) == bucket))
+        if current >= max_count:
+            return
+        pool = tactic_perf[tactic_perf["bucket"] == bucket].copy()
+        if pool.empty:
+            return
+        for _, row in pool.iterrows():
+            if len(selected_rows) >= 7:
+                break
+            if str(row["tactic_name"]) in selected_names:
                 continue
-            picked = row
-            break
-        if picked is None:
-            picked = cat_df.iloc[0]
-        selected_rows.append(picked)
-        selected_names.add(str(picked["tactic_name"]))
-        selected_overlap_keys.add(_tactic_overlap_key(picked["tactic_name"]))
+            if float(row["recommendation_score"]) < min_score and current >= min_count:
+                continue
+            if _is_duplicate_candidate(row) and current >= min_count:
+                continue
+            selected_rows.append(row)
+            selected_names.add(str(row["tactic_name"]))
+            current += 1
+            if current >= max_count:
+                break
 
-    for optional_cat in ["Mid", "Ivy"]:
-        if len(selected_rows) >= 7:
-            break
-        cat_df = tactic_perf[tactic_perf["bucket"] == optional_cat].copy()
-        if cat_df.empty:
-            continue
-        top_row = cat_df.iloc[0]
-        meaningful = int(top_row["times_used"]) >= min_sample and float(top_row["recommendation_score"]) >= 48
-        if meaningful and str(top_row["tactic_name"]) not in selected_names:
-            selected_rows.append(top_row)
-            selected_names.add(str(top_row["tactic_name"]))
+    _pick_from_bucket("Pistol", min_count=1, max_count=1, min_score=45.0)
+    _pick_from_bucket("Eco", min_count=1, max_count=2, min_score=43.0)
+    _pick_from_bucket("Standard", min_count=2, max_count=3, min_score=47.0)
+    _pick_from_bucket("Mid", min_count=0, max_count=1, min_score=52.0)
+    _pick_from_bucket("Ivy", min_count=0, max_count=1, min_score=52.0)
+
+    if len(selected_rows) < 6:
+        flex_pool = tactic_perf[~tactic_perf["tactic_name"].isin(selected_names)].copy()
+        for _, row in flex_pool.iterrows():
+            if len(selected_rows) >= 7:
+                break
+            if float(row["recommendation_score"]) < 54:
+                break
+            if _is_duplicate_candidate(row):
+                continue
+            selected_rows.append(row)
+            selected_names.add(str(row["tactic_name"]))
+
+    if len(selected_rows) > 7:
+        selected_rows = selected_rows[:7]
 
     selected_df = pd.DataFrame(selected_rows).head(7).copy()
     if selected_df.empty:
@@ -5969,7 +6076,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     coverage_labels = sorted({tag for tags in selected_df["route_tags"] for tag in tags if tag in {"fast", "slow", "mid", "ivy", "a", "b"}})
     health_notes = []
     if len(selected_df) < 5:
-        health_notes.append("Core 5 coverage is incomplete for this map-side; recommendations are provisional.")
+        health_notes.append("Depth is limited in this map-side pool, so the recommendation set stays compact.")
     if selected_df["times_used"].sum() < 30:
         health_notes.append("Selected set is sample-light; recommendations are tentative.")
     if "Mid" not in selected_df["bucket"].values and not tactic_perf[tactic_perf["bucket"] == "Mid"].empty:
@@ -5979,7 +6086,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     if (selected_df["confidence"] == "Proven poor").any():
         health_notes.append("One or more selected tactics are weak-confidence placeholders due to depth limits.")
     if not health_notes:
-        health_notes.append("Set is balanced with stable signal for this exact map + side context.")
+        health_notes.append("Set prioritises quality and reliability for this exact map + side context.")
 
     st.markdown("<div class='panel-card'>", unsafe_allow_html=True)
     st.markdown(
@@ -6001,10 +6108,8 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
 
     category_colors = {
         "Pistol": "#f5c451",
-        "Eco A": "#5ccf86",
-        "Eco B": "#36d1b8",
-        "Standard A": "#5ea9ff",
-        "Standard B": "#9c6df6",
+        "Eco": "#5ccf86",
+        "Standard": "#5ea9ff",
         "Mid": "#f0be4f",
         "Ivy": "#5ad9ff",
     }
@@ -6013,28 +6118,31 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         block = selected_df[selected_df["bucket"] == category]
         if block.empty:
             continue
-        row = block.iloc[0]
-        accent = category_colors.get(category, "#5ea9ff")
-        reason = {
-            "Pistol": "Best-performing pistol with stable sample.",
-            "Eco A": "Strong eco A option with above-baseline returns.",
-            "Eco B": "Best eco B entry for this exact map-side context.",
-            "Standard A": "Best standard A anchor for this map-side.",
-            "Standard B": "Best standard B anchor for this map-side.",
-            "Mid": "Adds Mid coverage without sacrificing quality.",
-            "Ivy": "Adds Ivy route coverage and tactical variety.",
-        }.get(category, "Selected for high score and contextual fit.")
-        st.markdown(
-            f"""
-            <div class="tb-decision-card" style="--accent:{accent}; border-color:{accent}55;">
-                <div class="tb-card-title">{category}: {row["tactic_name"]}</div>
-                <div class="tb-card-sub">{row["map"]} • {row["side"]}</div>
-                <div class="tb-card-meta">Score {row["recommendation_score"]:.1f} • {row["confidence"]} • Uses {int(row["times_used"])} • WR {row["win_pct"]:.1f}% • Δ {row["delta_vs_baseline"]:+.1f}pp</div>
-                <div class="tb-card-reason">{reason}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        for _, row in block.iterrows():
+            accent = category_colors.get(category, "#5ea9ff")
+            if category == "Eco":
+                reason = "Selected as top eco option because it beats eco baseline and holds usable sample."
+            elif category == "Standard":
+                reason = "Strong standard with distinct route/tempo profile and above-category performance."
+            elif category == "Pistol":
+                reason = "Best pistol option in this map-side context with reliable signal."
+            elif category == "Mid":
+                reason = "Useful Mid coverage with solid local performance."
+            elif category == "Ivy":
+                reason = "Useful Ivy coverage with enough independent value."
+            else:
+                reason = "Selected for high score and contextual fit."
+            st.markdown(
+                f"""
+                <div class="tb-decision-card" style="--accent:{accent}; border-color:{accent}55;">
+                    <div class="tb-card-title">{category}: {row["tactic_name"]}</div>
+                    <div class="tb-card-sub">{row["map"]} • {row["side"]}</div>
+                    <div class="tb-card-meta">Score {row["recommendation_score"]:.1f} • {row["confidence"]} • Uses {int(row["times_used"])} • WR {row["win_pct"]:.1f}% • Δmap {row["delta_vs_baseline"]:+.1f}pp • Δcat {row["delta_vs_category_baseline"]:+.1f}pp</div>
+                    <div class="tb-card-reason">{reason}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
     st.markdown("<div class='tb-section-title'>Bench / alternatives</div>", unsafe_allow_html=True)
     for category in category_order:
@@ -6046,8 +6154,23 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             continue
         st.markdown(f"**{category} alternatives**")
         for _, row in alternatives.iterrows():
-            why_not = "Strong, but overlaps with selected tactic." if _tactic_overlap_key(row["tactic_name"]) in selected_overlap_keys else (
-                "Good sample, but weaker recent trend." if float(row["trend_delta"]) < 0 else "Useful option, but lower confidence than main pick."
+            overlap_with = next(
+                (
+                    str(sel["tactic_name"])
+                    for _, sel in selected_df.iterrows()
+                    if _tactics_are_near_duplicate(
+                        str(row["tactic_name"]),
+                        str(sel["tactic_name"]),
+                        row["route_tags"] if isinstance(row["route_tags"], set) else set(),
+                        sel["route_tags"] if isinstance(sel["route_tags"], set) else set(),
+                    )
+                ),
+                None,
+            )
+            why_not = (
+                f"Not selected: overlaps too heavily with better option `{overlap_with}`."
+                if overlap_with
+                else ("Good sample, but weaker recent trend." if float(row["trend_delta"]) < 0 else "Useful option, but lower confidence than selected picks.")
             )
             st.markdown(
                 f"- `{row['tactic_name']}` — Score {row['recommendation_score']:.1f}, WR {row['win_pct']:.1f}%, Uses {int(row['times_used'])}. {why_not}"
@@ -6067,8 +6190,26 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     st.markdown("<div class='tb-section-title'>Copy recommended set</div>", unsafe_allow_html=True)
     compact_lines = [f"{row['bucket']}: {row['tactic_name']}" for _, row in selected_df[["bucket", "tactic_name"]].iterrows()]
     st.code("\n".join(compact_lines), language="text")
+    pistol_count = int((selected_df["bucket"] == "Pistol").sum())
+    eco_count = int((selected_df["bucket"] == "Eco").sum())
+    standard_count = int((selected_df["bucket"] == "Standard").sum())
+    mid_count = int((selected_df["bucket"] == "Mid").sum())
+    ivy_count = int((selected_df["bucket"] == "Ivy").sum())
+    summary_line = (
+        f"This set prioritises {pistol_count} pistol, {eco_count} eco option{'s' if eco_count != 1 else ''}, "
+        f"{standard_count} strong standard option{'s' if standard_count != 1 else ''}"
+    )
+    if mid_count or ivy_count:
+        summary_line += f", and {mid_count + ivy_count} coverage pick{'s' if (mid_count + ivy_count) != 1 else ''}."
+    else:
+        summary_line += "."
+    if standard_count >= 2 and bool((selected_df[selected_df["bucket"] == "Standard"]["route_tags"].apply(lambda t: "a" in t)).sum() >= 2):
+        summary_line += " Multiple A-leaning standards are retained because they provide distinct usable profiles."
+    if eco_count == 1:
+        summary_line += " Eco depth is limited, so only one eco tactic is recommended."
+    st.caption(summary_line)
     st.caption(
-        "Why this set? The planner selects one best tactic per core category, then optionally adds Mid/Ivy only when meaningful in this map-side data and still under the 7-tactic cap."
+        "Why this set? The planner prioritises category-relative quality (especially eco vs eco), practical variety, and non-duplicate tactical value while allowing multiple strong tactics toward the same site."
     )
 
 
