@@ -3830,7 +3830,7 @@ def compute_category_relative_score(row: pd.Series, category_baselines: dict[str
 
 def compute_tier_strength_weight(tier: str | None) -> float:
     tier_key = str(tier or "").strip().upper()
-    return {"S": 2.6, "A": 1.55, "B": 1.0, "C": 0.72}.get(tier_key, 1.0)
+    return {"S": 2.7, "A": 1.6, "B": 1.08, "C": 0.9}.get(tier_key, 1.0)
 
 
 def _compute_tier_expected_win_pct(tier: str | None) -> float:
@@ -3840,7 +3840,7 @@ def _compute_tier_expected_win_pct(tier: str | None) -> float:
 
 def _compute_tier_negative_penalty_scale(tier: str | None) -> float:
     tier_key = str(tier or "").strip().upper()
-    return {"S": 0.52, "A": 0.78, "B": 1.0, "C": 1.18}.get(tier_key, 1.0)
+    return {"S": 0.52, "A": 0.8, "B": 1.0, "C": 1.2}.get(tier_key, 1.0)
 
 
 def compute_tier_adjusted_tactic_score(
@@ -3868,12 +3868,16 @@ def compute_quality_of_results_component(
     total_uses: float,
 ) -> tuple[float, str]:
     if tier_rows.empty:
-        return 0.0, "Tier weighting unavailable (insufficient split sample)."
+        return 0.0, ""
 
     total_uses = max(float(total_uses), 1.0)
     component = 0.0
     elite_positive = 0.0
-    weak_farm_pressure = 0.0
+    elite_resilience = 0.0
+    c_positive = 0.0
+    c_negative = 0.0
+    c_share = 0.0
+    elite_share = 0.0
     for row in tier_rows.itertuples(index=False):
         tier = str(getattr(row, "tier", "")).upper().strip()
         if tier not in {"S", "A", "B", "C"}:
@@ -3893,23 +3897,58 @@ def compute_quality_of_results_component(
         evidence = np.sqrt(uses) / (np.sqrt(uses) + 2.0)
         component += centered * share * evidence * (0.75 + (tier_strength - 1.0) * 0.25)
         if tier == "S":
+            elite_share += share
             elite_positive += max(centered, 0.0) * evidence
+            elite_resilience += min(centered, 0.0) * evidence
         if tier == "C":
-            weak_farm_pressure += max(centered, 0.0) * evidence
+            c_share += share
+            c_positive += max(centered, 0.0) * evidence
+            c_negative += abs(min(centered, 0.0)) * evidence
 
     sample_stabilizer = np.sqrt(total_uses) / (np.sqrt(total_uses) + 3.5)
     component *= sample_stabilizer
     component = _clamp(component, -14.0, 22.0)
 
-    if elite_positive >= 3.5:
+    note = ""
+    if elite_positive >= 3.4 and elite_share >= 0.24:
         note = "Boosted by strong returns against S-tier opposition."
-    elif elite_positive >= 1.2:
-        note = "Held up well against elite teams."
-    elif weak_farm_pressure > 2.8 and component < 2.0:
-        note = "Results are inflated mostly by weaker-tier opposition."
-    else:
-        note = "Tier weighting applied: results against S-tier teams receive the strongest strength adjustment."
+    elif elite_positive >= 1.4 and elite_share >= 0.2:
+        note = "Trusted more because results held up against elite teams."
+    elif elite_resilience <= -1.35 and elite_share >= 0.25 and component >= -1.5:
+        note = "Profile remains respectable despite tough S-tier opposition."
+    elif c_positive >= 2.4 and c_share >= 0.52 and elite_positive < 1.1:
+        note = "Slightly discounted because most success came against volatile C-tier opposition."
+    elif c_negative >= 1.9 and c_share >= 0.35:
+        note = "Results are less convincing because C-tier matches underperformed."
     return round(component, 2), note
+
+
+def build_recommendation_reason(row: pd.Series, *, include_base: bool = True) -> str:
+    priority_label = str(row.get("keep_priority_label", "Useful keep")).lower()
+    reason_parts: list[str] = []
+    if include_base:
+        reason_parts.append(
+            f"Selected because it rates as {priority_label} in this exact map + side pool, with score-led value and stable context fit."
+        )
+    tier_reason = str(row.get("tier_weighting_note", "")).strip()
+    if tier_reason:
+        reason_parts.append(tier_reason)
+    return " ".join(reason_parts).strip()
+
+
+def build_set_explanation(selected_df: pd.DataFrame) -> tuple[str, str] | None:
+    if selected_df.empty or "tier_weighting_note" not in selected_df.columns:
+        return None
+    notes = selected_df["tier_weighting_note"].astype(str).str.strip()
+    if notes.empty:
+        return None
+    elite_count = int(notes.str.contains("S-tier|elite|tough S-tier", case=False, na=False).sum())
+    c_discount_count = int(notes.str.contains("C-tier|volatile C-tier", case=False, na=False).sum())
+    if elite_count >= 2:
+        return ("This set is trusted partly because several tactics held up against elite opposition.", "good")
+    if c_discount_count >= 2:
+        return ("Some recommendations are slightly de-risked because evidence is concentrated in C-tier matchups.", "warn")
+    return None
 
 
 def compute_tactical_recommendation_score(
@@ -6118,7 +6157,9 @@ def _teams_tactical_breakdown(tactics_df: pd.DataFrame, player_df: pd.DataFrame,
             tier_chart.update_yaxes(title_text="Win rate %")
             _apply_plotly_dark_style(tier_chart, height=320)
             st.plotly_chart(tier_chart, use_container_width=True)
-        st.caption("Tier weighting applied: results against S-tier teams receive the strongest strength adjustment.")
+        _, tier_context_note = compute_quality_of_results_component(sel_tier, total_uses=float(sel_tier["tier_uses"].sum()))
+        if tier_context_note:
+            st.caption(tier_context_note)
 
     st.markdown("<div class='tb-section-title'>Family/category summaries</div>", unsafe_allow_html=True)
     family_summary = (
@@ -6316,7 +6357,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
         ("quality_of_results_component", 0.0),
         ("tier_adjusted_score_component", 0.0),
         ("tier_weighted_strength", 1.0),
-        ("tier_weighting_note", "Tier weighting unavailable (insufficient split sample)."),
+        ("tier_weighting_note", ""),
     ):
         if col not in tactic_perf.columns:
             tactic_perf[col] = fallback
@@ -6549,13 +6590,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
             priority_label = str(row["keep_priority_label"])
             priority_tier = str(row["keep_priority_tier"])
             color_tokens = keep_priority_color_token(priority_tier)
-            reason = (
-                f"Selected because it rates as {priority_label.lower()} in this exact map + side pool, "
-                f"with score-led value and stable context fit."
-            )
-            tier_reason = str(row.get("tier_weighting_note", "")).strip()
-            if tier_reason:
-                reason = f"{reason} {tier_reason}"
+            reason = build_recommendation_reason(row)
             st.markdown(
                 f"""
                 <div class="tb-decision-card" style="--accent:{color_tokens['accent']}; --accent-text:{color_tokens['text']}; border-color:{color_tokens['accent']}66; background:linear-gradient(160deg, {color_tokens['bg']}, rgba(10, 17, 29, 0.92));">
@@ -6656,6 +6691,8 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                 None,
             )
             why_not = _alt_reason(row, overlap_with)
+            tier_note = build_recommendation_reason(row, include_base=False)
+            alt_reason = f"{why_not} {tier_note}".strip() if tier_note else why_not
             priority_label = str(row["keep_priority_label"])
             priority_tier = str(row["keep_priority_tier"])
             color_tokens = keep_priority_color_token(priority_tier)
@@ -6673,7 +6710,7 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
                         <div class="tb-tier-chip"><span class="tier-label">B</span>{row["vs_b_text"]}</div>
                         <div class="tb-tier-chip"><span class="tier-label">C</span>{row["vs_c_text"]}</div>
                     </div>
-                    <div class="tb-alt-reason">{why_not} {str(row.get("tier_weighting_note", ""))}</div>
+                    <div class="tb-alt-reason">{alt_reason}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -6686,11 +6723,9 @@ def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFr
     insights.append(("No Ivy coverage available in current sample" if not has_ivy else "Ivy coverage exists in the selected set", "warn" if not has_ivy else "good"))
     insights.append(("Set leans slow-control heavy" if has_slow and not has_fast else "Good mix of fast and control profiles" if has_fast and has_slow else "Tempo profile is narrow", "warn" if (has_slow and not has_fast) or not (has_fast and has_slow) else "good"))
     insights.append(("Selected set is sample-light, so confidence remains tentative" if sample_light else "Good mix of proven and early-positive tactics", "warn" if sample_light else "good"))
-    elite_boost_count = int((selected_df["tier_weighting_note"].astype(str).str.contains("S-tier|elite", case=False, na=False)).sum())
-    if elite_boost_count >= 2:
-        insights.append(("This set is trusted partly because several tactics have held up against S-tier opposition.", "good"))
-    else:
-        insights.append(("Tier weighting is active: weak-tier farming is de-emphasized versus elite-proof evidence.", "warn"))
+    set_explanation = build_set_explanation(selected_df)
+    if set_explanation:
+        insights.append(set_explanation)
     insight_markup = "".join(f"<div class='tb-insight {level}'>{text}</div>" for text, level in insights)
 
     st.markdown(
