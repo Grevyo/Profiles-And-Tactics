@@ -2902,6 +2902,7 @@ def _render_top_hero(active_page: str, subtitle: str) -> None:
         "profiles": "👤 HLTV CPL Profile Viewer",
         "tactics": "📊 Teams Tactical Breakdown",
         "medisports_vs": "⚔️ Medisports Vs Breakdown",
+        "tournament_summary": "🏆 Tournament Summary",
         "tactical_set": "🧠 Tactical Set Recommendations",
     }
     selected_nav = st.radio(
@@ -6577,6 +6578,314 @@ def safe_select_columns(
     return safe_df[existing_columns]
 
 
+def resolve_match_opponent_tier(row: pd.Series, latest_tier_lookup: dict[str, str | None]) -> str:
+    raw_tier = row.get("tier", pd.NA)
+    if raw_tier is not None and not pd.isna(raw_tier):
+        clean = str(raw_tier).strip().upper()[:1]
+        if clean in {"S", "A", "B", "C"}:
+            return clean
+    fallback = latest_tier_lookup.get(str(row.get("opponent_key", "")), None)
+    if fallback is not None and str(fallback).strip():
+        return str(fallback).strip().upper()[:1]
+    return "—"
+
+
+def get_previous_matchups_for_row(history_df: pd.DataFrame, row: pd.Series) -> pd.DataFrame:
+    if history_df.empty:
+        return history_df.copy()
+    opponent_key = str(row.get("opponent_key", "")).strip()
+    match_id = str(row.get("match_id", "")).strip()
+    row_date = pd.to_datetime(row.get("date"), errors="coerce")
+    previous = history_df[history_df["opponent_key"] == opponent_key].copy()
+    previous = previous[previous["match_id"].astype(str) != match_id]
+    if pd.notna(row_date):
+        previous = previous[pd.to_datetime(previous["date"], errors="coerce") < row_date]
+    return previous.sort_values("date", ascending=False)
+
+
+def build_matchup_comparison_note(current_row: pd.Series, previous_matchups: pd.DataFrame) -> str:
+    if previous_matchups.empty:
+        return "First meeting"
+    prev_wins = int((previous_matchups["match_result"] == "Win").sum())
+    prev_losses = int((previous_matchups["match_result"] == "Loss").sum())
+    meetings = int(previous_matchups["match_id"].nunique())
+    current_rd = int(current_row.get("round_diff", 0))
+    latest_prev = previous_matchups.sort_values("date", ascending=False).head(1).iloc[0]
+    prev_rd = int(latest_prev.get("round_diff", 0))
+    current_result = str(current_row.get("match_result", ""))
+    prev_result = str(latest_prev.get("match_result", ""))
+
+    if current_result == "Win" and prev_wins == 0:
+        return f"First win over this opponent • came in {prev_wins}W-{prev_losses}L"
+    if current_result == "Loss" and prev_losses >= 1:
+        return f"Previous meetings: {meetings} • came in {prev_wins}W-{prev_losses}L"
+    if current_result == prev_result and current_result in {"Win", "Loss"}:
+        streak_size = 1
+        for _, prev in previous_matchups.sort_values("date", ascending=False).iterrows():
+            if str(prev.get("match_result", "")) == current_result:
+                streak_size += 1
+            else:
+                break
+        if streak_size >= 2:
+            return f"{streak_size}{'nd' if streak_size == 2 else 'rd' if streak_size == 3 else 'th'} straight {current_result.lower()} vs this opponent"
+    if current_rd > prev_rd:
+        return f"Improved from previous meeting ({prev_rd:+d} rounds → {current_rd:+d})"
+    if current_rd < prev_rd:
+        return f"Worse than previous meeting ({prev_rd:+d} rounds → {current_rd:+d})"
+    return f"Previous meetings: {meetings} • came in {prev_wins}W-{prev_losses}L"
+
+
+def build_opponent_history_summary(current_row: pd.Series, history_df: pd.DataFrame) -> str:
+    previous = get_previous_matchups_for_row(history_df, current_row)
+    return build_matchup_comparison_note(current_row, previous)
+
+
+def build_tournament_match_rows(
+    filtered_df: pd.DataFrame,
+    history_df: pd.DataFrame,
+) -> pd.DataFrame:
+    if filtered_df.empty:
+        return pd.DataFrame()
+    latest_tier = resolve_latest_opponent_tier(history_df)
+    tier_lookup = latest_tier.set_index("opponent_key")["latest_tier"].to_dict() if not latest_tier.empty else {}
+
+    rows = filtered_df.sort_values(["date", "match_id"]).copy()
+    rows["opponent_tier_resolved"] = rows.apply(lambda row: resolve_match_opponent_tier(row, tier_lookup), axis=1)
+    rows["comparison_note"] = rows.apply(lambda row: build_opponent_history_summary(row, history_df), axis=1)
+    rows["tier_strength"] = rows["opponent_tier_resolved"].map({"S": 4, "A": 3, "B": 2, "C": 1}).fillna(0)
+    return rows
+
+
+def build_tournament_summary_df(match_rows: pd.DataFrame) -> pd.DataFrame:
+    if match_rows.empty:
+        return pd.DataFrame()
+    summary = (
+        match_rows.groupby(["competition_key", "competition_display", "season_resolved"], as_index=False)
+        .agg(
+            matches=("match_id", "nunique"),
+            wins=("match_result", lambda s: int((s == "Win").sum())),
+            losses=("match_result", lambda s: int((s == "Loss").sum())),
+            draws=("match_result", lambda s: int((s == "Draw").sum())),
+            round_diff=("round_diff", "sum"),
+            avg_tier_strength=("tier_strength", "mean"),
+            strongest_beaten=("opponent_tier_resolved", lambda s: "S" if "S" in s.values else ("A" if "A" in s.values else ("B" if "B" in s.values else ("C" if "C" in s.values else "—")))),
+            lowest_tier_loss=("opponent_tier_resolved", lambda s: "C" if "C" in s.values else ("B" if "B" in s.values else ("A" if "A" in s.values else ("S" if "S" in s.values else "—")))),
+            most_common_map=("map", lambda s: s.dropna().astype(str).mode().iloc[0] if not s.dropna().empty else "—"),
+            latest_date=("date", "max"),
+        )
+    )
+    summary["win_rate_pct"] = (summary["wins"] / (summary["wins"] + summary["losses"]).clip(lower=1) * 100).round(1)
+    summary["record"] = summary["wins"].astype(str) + "-" + summary["losses"].astype(str) + "-" + summary["draws"].astype(str)
+    summary["avg_tier_label"] = summary["avg_tier_strength"].apply(
+        lambda v: "S/A-heavy" if v >= 3.3 else ("Balanced A/B" if v >= 2.4 else ("Mostly B/C" if v >= 1.5 else "C-heavy"))
+    )
+    summary["tier_mix"] = summary["competition_key"].map(
+        match_rows.groupby("competition_key")["opponent_tier_resolved"]
+        .apply(lambda s: " • ".join([f"{tier}:{int((s == tier).sum())}" for tier in ["S", "A", "B", "C"] if int((s == tier).sum()) > 0]) or "No tier data")
+        .to_dict()
+    )
+    summary["insight"] = summary.apply(
+        lambda row: (
+            "Strong run with positive margins vs quality opposition"
+            if float(row["win_rate_pct"]) >= 60 and int(row["round_diff"]) > 0 and float(row["avg_tier_strength"]) >= 2.7
+            else "Good record, but narrow round margins"
+            if float(row["win_rate_pct"]) >= 60 and int(row["round_diff"]) <= 3
+            else "Competitive losses to stronger field"
+            if float(row["avg_tier_strength"]) >= 3 and float(row["win_rate_pct"]) < 50
+            else "Mixed event with inconsistent conversion"
+        ),
+        axis=1,
+    )
+    return summary.sort_values(["latest_date", "wins", "round_diff"], ascending=[False, False, False])
+
+
+def build_tournament_overview_metrics(summary_df: pd.DataFrame, match_rows: pd.DataFrame) -> dict[str, str]:
+    if summary_df.empty or match_rows.empty:
+        return {}
+    total_wins = int((match_rows["match_result"] == "Win").sum())
+    total_losses = int((match_rows["match_result"] == "Loss").sum())
+    tier_mix = " • ".join(
+        [f"{tier}:{int((match_rows['opponent_tier_resolved'] == tier).sum())}" for tier in ["S", "A", "B", "C"] if int((match_rows["opponent_tier_resolved"] == tier).sum()) > 0]
+    ) or "No tier data"
+    best_event = summary_df.sort_values(["win_rate_pct", "round_diff", "matches"], ascending=[False, False, False]).head(1)
+    toughest = summary_df.sort_values(["avg_tier_strength", "matches"], ascending=[False, False]).head(1)
+    return {
+        "Tournaments": str(int(summary_df["competition_key"].nunique())),
+        "Matches": str(int(match_rows["match_id"].nunique())),
+        "Record": f"{total_wins}W-{total_losses}L",
+        "Tier mix faced": tier_mix,
+        "Best tournament": (
+            f"{best_event.iloc[0]['competition_display']} ({best_event.iloc[0]['win_rate_pct']:.1f}% WR)"
+            if not best_event.empty
+            else "—"
+        ),
+        "Toughest field": (
+            f"{toughest.iloc[0]['competition_display']} ({toughest.iloc[0]['avg_tier_label']})"
+            if not toughest.empty
+            else "—"
+        ),
+    }
+
+
+def render_tournament_summary_page(match_rows: pd.DataFrame, summary_df: pd.DataFrame, image_index: dict[str, dict[str, Path]]) -> None:
+    st.markdown("<div class='tb-section-title'>Tournament Summary</div>", unsafe_allow_html=True)
+    st.caption("Campaign-by-campaign results, opponent quality, and matchup history.")
+    overview = build_tournament_overview_metrics(summary_df, match_rows)
+    if not overview:
+        st.info("No matches available for this filter setup.")
+        return
+    overview_html = "".join(
+        f"<div class='kpi-card'><div class='kpi-label'>{html.escape(label)}</div><div class='kpi-value'>{html.escape(value)}</div></div>"
+        for label, value in overview.items()
+    )
+    st.markdown(
+        f"<div class='panel-card'><div class='panel-muted'>Tournament overview strip</div><div class='kpi-grid'>{overview_html}</div></div>",
+        unsafe_allow_html=True,
+    )
+
+    for _, tournament in summary_df.iterrows():
+        competition_key = tournament["competition_key"]
+        block_df = match_rows[match_rows["competition_key"] == competition_key].sort_values("date", ascending=False).copy()
+        if block_df.empty:
+            continue
+        logo_uri = _competition_logo_uri(image_index, tournament["competition_display"])
+        logo_html = f"<img class='rank-logo' src='{logo_uri}' alt='competition logo'>" if logo_uri else "<span class='rank-logo'></span>"
+        header_html = (
+            f"<div class='panel-card'><div class='rank-cell-main'>{logo_html}"
+            f"<span class='panel-title'>{html.escape(str(tournament['competition_display']))}</span></div>"
+            f"<div class='panel-muted'>{html.escape(str(tournament.get('season_resolved', 'Unknown season')))} • "
+            f"Record {html.escape(str(tournament['record']))} • WR {float(tournament['win_rate_pct']):.1f}% • RD {int(tournament['round_diff']):+d}</div>"
+            f"<div style='display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;'>"
+            f"<span class='vs-pill'>Matches {int(tournament['matches'])}</span>"
+            f"<span class='vs-pill'>Tier mix {html.escape(str(tournament['tier_mix']))}</span>"
+            f"<span class='vs-pill'>Avg field {html.escape(str(tournament['avg_tier_label']))}</span>"
+            f"<span class='vs-pill'>Most common map {html.escape(str(tournament['most_common_map']))}</span>"
+            f"</div><div class='tb-note' style='margin-top:8px;'>{html.escape(str(tournament['insight']))}</div></div>"
+        )
+        st.markdown(header_html, unsafe_allow_html=True)
+        with st.expander(f"View matches: {tournament['competition_display']}", expanded=True):
+            table = block_df.copy()
+            table["date"] = pd.to_datetime(table["date"], errors="coerce").dt.strftime("%Y-%m-%d")
+            table["result"] = table["match_result"].map({"Win": "🟢 Win", "Loss": "🔴 Loss", "Draw": "🟡 Draw"}).fillna("⚪")
+            table["tier_badge"] = table["opponent_tier_resolved"].apply(lambda v: f"Tier {v}" if str(v) != "—" else "Tier —")
+            st.dataframe(
+                table[
+                    [
+                        "date",
+                        "opponent_raw",
+                        "tier_badge",
+                        "map",
+                        "result",
+                        "round_wins",
+                        "round_losses",
+                        "round_diff",
+                        "comparison_note",
+                    ]
+                ].rename(
+                    columns={
+                        "opponent_raw": "Opponent",
+                        "map": "Map",
+                        "round_wins": "RW",
+                        "round_losses": "RL",
+                        "round_diff": "RD",
+                        "comparison_note": "Comparison note",
+                    }
+                ),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+
+def _tournament_summary_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, competition_source_col: str) -> None:
+    _inject_styles()
+    _render_top_hero(
+        active_page="tournament_summary",
+        subtitle="Campaign-by-campaign results, opponent quality, and matchup history.",
+    )
+    team_df = tactics_df[tactics_df["my_team"].astype(str).str.contains("ⓜ", regex=False, na=False)].copy()
+    if team_df.empty:
+        st.warning("No Medisports tactics data found.")
+        return
+    if "tier" not in team_df.columns or team_df["tier"].isna().all():
+        tier_lookup = (
+            player_df.groupby("match_id", as_index=False)["tier"]
+            .agg(lambda s: s.dropna().iloc[0] if not s.dropna().empty else pd.NA)
+        )
+        team_df = team_df.merge(tier_lookup, on="match_id", how="left")
+    base_df = build_medisports_vs_base_df(team_df, competition_source_col)
+    if base_df.empty:
+        st.warning("No tournament summary data found.")
+        return
+
+    all_seasons = sorted(base_df["season_num_resolved"].dropna().astype(int).unique().tolist(), reverse=True)
+    latest_season = all_seasons[0] if all_seasons else None
+    season_options = ["Lifetime"] + [f"S{season}" for season in all_seasons]
+    default_season = f"S{latest_season}" if latest_season is not None else "Lifetime"
+
+    st.markdown("<div class='compact-toolbar'>", unsafe_allow_html=True)
+    c1, c2, c3, c4, c5, c6 = st.columns([1.0, 1.7, 1.0, 0.9, 0.9, 1.4])
+    with c1:
+        selected_season = st.selectbox(
+            "Season",
+            season_options,
+            index=season_options.index(default_season) if default_season in season_options else 0,
+            key="tournament_summary_season",
+        )
+    with c2:
+        grouped_competitions = st.toggle("Grouped competitions", value=False, key="tournament_summary_grouped")
+        comp_col = "competition_grouped" if grouped_competitions else "competition_raw"
+        competition_options = sorted(base_df[comp_col].dropna().astype(str).unique().tolist())
+        selected_competitions = st.multiselect(
+            "Competition / tournament",
+            competition_options,
+            default=[],
+            key="tournament_summary_competitions",
+        )
+    with c3:
+        min_matches = int(st.slider("Minimum matches", 1, 8, 1, key="tournament_summary_min_matches"))
+    with c4:
+        tier_filter = st.multiselect("Tier filter", ["S", "A", "B", "C"], default=[], key="tournament_summary_tiers")
+    with c5:
+        tier_mode = st.selectbox("Tier mode", ["Any", "Only selected"], index=0, key="tournament_summary_tier_mode")
+    with c6:
+        min_date = pd.to_datetime(base_df["date"], errors="coerce").min()
+        max_date = pd.to_datetime(base_df["date"], errors="coerce").max()
+        date_range = st.date_input(
+            "Date range",
+            value=(min_date.date(), max_date.date()) if pd.notna(min_date) and pd.notna(max_date) else None,
+            min_value=min_date.date() if pd.notna(min_date) else None,
+            max_value=max_date.date() if pd.notna(max_date) else None,
+            key="tournament_summary_date_range",
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    filtered = base_df.copy()
+    filtered["competition_display"] = filtered[comp_col]
+    if selected_season != "Lifetime":
+        filtered = filtered[filtered["season_resolved"] == selected_season].copy()
+    if selected_competitions:
+        selected_keys = {normalize_competition_label(name) for name in selected_competitions}
+        filtered = filtered[filtered["competition_key"].isin(selected_keys)].copy()
+    if isinstance(date_range, tuple) and len(date_range) == 2:
+        start_date = pd.to_datetime(date_range[0], errors="coerce")
+        end_date = pd.to_datetime(date_range[1], errors="coerce")
+        filtered = filtered[pd.to_datetime(filtered["date"], errors="coerce").between(start_date, end_date, inclusive="both")]
+
+    history_df = base_df.copy()
+    history_df["competition_display"] = history_df[comp_col]
+    match_rows = build_tournament_match_rows(filtered, history_df)
+    if tier_filter:
+        if tier_mode == "Only selected":
+            match_rows = match_rows[match_rows["opponent_tier_resolved"].isin(tier_filter)].copy()
+    summary_df = build_tournament_summary_df(match_rows)
+    summary_df = summary_df[summary_df["matches"] >= min_matches].copy()
+    if summary_df.empty:
+        st.info("No tournaments meet the current filters.")
+        return
+    image_index = _build_image_index()
+    render_tournament_summary_page(match_rows, summary_df, image_index)
+
+
 def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFrame, competition_source_col: str) -> None:
     _inject_styles()
     _render_top_hero(
@@ -8152,7 +8461,7 @@ def main() -> None:
 
     page = st.session_state["page"]
     competition_source_col = "competition"
-    if page in {"profiles", "tactics", "medisports_vs", "tactical_set"}:
+    if page in {"profiles", "tactics", "medisports_vs", "tactical_set", "tournament_summary"}:
         competition_view = st.radio(
             "Competition View",
             ["Raw competition names", "Grouped competition names"],
@@ -8168,6 +8477,8 @@ def main() -> None:
         _teams_tactical_breakdown(tactics_df, player_df, competition_source_col)
     elif page == "medisports_vs":
         _medisports_vs_breakdown(tactics_df, player_df, competition_source_col)
+    elif page == "tournament_summary":
+        _tournament_summary_page(tactics_df, player_df, competition_source_col)
     elif page == "tactical_set":
         _tactical_set_recommendations(tactics_df, player_df, competition_source_col)
     else:
