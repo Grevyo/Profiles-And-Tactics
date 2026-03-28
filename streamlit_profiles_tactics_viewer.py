@@ -7169,17 +7169,17 @@ def _opponent_review_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, com
         outcome = str(row["match_result"]).lower()
         row_date = pd.to_datetime(row["date"], errors="coerce")
         recent_cards.append(
-            f"""
-            <article class='match-card {outcome}'>
-                <div class='panel-muted'>{row_date.strftime("%Y-%m-%d") if pd.notna(row_date) else "Unknown date"}</div>
-                <div class='panel-title' style='font-size:0.95rem;'>{html.escape(str(row["competition_display"]))}</div>
-                <div style='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;'>
-                    <span class='vs-pill'>Map {html.escape(str(row["map"]))}</span>
-                    <span class='vs-pill {"vs-pill-good" if outcome=="win" else "vs-pill-bad" if outcome=="loss" else "vs-pill-mid"}'>{html.escape(str(row["match_result"]))} {int(row["round_wins"])}-{int(row["round_losses"])}</span>
-                </div>
-                <div class='mini-note'>{html.escape(str(row.get("comparison_note", "")))}</div>
-            </article>
-            """
+            (
+                f"<article class='match-card {outcome}'>"
+                f"<div class='panel-muted'>{row_date.strftime('%Y-%m-%d') if pd.notna(row_date) else 'Unknown date'}</div>"
+                f"<div class='panel-title' style='font-size:0.95rem;'>{html.escape(str(row['competition_display']))}</div>"
+                "<div style='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;'>"
+                f"<span class='vs-pill'>Map {html.escape(str(row['map']))}</span>"
+                f"<span class='vs-pill {'vs-pill-good' if outcome=='win' else 'vs-pill-bad' if outcome=='loss' else 'vs-pill-mid'}'>{html.escape(str(row['match_result']))} {int(row['round_wins'])}-{int(row['round_losses'])}</span>"
+                "</div>"
+                f"<div class='mini-note'>{html.escape(str(row.get('comparison_note', '')))}</div>"
+                "</article>"
+            )
         )
     st.markdown(f"<div class='panel-card'><div class='panel-muted'>Recent meetings</div><section class='match-card-grid'>{''.join(recent_cards)}</section></div>", unsafe_allow_html=True)
 
