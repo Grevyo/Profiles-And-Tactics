@@ -2697,6 +2697,47 @@ def _inject_styles() -> None:
         .tb-wash-name { color:#eff6ff; font-size:0.76rem; font-weight:800; }
         .tb-wash-meta { margin-top:4px; color:#c7daf7; font-size:0.67rem; line-height:1.3; }
         .tb-wash-reason { margin-top:5px; color:#b7cdf0; font-size:0.68rem; line-height:1.32; }
+        .roster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 14px;
+            margin-top: 12px;
+        }
+        .roster-card {
+            border: 1px solid rgba(151, 166, 195, 0.25);
+            border-radius: 14px;
+            background: linear-gradient(165deg, rgba(14, 21, 33, 0.96), rgba(10, 14, 23, 0.96));
+            padding: 14px;
+        }
+        .roster-head { display: grid; grid-template-columns: 62px 1fr; gap: 10px; align-items: center; }
+        .roster-photo {
+            width: 62px; height: 62px; border-radius: 10px; object-fit: cover;
+            border: 1px solid rgba(151, 166, 195, 0.4);
+        }
+        .roster-name { font-size: 1rem; font-weight: 750; color: #f2f6ff; line-height: 1.2; }
+        .roster-meta { color: #9da7bd; font-size: 0.76rem; }
+        .roster-kpis { margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+        .roster-kpi {
+            border: 1px solid rgba(151, 166, 195, 0.2); border-radius: 10px; background: rgba(16, 24, 36, 0.72); padding: 6px 7px;
+        }
+        .roster-kpi .k { font-size: 0.67rem; color: #9da7bd; }
+        .roster-kpi .v { font-size: 0.95rem; color: #f5f7fb; font-weight: 760; line-height: 1.1; }
+        .match-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .match-card {
+            border: 1px solid rgba(151, 166, 195, 0.25);
+            border-radius: 12px;
+            padding: 10px 11px;
+            background: rgba(13, 20, 30, 0.82);
+        }
+        .match-card.win { border-color: rgba(49, 209, 123, 0.45); }
+        .match-card.loss { border-color: rgba(255, 108, 122, 0.36); }
+        .match-card.draw { border-color: rgba(240, 190, 79, 0.35); }
+        .mini-note { font-size: 0.72rem; color: #9da7bd; margin-top: 4px; }
         .tb-family-card {
             border-radius: 12px;
             border: 1px solid rgba(136, 163, 212, 0.36);
@@ -2899,10 +2940,12 @@ def _render_top_hero(active_page: str, subtitle: str) -> None:
         unsafe_allow_html=True,
     )
     nav_labels = {
+        "front_page": "🧭 Front Page",
         "profiles": "👤 HLTV CPL Profile Viewer",
         "tactics": "📊 Teams Tactical Breakdown",
         "medisports_vs": "⚔️ Medisports Vs Breakdown",
         "tournament_summary": "🏆 Tournament Summary",
+        "opponent_review": "🕵️ Opponent Review",
         "tactical_set": "🧠 Tactical Set Recommendations",
     }
     selected_nav = st.radio(
@@ -5032,9 +5075,148 @@ def build_player_stat_insight(metrics: dict[str, float], *, avg_acc: float, avg_
 def _home() -> None:
     _inject_styles()
     _render_top_hero(
-        active_page="home",
-        subtitle="Player analytics, tactical breakdowns, match insights.",
+        active_page="front_page",
+        subtitle="Team roster intelligence, player analytics, tactical breakdowns, and matchup insights.",
     )
+
+
+def _front_page(player_df: pd.DataFrame, tactics_df: pd.DataFrame, competition_source_col: str) -> None:
+    _inject_styles()
+    _render_top_hero(
+        active_page="front_page",
+        subtitle="Visual roster board: current ability, recent form, and player-by-player comparison.",
+    )
+    st.markdown("<div class='tb-section-title'>Front Page</div>", unsafe_allow_html=True)
+    st.caption("Team roster overview with premium profile cards and quick sorting controls.")
+
+    team_players = sorted(player_df[player_df["player"].astype(str).str.contains("ⓜ", regex=False, na=False)]["player"].dropna().unique().tolist())
+    if not team_players:
+        st.warning("No Medisports players found.")
+        return
+
+    all_seasons = sorted(player_df[competition_source_col].apply(extract_season_number).dropna().astype(int).unique().tolist(), reverse=True)
+    season_options = ["Lifetime"] + [f"S{season}" for season in all_seasons]
+    selected_season = st.selectbox("Season", season_options, index=0, key="front_page_season")
+    map_options = sorted(player_df["map"].dropna().astype(str).unique().tolist()) if "map" in player_df.columns else []
+    sort_metric = st.selectbox("Sort by", ["GrevScore", "Rating", "Impact", "Form", "K/D"], key="front_page_sort")
+    selected_maps = st.multiselect("Map filter", map_options, default=[], key="front_page_map_filter")
+    current_only = st.toggle("Current roster only", value=True, key="front_page_current_only")
+
+    scoped_players = apply_season_filter(player_df.copy(), selected_season, competition_source_col)
+    if selected_maps:
+        scoped_players = scoped_players[scoped_players["map"].isin(selected_maps)].copy()
+
+    profiles = _load_play_csv_profiles()
+    if current_only and not profiles.empty and "player" in profiles.columns:
+        current_roster = set(profiles["player"].astype(str).str.strip())
+        scoped_players = scoped_players[scoped_players["player"].isin(current_roster)].copy()
+    else:
+        scoped_players = scoped_players[scoped_players["player"].isin(team_players)].copy()
+
+    if scoped_players.empty:
+        st.info("No rows match the Front Page filters.")
+        return
+
+    baseline = _build_metric_baseline(player_df[player_df["match_id"].isin(scoped_players["match_id"].unique())].copy())
+    image_index = _build_image_index()
+    cards: list[dict[str, object]] = []
+    for player_name, rows in scoped_players.groupby("player"):
+        player_tactics = tactics_df[tactics_df["match_id"].isin(rows["match_id"].unique())].copy()
+        form_score, recent_form = _calculate_form_section(rows, player_tactics)
+        metrics = _calc_player_card_metrics(rows, player_tactics, baseline_profile=baseline, recent_form_score=form_score)
+        trend_direction = "Stable"
+        if len(recent_form) >= 8:
+            first_half = float(recent_form.head(len(recent_form) // 2)["kpd"].mean())
+            second_half = float(recent_form.tail(len(recent_form) // 2)["kpd"].mean())
+            if second_half > first_half + 0.03:
+                trend_direction = "Rising"
+            elif second_half < first_half - 0.03:
+                trend_direction = "Dropping"
+        role = get_player_profile_from_play_csv(player_name).get("role", "Fragger")
+        nation = get_player_profile_from_play_csv(player_name).get("nation", "")
+        best_map = rows.groupby("map")["kpd"].mean().sort_values(ascending=False).index[0] if "map" in rows.columns and not rows["map"].dropna().empty else "—"
+        cards.append(
+            {
+                "player": player_name,
+                "role": role,
+                "nation": nation,
+                "flag": _nation_flag_emoji(nation),
+                "grevscore": float(metrics["grevscore"]),
+                "rating": float(rows["kpd"].mean()) if "kpd" in rows.columns else 0.0,
+                "impact": float(metrics["impact"]),
+                "form": float(form_score),
+                "kd": float(metrics["kd"]),
+                "matches": int(metrics["matches"]),
+                "trend": trend_direction,
+                "best_map": str(best_map),
+                "insight": build_player_profile_descriptor(metrics, avg_acc=float(rows["accuracy_pct"].mean()), avg_hs=float(rows["hs_pct"].mean()), form_score=form_score),
+                "photo": resolve_player_photo(image_index, player_name),
+            }
+        )
+
+    cards_df = pd.DataFrame(cards)
+    if cards_df.empty:
+        st.info("No card data available.")
+        return
+    sort_map = {"GrevScore": "grevscore", "Rating": "rating", "Impact": "impact", "Form": "form", "K/D": "kd"}
+    cards_df = cards_df.sort_values(sort_map[sort_metric], ascending=False).reset_index(drop=True)
+    strongest = cards_df.iloc[0]["player"]
+    hottest = cards_df.sort_values("form", ascending=False).iloc[0]["player"]
+    weakest = cards_df.sort_values("form", ascending=True).iloc[0]["player"]
+
+    summary_html = "".join(
+        [
+            f"<div class='kpi-card'><div class='kpi-label'>Total players shown</div><div class='kpi-value'>{len(cards_df)}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Average GrevScore</div><div class='kpi-value'>{cards_df['grevscore'].mean():.2f}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Average Rating</div><div class='kpi-value'>{cards_df['rating'].mean():.2f}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Average Impact</div><div class='kpi-value'>{cards_df['impact'].mean():.1f}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Strongest current player</div><div class='kpi-value'>{html.escape(str(strongest))}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Hottest recent form</div><div class='kpi-value'>{html.escape(str(hottest))}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Weakest current form</div><div class='kpi-value'>{html.escape(str(weakest))}</div></div>",
+        ]
+    )
+    st.markdown(f"<div class='panel-card'><div class='kpi-grid'>{summary_html}</div></div>", unsafe_allow_html=True)
+
+    selected_profile = st.selectbox("Quick profile drilldown", cards_df["player"].tolist(), index=0, key="front_page_profile_select")
+    if st.button("View profile", key="front_page_open_profile"):
+        st.session_state["profile_player_override"] = selected_profile
+        st.session_state["page"] = "profiles"
+        st.rerun()
+
+    card_html = []
+    for _, row in cards_df.iterrows():
+        trend = str(row["trend"])
+        trend_icon = "📈" if trend == "Rising" else ("📉" if trend == "Dropping" else "➖")
+        badge = "Low sample" if int(row["matches"]) < 5 else ("Rising" if trend == "Rising" else ("Dropping" if trend == "Dropping" else "Stable"))
+        photo_html = (
+            f"<img class='roster-photo' src='{_image_to_data_uri(row['photo'])}' alt='player photo'>"
+            if isinstance(row["photo"], Path) and row["photo"]
+            else "<div class='roster-photo' style='display:flex;align-items:center;justify-content:center;color:#9da7bd;'>N/A</div>"
+        )
+        card_html.append(
+            f"""
+            <article class='roster-card'>
+                <div class='roster-head'>
+                    {photo_html}
+                    <div>
+                        <div class='roster-name'>{html.escape(str(row["player"]))}</div>
+                        <div class='roster-meta'>{html.escape(str(row["flag"]))} {html.escape(str(row["nation"] or "Unknown"))} • {html.escape(str(row["role"]))}</div>
+                        <div class='roster-meta'>{trend_icon} {html.escape(trend)} • {html.escape(str(badge))}</div>
+                    </div>
+                </div>
+                <div class='roster-kpis'>
+                    <div class='roster-kpi'><div class='k'>GrevScore</div><div class='v'>{float(row["grevscore"]):.2f}</div></div>
+                    <div class='roster-kpi'><div class='k'>Rating</div><div class='v'>{float(row["rating"]):.2f}</div></div>
+                    <div class='roster-kpi'><div class='k'>Impact</div><div class='v'>{float(row["impact"]):.1f}</div></div>
+                    <div class='roster-kpi'><div class='k'>Form</div><div class='v'>{float(row["form"]):.1f}</div></div>
+                    <div class='roster-kpi'><div class='k'>K/D</div><div class='v'>{float(row["kd"]):.2f}</div></div>
+                    <div class='roster-kpi'><div class='k'>Best map</div><div class='v'>{html.escape(str(row["best_map"]))}</div></div>
+                </div>
+                <div class='mini-note'>{html.escape(str(row["insight"]))}</div>
+            </article>
+            """
+        )
+    st.markdown(f"<section class='roster-grid'>{''.join(card_html)}</section>", unsafe_allow_html=True)
 
 
 def _build_match_level_results(tactics_df: pd.DataFrame, competition_source_col: str) -> pd.DataFrame:
@@ -5151,7 +5333,9 @@ def _hltv_profile_view(
         st.warning('No players with "ⓜ" in their name were found.')
         return
 
-    selected_player = st.selectbox('Pick a player (names containing "ⓜ")', players)
+    default_player = st.session_state.pop("profile_player_override", players[0] if players else None)
+    default_index = players.index(default_player) if default_player in players else 0
+    selected_player = st.selectbox('Pick a player (names containing "ⓜ")', players, index=default_index)
 
     with st.expander("Profile Filters", expanded=False):
         filtered_players, filtered_tactics = _apply_shared_filters(
@@ -6763,7 +6947,33 @@ def render_tournament_summary_page(match_rows: pd.DataFrame, summary_df: pd.Data
             f"</div><div class='tb-note' style='margin-top:8px;'>{html.escape(str(tournament['insight']))}</div></div>"
         )
         st.markdown(header_html, unsafe_allow_html=True)
-        with st.expander(f"View matches: {tournament['competition_display']}", expanded=True):
+        match_cards = []
+        for _, row in block_df.head(8).iterrows():
+            result = str(row.get("match_result", "Draw")).lower()
+            result_class = "win" if result == "win" else ("loss" if result == "loss" else "draw")
+            date_text = pd.to_datetime(row.get("date"), errors="coerce")
+            date_label = date_text.strftime("%Y-%m-%d") if pd.notna(date_text) else "Unknown date"
+            comparison = str(row.get("comparison_note", ""))
+            match_cards.append(
+                f"""
+                <article class='match-card {result_class}'>
+                    <div class='panel-muted'>{date_label}</div>
+                    <div class='panel-title' style='font-size:0.95rem;'>{html.escape(str(row.get("opponent_raw", "Unknown opponent")))}</div>
+                    <div style='display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;'>
+                        <span class='vs-pill'>Tier {html.escape(str(row.get("opponent_tier_resolved", "—")))}</span>
+                        <span class='vs-pill'>Map {html.escape(str(row.get("map", "—")))}</span>
+                        <span class='vs-pill {"vs-pill-good" if result == "win" else "vs-pill-bad" if result == "loss" else "vs-pill-mid"}'>{html.escape(str(row.get("match_result", "Draw")))} {int(row.get("round_wins", 0))}-{int(row.get("round_losses", 0))}</span>
+                        <span class='vs-pill {"vs-pill-good" if int(row.get("round_diff", 0)) >= 0 else "vs-pill-bad"}'>RD {int(row.get("round_diff", 0)):+d}</span>
+                    </div>
+                    <div class='mini-note'>{html.escape(comparison)}</div>
+                </article>
+                """
+            )
+        st.markdown(
+            f"<div class='panel-card'><div class='panel-muted'>Recent results</div><section class='match-card-grid'>{''.join(match_cards)}</section></div>",
+            unsafe_allow_html=True,
+        )
+        with st.expander(f"View full match table: {tournament['competition_display']}", expanded=False):
             table = block_df.copy()
             table["date"] = pd.to_datetime(table["date"], errors="coerce").dt.strftime("%Y-%m-%d")
             table["result"] = table["match_result"].map({"Win": "🟢 Win", "Loss": "🔴 Loss", "Draw": "🟡 Draw"}).fillna("⚪")
@@ -6884,6 +7094,157 @@ def _tournament_summary_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, 
         return
     image_index = _build_image_index()
     render_tournament_summary_page(match_rows, summary_df, image_index)
+
+
+def _opponent_review_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, competition_source_col: str) -> None:
+    _inject_styles()
+    _render_top_hero(
+        active_page="opponent_review",
+        subtitle="Single-team dossier: history, map split, trendline, and latest known opponent tier.",
+    )
+    st.markdown("<div class='tb-section-title'>Opponent Review</div>", unsafe_allow_html=True)
+    st.caption("Focus one opponent across all meetings and compare trajectory over time.")
+
+    team_df = tactics_df[tactics_df["my_team"].astype(str).str.contains("ⓜ", regex=False, na=False)].copy()
+    if team_df.empty:
+        st.warning("No Medisports tactics data found.")
+        return
+    if "tier" not in team_df.columns or team_df["tier"].isna().all():
+        tier_lookup = player_df.groupby("match_id", as_index=False)["tier"].agg(lambda s: s.dropna().iloc[0] if not s.dropna().empty else pd.NA)
+        team_df = team_df.merge(tier_lookup, on="match_id", how="left")
+    base_df = build_medisports_vs_base_df(team_df, competition_source_col)
+    if base_df.empty:
+        st.info("No opponent review data available.")
+        return
+
+    all_seasons = sorted(base_df["season_num_resolved"].dropna().astype(int).unique().tolist(), reverse=True)
+    season_options = ["Lifetime"] + [f"S{season}" for season in all_seasons]
+    selected_season = st.selectbox("Season", season_options, index=0, key="opponent_review_season")
+    grouped = st.toggle("Grouped competitions", value=True, key="opponent_review_grouped")
+    comp_col = "competition_grouped" if grouped else "competition_raw"
+    opponent_options = sorted(base_df["opponent_raw"].dropna().astype(str).unique().tolist())
+    selected_opp = st.selectbox("Opponent/team", opponent_options, index=0, key="opponent_review_team")
+    map_filter = st.multiselect("Map filter", sorted(base_df["map"].dropna().astype(str).unique().tolist()), default=[], key="opponent_review_map")
+
+    min_date = pd.to_datetime(base_df["date"], errors="coerce").min()
+    max_date = pd.to_datetime(base_df["date"], errors="coerce").max()
+    date_range = st.date_input(
+        "Date range",
+        value=(min_date.date(), max_date.date()) if pd.notna(min_date) and pd.notna(max_date) else None,
+        min_value=min_date.date() if pd.notna(min_date) else None,
+        max_value=max_date.date() if pd.notna(max_date) else None,
+        key="opponent_review_date_range",
+    )
+
+    filtered = base_df.copy()
+    filtered["competition_display"] = filtered[comp_col]
+    if selected_season != "Lifetime":
+        filtered = filtered[filtered["season_resolved"] == selected_season].copy()
+    filtered = filtered[filtered["opponent_raw"] == selected_opp].copy()
+    if map_filter:
+        filtered = filtered[filtered["map"].isin(map_filter)].copy()
+    if isinstance(date_range, tuple) and len(date_range) == 2:
+        start_date = pd.to_datetime(date_range[0], errors="coerce")
+        end_date = pd.to_datetime(date_range[1], errors="coerce")
+        filtered = filtered[pd.to_datetime(filtered["date"], errors="coerce").between(start_date, end_date, inclusive="both")]
+
+    if filtered.empty:
+        st.info("No meetings found for this opponent with the current filters.")
+        return
+
+    filtered = build_tournament_match_rows(filtered, base_df).sort_values("date")
+    wins = int((filtered["match_result"] == "Win").sum())
+    losses = int((filtered["match_result"] == "Loss").sum())
+    draws = int((filtered["match_result"] == "Draw").sum())
+    latest_tier = str(filtered.sort_values("date", ascending=False)["opponent_tier_resolved"].dropna().astype(str).head(1).iloc[0]) if not filtered["opponent_tier_resolved"].dropna().empty else "—"
+    kpi_html = "".join(
+        [
+            f"<div class='kpi-card'><div class='kpi-label'>Opponent</div><div class='kpi-value'>{html.escape(selected_opp)}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Record vs them</div><div class='kpi-value'>{wins}W-{losses}L-{draws}D</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Meetings</div><div class='kpi-value'>{int(filtered['match_id'].nunique())}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Round differential</div><div class='kpi-value'>{int(filtered['round_diff'].sum()):+d}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Latest known tier</div><div class='kpi-value'>Tier {html.escape(latest_tier)}</div></div>",
+            f"<div class='kpi-card'><div class='kpi-label'>Tournaments met</div><div class='kpi-value'>{int(filtered['competition_key'].nunique())}</div></div>",
+        ]
+    )
+    st.markdown(f"<div class='panel-card'><div class='kpi-grid'>{kpi_html}</div></div>", unsafe_allow_html=True)
+
+    recent_cards = []
+    for _, row in filtered.sort_values("date", ascending=False).head(6).iterrows():
+        outcome = str(row["match_result"]).lower()
+        row_date = pd.to_datetime(row["date"], errors="coerce")
+        recent_cards.append(
+            f"""
+            <article class='match-card {outcome}'>
+                <div class='panel-muted'>{row_date.strftime("%Y-%m-%d") if pd.notna(row_date) else "Unknown date"}</div>
+                <div class='panel-title' style='font-size:0.95rem;'>{html.escape(str(row["competition_display"]))}</div>
+                <div style='display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;'>
+                    <span class='vs-pill'>Map {html.escape(str(row["map"]))}</span>
+                    <span class='vs-pill {"vs-pill-good" if outcome=="win" else "vs-pill-bad" if outcome=="loss" else "vs-pill-mid"}'>{html.escape(str(row["match_result"]))} {int(row["round_wins"])}-{int(row["round_losses"])}</span>
+                </div>
+                <div class='mini-note'>{html.escape(str(row.get("comparison_note", "")))}</div>
+            </article>
+            """
+        )
+    st.markdown(f"<div class='panel-card'><div class='panel-muted'>Recent meetings</div><section class='match-card-grid'>{''.join(recent_cards)}</section></div>", unsafe_allow_html=True)
+
+    map_breakdown = (
+        filtered.groupby("map", as_index=False)
+        .agg(matches=("match_id", "nunique"), wins=("match_result", lambda s: int((s == "Win").sum())), losses=("match_result", lambda s: int((s == "Loss").sum())), round_diff=("round_diff", "sum"))
+        .assign(record=lambda d: d["wins"].astype(str) + "-" + d["losses"].astype(str))
+        .sort_values(["matches", "round_diff"], ascending=[False, False])
+    )
+    left_col, right_col = st.columns(2)
+    with left_col:
+        st.markdown("#### Map breakdown vs selected opponent")
+        st.dataframe(map_breakdown.rename(columns={"map": "Map", "matches": "Matches", "record": "Record", "round_diff": "RD"})[["Map", "Matches", "Record", "RD"]], hide_index=True, use_container_width=True)
+    with right_col:
+        st.markdown("#### Round differential trend")
+        trend = filtered.sort_values("date").copy()
+        trend["meeting"] = range(1, len(trend) + 1)
+        if go is None:
+            _render_plotly_unavailable()
+        else:
+            trend_fig = go.Figure(
+                go.Scatter(
+                    x=trend["meeting"],
+                    y=trend["round_diff"],
+                    mode="lines+markers",
+                    marker=dict(size=8, color=["#44c06f" if v >= 0 else "#e85c6b" for v in trend["round_diff"]]),
+                    text=trend["map"],
+                    customdata=trend[["competition_display", "match_result"]],
+                    hovertemplate="Meeting %{x}<br>%{customdata[0]}<br>Result %{customdata[1]}<br>RD %{y:+d}<extra></extra>",
+                )
+            )
+            trend_fig.update_xaxes(title_text="Meeting #")
+            trend_fig.update_yaxes(title_text="Round differential")
+            _apply_plotly_dark_style(trend_fig, height=320, margin=dict(l=64, r=20, t=24, b=48))
+            st.plotly_chart(trend_fig, use_container_width=True)
+
+    st.markdown("#### Tournament contexts vs selected opponent")
+    t_context = (
+        filtered.groupby("competition_display", as_index=False)
+        .agg(matches=("match_id", "nunique"), wins=("match_result", lambda s: int((s == "Win").sum())), losses=("match_result", lambda s: int((s == "Loss").sum())), round_diff=("round_diff", "sum"))
+        .assign(record=lambda d: d["wins"].astype(str) + "-" + d["losses"].astype(str), win_rate=lambda d: (d["wins"] / (d["wins"] + d["losses"]).clip(lower=1) * 100).round(1))
+        .sort_values(["matches", "round_diff"], ascending=[False, False])
+    )
+    st.dataframe(
+        t_context.rename(columns={"competition_display": "Tournament", "matches": "Matches", "record": "Record", "win_rate": "WR %", "round_diff": "RD"})[
+            ["Tournament", "Matches", "Record", "WR %", "RD"]
+        ],
+        hide_index=True,
+        use_container_width=True,
+    )
+    with st.expander("View full meeting table", expanded=False):
+        table = filtered.sort_values("date", ascending=False).copy()
+        table["date"] = pd.to_datetime(table["date"], errors="coerce").dt.strftime("%Y-%m-%d")
+        st.dataframe(
+            table.rename(columns={"date": "Date", "competition_display": "Tournament", "map": "Map", "match_result": "Result", "round_wins": "RW", "round_losses": "RL", "round_diff": "RD", "comparison_note": "Comparison note"})[
+                ["Date", "Tournament", "Map", "Result", "RW", "RL", "RD", "comparison_note"]
+            ],
+            hide_index=True,
+            use_container_width=True,
+        )
 
 
 def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFrame, competition_source_col: str) -> None:
@@ -8457,11 +8818,11 @@ def _medisports_vs_breakdown(
 def main() -> None:
     player_df, tactics_df, achievements_df = _load_data()
     if "page" not in st.session_state:
-        st.session_state["page"] = "home"
+        st.session_state["page"] = "front_page"
 
     page = st.session_state["page"]
     competition_source_col = "competition"
-    if page in {"profiles", "tactics", "medisports_vs", "tactical_set", "tournament_summary"}:
+    if page in {"front_page", "profiles", "tactics", "medisports_vs", "tactical_set", "tournament_summary", "opponent_review"}:
         competition_view = st.radio(
             "Competition View",
             ["Raw competition names", "Grouped competition names"],
@@ -8471,7 +8832,9 @@ def main() -> None:
         )
         competition_source_col = "competition" if competition_view == "Raw competition names" else "grouped_competition"
 
-    if page == "profiles":
+    if page == "front_page":
+        _front_page(player_df, tactics_df, competition_source_col)
+    elif page == "profiles":
         _hltv_profile_view(player_df, tactics_df, achievements_df, competition_source_col)
     elif page == "tactics":
         _teams_tactical_breakdown(tactics_df, player_df, competition_source_col)
@@ -8479,6 +8842,8 @@ def main() -> None:
         _medisports_vs_breakdown(tactics_df, player_df, competition_source_col)
     elif page == "tournament_summary":
         _tournament_summary_page(tactics_df, player_df, competition_source_col)
+    elif page == "opponent_review":
+        _opponent_review_page(tactics_df, player_df, competition_source_col)
     elif page == "tactical_set":
         _tactical_set_recommendations(tactics_df, player_df, competition_source_col)
     else:
