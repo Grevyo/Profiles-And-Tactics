@@ -1165,26 +1165,35 @@ def _inject_styles() -> None:
             align-items: flex-start;
         }
         .achievement-premium {
-            width: 108px;
-            height: 140px;
+            width: 110px;
+            height: 144px;
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid rgba(151, 166, 195, 0.32);
             background: linear-gradient(180deg, rgba(19, 28, 43, 0.95), rgba(9, 14, 24, 0.96));
-            flex: 0 0 108px;
+            flex: 0 0 110px;
             display: grid;
             grid-template-rows: auto 1fr auto;
         }
         .achievement-top-row {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 8px;
-            padding: 8px 8px 7px;
-            min-height: 40px;
+            gap: 9px;
+            padding: 9px 10px 7px;
+            min-height: 38px;
             background: linear-gradient(180deg, rgba(8, 14, 24, 0.9), rgba(10, 16, 28, 0.95));
             border-bottom: 1px solid rgba(123, 148, 188, 0.28);
         }
+        .achievement-top-left {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            min-width: 0;
+            flex: 1 1 auto;
+            padding-left: 2px;
+        }
+        .achievement-top-right,
         .achievement-badge-stack {
             display: flex;
             align-items: center;
@@ -1192,6 +1201,7 @@ def _inject_styles() -> None:
             gap: 6px;
             min-width: 0;
             max-width: 100%;
+            flex: 0 0 auto;
         }
         .achievement-header-cluster {
             justify-self: end;
@@ -1199,7 +1209,7 @@ def _inject_styles() -> None:
         .achievement-premium .achievement-image-wrap {
             width: 100%;
             height: 100%;
-            padding: 10px 8px 8px;
+            padding: 8px 10px 8px;
             box-sizing: border-box;
             background: radial-gradient(circle at 50% 42%, rgba(44, 63, 98, 0.4), rgba(10, 15, 24, 0.96));
         }
@@ -1216,10 +1226,29 @@ def _inject_styles() -> None:
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 30px;
-            padding: 6px 8px 8px;
+            min-height: 31px;
+            padding: 6px 9px 8px;
             border-top: 1px solid rgba(118, 145, 186, 0.2);
             background: linear-gradient(180deg, rgba(12, 18, 31, 0.85), rgba(9, 14, 24, 0.96));
+        }
+        @media (min-width: 1100px) {
+            .achievement-top-row {
+                padding: 10px 11px 8px;
+                min-height: 40px;
+                gap: 10px;
+            }
+            .achievement-top-left {
+                padding-left: 4px;
+            }
+            .achievement-badge-stack {
+                gap: 7px;
+            }
+            .achievement-premium .achievement-image-wrap {
+                padding: 9px 11px 9px;
+            }
+            .achievement-footer {
+                padding: 6px 10px 8px;
+            }
         }
         .achievement-missing {
             color: #dce7ff;
@@ -2725,10 +2754,12 @@ def _inject_styles() -> None:
                 flex-basis: 82px;
             }
             .achievement-top-row {
-                grid-template-columns: minmax(0, 1fr) auto;
                 gap: 5px;
                 padding: 6px 6px 5px;
                 min-height: 33px;
+            }
+            .achievement-top-left {
+                padding-left: 0;
             }
             .achievement-premium .achievement-image-wrap {
                 padding: 6px 6px 6px;
@@ -4772,8 +4803,8 @@ def _achievement_premium_card_html(ach_row: pd.Series) -> str:
     return (
         f"<div class='achievement-premium glow-{tier_class}'>"
         "<div class='achievement-top-row'>"
-        f"<div class='achievement-season achievement-season-badge'>{season}</div>"
-        "<div class='achievement-badge-stack achievement-header-cluster'>"
+        f"<div class='achievement-top-left'><div class='achievement-season achievement-season-badge'>{season}</div></div>"
+        "<div class='achievement-top-right achievement-badge-stack achievement-header-cluster'>"
         f"{position_badge_html}"
         f"<span class='achievement-tier-badge tier-{tier_class}'><span class='achievement-tier-badge__text'>{top_badge}</span></span>"
         "</div>"
