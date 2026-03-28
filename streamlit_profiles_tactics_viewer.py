@@ -130,6 +130,11 @@ def _render_plotly_unavailable() -> None:
     st.warning("Plotly is unavailable in this environment. Install `plotly` to render dashboard charts.")
 
 
+def _render_html(html_string: str) -> None:
+    """Render trusted custom HTML blocks consistently."""
+    st.markdown(html_string, unsafe_allow_html=True)
+
+
 def _wrap_labels(labels: pd.Series, width: int = 26) -> list[str]:
     wrapped_labels = []
     for label in labels.astype(str):
@@ -6943,7 +6948,7 @@ def render_tournament_summary_page(match_rows: pd.DataFrame, summary_df: pd.Data
             f"<span class='vs-pill'>Most common map {html.escape(str(tournament['most_common_map']))}</span>"
             f"</div><div class='tb-note' style='margin-top:8px;'>{html.escape(str(tournament['insight']))}</div></div>"
         )
-        st.markdown(header_html, unsafe_allow_html=True)
+        _render_html(header_html)
         match_cards = []
         for _, row in block_df.head(8).iterrows():
             result = str(row.get("match_result", "Draw")).lower()
@@ -6966,9 +6971,8 @@ def render_tournament_summary_page(match_rows: pd.DataFrame, summary_df: pd.Data
                     "</article>"
                 )
             )
-        st.markdown(
-            f"<div class='panel-card'><div class='panel-muted'>Recent results</div><section class='match-card-grid'>{''.join(match_cards)}</section></div>",
-            unsafe_allow_html=True,
+        _render_html(
+            f"<div class='panel-card'><div class='panel-muted'>Recent results</div><section class='match-card-grid'>{''.join(match_cards)}</section></div>"
         )
         with st.expander(f"View full match table: {tournament['competition_display']}", expanded=False):
             table = block_df.copy()
@@ -7162,7 +7166,7 @@ def _opponent_review_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, com
             f"<div class='kpi-card'><div class='kpi-label'>Tournaments met</div><div class='kpi-value'>{int(filtered['competition_key'].nunique())}</div></div>",
         ]
     )
-    st.markdown(f"<div class='panel-card'><div class='kpi-grid'>{kpi_html}</div></div>", unsafe_allow_html=True)
+    _render_html(f"<div class='panel-card'><div class='kpi-grid'>{kpi_html}</div></div>")
 
     recent_cards = []
     for _, row in filtered.sort_values("date", ascending=False).head(6).iterrows():
@@ -7181,7 +7185,9 @@ def _opponent_review_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, com
                 "</article>"
             )
         )
-    st.markdown(f"<div class='panel-card'><div class='panel-muted'>Recent meetings</div><section class='match-card-grid'>{''.join(recent_cards)}</section></div>", unsafe_allow_html=True)
+    _render_html(
+        f"<div class='panel-card'><div class='panel-muted'>Recent meetings</div><section class='match-card-grid'>{''.join(recent_cards)}</section></div>"
+    )
 
     map_breakdown = (
         filtered.groupby("map", as_index=False)
@@ -7235,7 +7241,7 @@ def _opponent_review_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, com
         table["date"] = pd.to_datetime(table["date"], errors="coerce").dt.strftime("%Y-%m-%d")
         st.dataframe(
             table.rename(columns={"date": "Date", "competition_display": "Tournament", "map": "Map", "match_result": "Result", "round_wins": "RW", "round_losses": "RL", "round_diff": "RD", "comparison_note": "Comparison note"})[
-                ["Date", "Tournament", "Map", "Result", "RW", "RL", "RD", "comparison_note"]
+                ["Date", "Tournament", "Map", "Result", "RW", "RL", "RD", "Comparison note"]
             ],
             hide_index=True,
             use_container_width=True,
