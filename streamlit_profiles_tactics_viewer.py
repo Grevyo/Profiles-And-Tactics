@@ -7482,6 +7482,21 @@ def _opponent_review_page(tactics_df: pd.DataFrame, player_df: pd.DataFrame, com
         )
 
 
+def safe_select_columns(
+    df: pd.DataFrame,
+    desired_columns: list[str],
+    fill_defaults: dict[str, object] | None = None,
+) -> pd.DataFrame:
+    """Return a safe column subset without raising when columns are missing."""
+    safe_df = df.copy()
+    defaults = fill_defaults or {}
+    for column, default_value in defaults.items():
+        if column not in safe_df.columns:
+            safe_df[column] = default_value
+    existing_columns = [column for column in desired_columns if column in safe_df.columns]
+    return safe_df[existing_columns]
+
+
 def _tactical_set_recommendations(tactics_df: pd.DataFrame, player_df: pd.DataFrame, competition_source_col: str) -> None:
     _inject_styles()
     _render_top_hero(
